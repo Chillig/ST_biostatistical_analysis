@@ -1,0 +1,90 @@
+---
+title: "Vignette__Pathway_Enrichment_Analysis"
+author: "Christina Hillig"
+date: "3/15/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(eval = FALSE)
+```
+
+# Introduction
+The following section describes the pathway enrichment analysis of upregulated genes in the IL17A transcript positive and negative group in T-cell spots in the ST data set. 
+
+# Initialisation
+```{r, echo=FALSE}
+print("R version 4.0.3 Patched (2020-10-23 r79366)")
+print("Platform: x86_64-apple-darwin17.0 (64-bit)")
+print("Running under: macOS Catalina 10.15.7)")
+```
+
+Load required R and Bioconductor packages:
+```{r, message=FALSE}
+# R packages
+rlibs <- c("dplyr", "gtools", "hash", "kableExtra", "knitr", "stringr", "tibble", "xlsx")
+invisible(lapply(rlibs, require, character.only = TRUE))
+# Bioconductor packages
+bioclibs <- c("ReactomePA", "pathview",  "enrichplot")
+invisible(lapply(bioclibs, require, character.only = TRUE))
+
+getwd()
+environment()
+
+# Source R-scripts
+source('../scripts/init.R')
+source('../scripts/load_data.R')
+source('../scripts/utils.R')
+# R-script to import immune Pathways which shall be highlighted in the publication
+source('../scripts/"ImmunePublication_pathways.R"', local=environment())
+# R-script to plot the Pathway enrichment result
+source("../scripts/PA_plotting_functions.R", , local=environment())
+```
+
+Define input directory.
+```{r}
+## Input 
+# Input directory 
+input.folder = "/Users/christina.hillig/R_studio/NGS_Pathway_analysis/Input"
+# Date
+date = "2021-02-01"
+# Data set 
+dataset.type = 'Tcells'
+# Sequencing technique
+seq.technique = "ST"  
+# Comparison
+cytokine = 'IL17A'
+
+
+# General input directory
+input.dir = get_inputdir(input.dir=input.folder, date.file=date, dataset.type=dataset.type, seq.technique=seq.technique, comparison=cytokine)
+
+print(input.dir)
+
+num.samples_per_donor = 2
+```
+Determine cut-parameters applied to identify differential expressed (DEx) genes.
+```{r}
+## DGE Analysis parameters
+# Used DGE Analysis library
+dge.method = 'glmGamPoi'
+
+# Cut parameter
+l2fc.factor = 1
+fdr.value = 0.05
+pval_cut = 0.05
+p_value = 0.05
+minGSSize = 10
+# Multi-test method Benjamini-Hochberg (BH)
+multitest.method =  "BH" 
+
+```
+Create output directory.
+```{r}
+## Output
+# General output directory
+output.dir <- get_outputdir(dataset.type = dataset.type, dge.method = dge.method, 
+                            seq.technique = seq.technique)
+print(output.dir)
+```
