@@ -1,4 +1,4 @@
-# ST_biostatistical_analysis
+# Summary
 
 
 You can find a preprint version of the manuscript <br>
@@ -13,13 +13,13 @@ here: [ADD URL][??]
 Short summary of key message
 
 
+# Analysis
 ## Preprocessing
 
+## Clustering
 
-## Start analysis
+## DGE Analysis
 
-**DGE Analysis**
+## Pathway Enrichemnt Analysis
 
-**Pathway Enrichemnt Analysis**
-
-** Conditional Density Clustering **
+## Conditional Density Clustering
