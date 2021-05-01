@@ -5,51 +5,37 @@
 # Running under: macOS Catalina 10.15.7
 
 # install Packages: BiocManager::install("reactome.db"), BiocManager::install("pathview"), install.packages("cowplot"), install.packages("xlsx")
-# BiocManager::install("enrichplot"), install.packages("ggupset"), BiocManager::install("ReactomePA"), install.packages("qdapTools"), BiocManager::install("fgsea"), BiocManager::install("goseq"), BiocManager::install("clusterProfiler"), install.packages("Hmisc"), BiocManager::install("KEGG.db"), BiocManager::install("rWikiPathways")
+# BiocManager::install("enrichplot"), install.packages("ggupset"), BiocManager::install("ReactomePA"), install.packages("qdapTools"), BiocManager::install("fgsea"), BiocManager::install("goseq"), BiocManager::install("clusterProfiler"), install.packages("Hmisc")
 ########################################################################################
-# GSEA analysis
-# Gene Set Enrichment Analysis GSEA tests whether a set of genes of interest is enriched
-# https://bioinformatics-core-shared-training.github.io/cruk-summer-school-2018/RNASeq2018/html/06_Gene_set_testing.nb.html
-
-# The analysis is performed by:
-# I. ranking all genes in the data set
-# II. identifying the rank positions of all members of the gene set in the ranked data set
-# III. calculating an enrichment score (ES) that represents the difference between the observed rankings 
-# and that which would be expected assuming a random rank distribution.
-
 # Analysis included in that script:
-# 1. GSEA analysis (Sergushichev 2016) --> get ES 
-# 2. GO enrichment analysis  (Young et al. 2010)
-# 3. KEGG pathway enrichment analysis (Yu et al. 2012)
+# ReactomePA pathway enrichment analysis 
+
+# The steps inlcude:
+# I. Replace gene symbol by entrezid of gene
+# II. Define significant DEx genes and background genes
+# III. Perform Pathway enrichement analysis
+# IV. Visualise Pathways in Dotplots and as Networks
+
 ########################################################################################
 # .libPaths() : "/Users/christina.hillig/anaconda3/envs/py37_R4/lib/R/library"
 
 # remove all variables in global environment
 rm(list = ls())
-library(docstring)
+
 
 # libraries
-# library("rWikiPathways")
-# Gene set enrichment analysis:
-# library(fgsea)
+library(docstring)
 
 # GO-term Analysis:
-# library(goseq)
 library(clusterProfiler)
 
 # for pathway enrichemnt analysis:
-# library(DOSE) 
 library(ReactomePA)
 
-# Gene, GO-term and Pathway database:
+# Gene and Pathway database:
 library(org.Hs.eg.db) # human organism
 # library(GO.db)
 # library(reactome.db)
-
-# Plot for pathway enrichemnt analysis:
-# library(ggplot2)
-# library(enrichplot) 
-# library(cowplot)
 
 # variable or objects functions:
 library(dplyr) 
@@ -66,122 +52,36 @@ source('utils.R')
 
 
 #################################### -> functions <- ##################################
+#' Read in .csv of .xlsx file 
+#' 
+#' Gets the full path and reads in csv file including the header
+#' @note The .csv file entries should be separated by ","
+#' @param path_name_file Path to .csv file
+#' @return Dataframe
 load_files <- function(path_name_file)
 {
-  #' Read in .csv file 
-  #' 
-  #' Gets the full path and reads in csv file including the header
-  #' @note The .csv file entries should be separated by ","
-  #' @param path_name_file Path to .csv file
-  #' @return Dataframe
-  
   if (tail(strsplit(path_name_file, split = "[.]")[[1]], n = 1) == "xlsx") 
   {
-    dge_df <- read.xlsx(path_name_file, sheetIndex = 1, header = TRUE)
+    dge_df <- xlsx::read.xlsx(path_name_file, sheetIndex = 1, header = TRUE)
   } else {
-    dge_df <- read.csv(path_name_file, header = TRUE, sep = ";")
+    dge_df <- xlsx::read.csv(path_name_file, header = TRUE, sep = ";")
     
-    if (ncol(dge_df)==1) {dge_df = read.csv(path_name_file, header = TRUE, sep = ",")}
+    if (ncol(dge_df) == 1) {dge_df = read.csv(path_name_file, header = TRUE, sep = ",")}
   }
   
   return(dge_df)
 }
 
-insertRow <- function(existingDF, newrow, r) 
-{
-  existingDF[seq(r + 1, nrow(existingDF) + 1),] <- existingDF[seq(r, nrow(existingDF)),]
-  existingDF[r,] <- newrow
-}
 
-
-get_gene_entrez <- function(dge_matrix)
-{
-  # get gene names
-  gene_names <- row.names(dge_matrix)
-  
-  EG_IDs = mget(gene_names, revmap(org.Hs.egSYMBOL), ifnotfound = NA)
-  dge_matrix <- dge_matrix[-which(is.na(EG_IDs)), ] 
-  
-  return(EG_IDs)
-}
-
-convert_gene_keggid <- function(dge_matrix)
-{
-  # get gene names
-  gene_names <- row.names(dge_matrix)
-  ##Get the Entrez gene IDs associated with those symbols
-  # EG_IDs = unlist(mget(x=gene, envir=org.Hs.egALIAS2EG, ifnotfound=NA))
-  
-  EG_IDs = mget(gene_names, revmap(org.Hs.egSYMBOL), ifnotfound = NA)
-  dge_matrix <- dge_matrix[-which(is.na(EG_IDs)), ] 
-  EG_IDs <- EG_IDs[-which(is.na(EG_IDs))] 
-  
-  ##Then get the KEGG IDs associated with those entrez genes.
-  KEGG_IDs = mget(as.character(EG_IDs), org.Hs.egPATH, ifnotfound = NA)
-  
-  
-  ## Map KEGG_IDs to DEG matrix
-  # change gene names to EG_IDs
-  row.names(dge_matrix) <- unlist(EG_IDs, use.names = FALSE)
-  dge_matrix <- dge_matrix[-which(is.na(KEGG_IDs)), ]
-  KEGG_IDs <- KEGG_IDs[-which(is.na(KEGG_IDs))]
-  
-  # assign KEGG_IDs to EG_IDS in matrix
-  # TODO how to treat rows with same same?
-  counter <- 1
-  for (i in seq_along(KEGG_IDs))
-  {
-    if (names(KEGG_IDs[i]) %in% row.names(dge_matrix)) {
-      if (length(KEGG_IDs[i][[1]]) > 1)
-      {
-        index_id <- which(row.names(dge_matrix) == names(KEGG_IDs[i]))
-        for (id_names in KEGG_IDs[i][[1]])
-        {
-          # copy and add row
-          # check for dulicated row names
-          if (id_names %in%  row.names(dge_matrix))
-          {
-            counter <- counter + 1
-          }else{
-            rownames(dge_matrix)[index_id] <- id_names
-            dge_matrix[seq(index_id + 1, nrow(dge_matrix) + 1), ] <- dge_matrix[
-              seq(index_id, nrow(dge_matrix)), ]
-            dge_matrix[index_id, ] <- dge_matrix[index_id, ]
-            counter <- counter + 1
-            # insertRow(dge_matrix, dge_matrix[index_id, ], index_id)
-          }
-        }
-      }else
-      {
-        index_id <- which(row.names(dge_matrix)  == names(KEGG_IDs[i]))
-        # copy and add row
-        if (KEGG_IDs[i][[1]] %in%  row.names(dge_matrix))
-        {
-          counter <- counter + 1
-        }else
-        {
-          rownames(dge_matrix)[index_id] <- KEGG_IDs[i][[1]]
-          counter <- counter + 1}
-      }
-    }
-  }
-  
-  
-  return(dge_matrix)
-}
-
-
-############## initialization phase
 main = function(sample, date_file, replicate_type, dge_approach, minGSSize,
-                lfc_factor,  fdr_value, p_value, pval_cut, correction_method) 
+                lfc_factor,  fdr_value, p_value, pval_cut, correction_method, plot_signaturecytokine)
 {
   print("-------------------------->  Pathway enrichment Analysis  <--------------------------")
   
   ############################### 1. Initialization phase
-  sub_folders <- list.dirs(path = file.path(getwd(), "Input",
-                                            paste(dge_approach, "output", sep = "_"),
-                                            date_file, sample), 
-                           full.names = TRUE, recursive = FALSE)
+  sub_folders <- list.dirs(
+    path = file.path(getwd(), "Input", paste(dge_approach, "output", sep = "_"),
+                     date_file, sample), full.names = TRUE, recursive = FALSE)
   
   # output paths
   dir.create(file.path(getwd(), "output", "Fig3C__PA_analysis"),  recursive = TRUE,
@@ -193,7 +93,7 @@ main = function(sample, date_file, replicate_type, dge_approach, minGSSize,
   dir.create(save_dir, showWarnings = FALSE,  recursive = TRUE)
   
   
-  ######### START ANALYSIS
+  ############################### 2. START ANALYSIS
   for (sub_folder in sub_folders) 
   {
     # get all DGE .csv files in subfolders
@@ -219,18 +119,20 @@ main = function(sample, date_file, replicate_type, dge_approach, minGSSize,
       
       # Load dge list with gene names and p-value (and/or log2FC)
       dge_list_results <- load_files(path_name_file = dge_results_load_dir)
-      # remove duplicated rows ..
+      
+      # Remove redundant inforamtion:
+      # # -remove duplicated rows
       dge_list_results <- dge_list_results[!duplicated(dge_list_results$gene_symbol), ]
       rownames(dge_list_results) <- dge_list_results$gene_symbol
       dge_list_results <- dge_list_results[, c(colnames(dge_list_results) != "X"),
                                            drop = FALSE]
-      # remove NA columns
+      # # -remove NA columns
       dge_list_results <- dge_list_results[, colSums(is.na(dge_list_results)) < 
                                              nrow(dge_list_results)]
-      # remove NA rows
+      # # -remove NA rows
       dge_list_results <- na.omit(dge_list_results)
       
-      # TDecide if cytokine shall be considered in analysis 
+      # If cytokine shall be considered in analysis 
       if (plot_signaturecytokine == TRUE) 
       {
         signature_gene = strsplit(name_comparison, .Platform$file.sep)[[1]][1]
@@ -267,12 +169,10 @@ main = function(sample, date_file, replicate_type, dge_approach, minGSSize,
       
       names(ranks) <- dge_list_results$gene_symbol #dge_list_results$entrezid
       ranked_genes <- sort(ranks, decreasing = T)
-      # II. Identify the rank positions
-      # barplot(ranked_genes)
       
-      # III. Define significant DEx genes and background genes
+      # II. Define significant DEx genes and background genes
       # Option 2: Determining the DE genes using edgeR 
-      # 1.a) sort genes into groups belonging either to reference or test (control) condition
+      # II.a) sort genes into groups belonging either to reference or test (control) condition
       df.ref <- dge_list_results[
         dge_list_results$pval < p_value & !is.na(dge_list_results$pval) & 
           dge_list_results$log2fc < -lfc_factor, ]
@@ -289,7 +189,7 @@ main = function(sample, date_file, replicate_type, dge_approach, minGSSize,
       ranked_genes.ctrl <- df.ctrl$log2fc
       names(ranked_genes.ctrl) <- df.ctrl$gene_symbol
       
-      # 1.b) get differentially expressed genes either up or down regulated 
+      # II.b) get differentially expressed genes either up or down regulated 
       char_columns <- 2
       dge_list_results[ , char_columns] <- as.data.frame(sapply(dge_list_results$log2fc, 
                                                                 as.numeric))
@@ -298,7 +198,7 @@ main = function(sample, date_file, replicate_type, dge_approach, minGSSize,
                                                abs(dge_list_results$log2fc) > lfc_factor]
       de.common <- as.character(na.exclude(de.common))
 
-      # b.) Background genes are all genes from our (sup-) data set
+      # II.c) Background genes are all genes from our (sup-) data set
       bg_genes <- as.character(dge_list_results$entrezid)
       
       # transform entrez_id to factor
@@ -307,10 +207,10 @@ main = function(sample, date_file, replicate_type, dge_approach, minGSSize,
       #############################################################################
       #################### ---> Pathway Enrichment Analysis <--- ##################
       #############################################################################
-      # 1. ReactomePA Pathway enrichment analysis of a gene set: Database REACTOME
+      # III. ReactomePA Pathway enrichment analysis of a gene set: Database REACTOME
       # Note: Used to determine occuring protein receptors in dataset
       # Given vector of genes, function returns enriched pathways with FDR control.
-      # 1.1 Find enriched Pathways for reference condition
+      # III.a) Find enriched Pathways for reference condition
       reactome_object.ref <- enrichPathway(gene = de.ref, # a vector of entrez gene id
                                            universe = bg_genes,
                                            organism = 'human', 
@@ -321,7 +221,7 @@ main = function(sample, date_file, replicate_type, dge_approach, minGSSize,
                                            maxGSSize = 500,
                                            readable = T)
       
-      # 1.2 Find enriched Pathways for control condition
+      # III.b) Find enriched Pathways for control condition
       reactome_object.ctrl <- enrichPathway(gene = de.ctrl, # a vector of entrez gene id
                                             universe = bg_genes,
                                             organism = 'human', 
@@ -335,8 +235,8 @@ main = function(sample, date_file, replicate_type, dge_approach, minGSSize,
       
       ################### ---> convert gene ID to Symbol <--- ################### 
       # Pathway Enrichment
-      reactome.ctrl = setreadable_pa(paenrich_object=reactome_object.ctrl)
-      reactome.ref = setreadable_pa(paenrich_object=reactome_object.ref) 
+      reactome.ctrl = setreadable_pa(paenrich_object = reactome_object.ctrl)
+      reactome.ref = setreadable_pa(paenrich_object = reactome_object.ref) 
       
       
       #############################################################################
@@ -344,35 +244,34 @@ main = function(sample, date_file, replicate_type, dge_approach, minGSSize,
       #############################################################################
       # Attention: 
       # ctrl (= negative log2FC) and ref (= positive log2FC) are switched for Immune publication
-      enrichobject_to_df(paenrich_object=reactome.ctrl, condition='Cytoneg', 
-                         pa_database='REACTOME', output_path=results_save_dir) 
-      enrichobject_to_df(paenrich_object=reactome.ref, condition='Cytopos', 
-                         pa_database='REACTOME', output_path=results_save_dir) 
+      enrichobject_to_df(paenrich_object = reactome.ctrl, condition = 'Cytoneg', 
+                         pa_database = 'REACTOME', output_path = results_save_dir) 
+      enrichobject_to_df(paenrich_object = reactome.ref, condition = 'Cytopos', 
+                         pa_database = 'REACTOME', output_path = results_save_dir) 
 
       #############################################################################
       ############################### ---> PLOTS <--- ############################# 
       #############################################################################
-      # Plot variables
+      # IV.a) Plot variables
       # select pathways or Enriched gene sets manually
       publication_pas = pathwaysofinterest()
       if (sample == 'single_cell') 
       {
         pas_publication = grep(
-          paste('sc', signature_gene, sep="_"), keys(publication_pas), value=TRUE)
+          paste('sc', signature_gene, sep = "_"), keys(publication_pas), value = TRUE)
       } else 
       {
         pas_publication = grep(
-          paste('st', signature_gene, sep="_"), keys(publication_pas), value=TRUE)
+          paste('st', signature_gene, sep = "_"), keys(publication_pas), value = TRUE)
       }
       show_categories = publication_pas[[pas_publication]] #  3
-      # show_categories = 4
       show_dotplot_categories = 15
       
       width_img = 16
       height_img = 8
 
       ######### ---> Save Pathway Enrichment Analysis Plots and Files <--- #########
-      # 1. Reference Condition
+      # IV.b) Reference Condition
       # If a gene is associated with two or more enriched PAs 
       # but less than those are shown than this results in a bug 
       # -> the log2fc of that gene is not correctly shown
@@ -381,8 +280,7 @@ main = function(sample, date_file, replicate_type, dge_approach, minGSSize,
         if (nrow(reactome.ref) > 1 & any(show_categories %in% reactome.ref$Description)) 
         {
           # Cnetplots to visualise enriched pathways
-          pdf(file = file.path(results_save_dir,
-                               "Cytopos_REACTOME_Pathway_Enrichment_Analysis.pdf"),
+          pdf(file = file.path(results_save_dir, "Cytopos_REACTOME_Pathway_Enrichment_Analysis.pdf"),
               width = width_img, height = height_img)
           print(fig.pathways.REACTOME(reactome_res = reactome.ref, 
                                       entrezid_log2fc = ranked_genes.ref,
@@ -392,22 +290,21 @@ main = function(sample, date_file, replicate_type, dge_approach, minGSSize,
           # Dotplot to visualise enriched pathways
           pdf(file = file.path(results_save_dir, "Cytopos_REACTOME_dotplot.pdf"),
               width = height_img, height = height_img)
-          print(fig.pathway.dotplot(pathway_res=reactome.ref,
-                                    showCategories=show_dotplot_categories, 
-                                    method='REACTOME'))
+          print(fig.pathway.dotplot(pathway_res = reactome.ref,
+                                    showCategories = show_dotplot_categories, 
+                                    method = 'REACTOME'))
           dev.off()
           
         }
       }
       
-      # # 2. Control Condition
+      # IV.c) Control Condition
       if (!is.null(nrow(reactome.ctrl)))
       {
         if (nrow(reactome.ctrl) > 1 & any(show_categories %in% reactome.ctrl$Description)) 
         {
           # Cnetplots to visualise enriched pathways
-          pdf(file = file.path(results_save_dir,
-                               "Cytoneg_REACTOME_Pathway_Enrichment_Analysis.pdf"),
+          pdf(file = file.path(results_save_dir, "Cytoneg_REACTOME_Pathway_Enrichment_Analysis.pdf"),
               width = width_img, height = height_img)
           print(fig.pathways.REACTOME(reactome_res = reactome.ctrl, 
                                       entrezid_log2fc = ranked_genes.ctrl,
@@ -417,9 +314,9 @@ main = function(sample, date_file, replicate_type, dge_approach, minGSSize,
           # Dotplot to visualise enriched pathways
           pdf(file = file.path(results_save_dir, "Cytoneg_REACTOME_dotplot.pdf"),
               width = height_img, height = height_img)
-          print(fig.pathway.dotplot(pathway_res=reactome.ctrl,
-                                    showCategories=show_dotplot_categories, 
-                                    method='REACTOME'))
+          print(fig.pathway.dotplot(pathway_res = reactome.ctrl,
+                                    showCategories = show_dotplot_categories, 
+                                    method = 'REACTOME'))
           dev.off()
         }
       }
@@ -443,7 +340,9 @@ minGSSize = 10
 # FDR and BH are more conservative than bonferroni
 test_method =  "BH" 
 
+plot_cytokine = TRUE
+
 main(date_file = date_file, sample = sample, dge_approach = dge_approach, 
      replicate_type = replicate_type,
      lfc_factor = lfc_factor, fdr_value = fdr_value, p_value = p_value, pval_cut = pval_cut, 
-     correction_method = test_method, minGSSize=minGSSize)
+     correction_method = test_method, minGSSize=minGSSize, plot_signaturecytokine=plot_cytokine)
