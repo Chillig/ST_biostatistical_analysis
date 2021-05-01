@@ -55,3 +55,6 @@ adata_storage/
 data/
 output/
 input/
+r_scripts/data
+r_scripts/environment
+r_scripts/results
