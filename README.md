@@ -26,7 +26,7 @@ You can clone the repository by typing in the terminal the command:
 git clone https://github.com/Chillig/ST_biostatistical_analysis.git
 ```
 
-1. Dependencies
+### Dependencies
 In order to run the preprocessing and analysis in python you will have to create a conda environment from the python_conda_env.yml. Before doing so, you will have to manually set the prefix variable in the python_conda_env.yml file to your directory. Now, you can run the follwoing commands in the terminal:
 ```{bash}
 # The following command will create an env with the name py37_sc_rpy2_diffxpy
@@ -34,15 +34,40 @@ conda env create -f python_conda_env.yml
 # Activate the conda env with
 conda activate py37_sc_rpy2_diffxpy
 ```
-For the DGE and pathway enrichment analysis R4.0.3 Patched (2020-10-23 r79366) is required.<br>
+For the DGE and pathway enrichment analysis the R version R 4.0.3 Patched (2020-10-23 r79366) is required. 
+Additionally, the following cran and Bioconductor packages are needed: <br> 
+```{r}
+# cran packages
+rlibs <- c("dplyr", "gtools", "hash", "kableExtra", "knitr", "stringr", "tibble", "xlsx")
+invisible(lapply(rlibs, require, character.only = TRUE))
+# Bioconductor packages (Bioconductor version 3.12 (BiocManager 1.30.12))
+bioclibs <- c("glmGamPoi", "pathview",  "org.Hs.eg.db", "ReactomePA",  "enrichplot", "clusterProfiler")
+invisible(lapply(bioclibs, require, character.only = TRUE))
+```
 
 
-## Preprocessing
+## Tutorial
+The analysis is grouped into pre-processing
+### Preprocessing
+Before the actual analysis of the samples, they have been preprocessed applying the standard procedures 
+such as quality control, filtering, normalisation and batch correction.
 
-## Clustering
+### Clustering
 
-## DGE Analysis
 
-## Pathway Enrichemnt Analysis
+### DGE Analysis
+In ords of spots containing cytokine-positive leukocytes compared to leukocyte spots without cytokine expression was performed.
+In order to determine the characteristic genes associated with cytokine-expressing leukocytes, 
+a dge analysis was performed between spots / cells containing cytokine-postive leukocytes and 
+cytokine-negative leukocytes. <br>
+A Vignette can be found in the folder r_scripts/dge_analysis/Vignette__DGE_Analysis.Rmd.
 
-## Conditional Density Clustering
+### Pathway Enrichment Analysis
+The output of the DGE analysis containing the gene names, p-values, and log2FC are used as input for the 
+this type of analysis. Additionally, interesting pathways . <br>
+A Vignette can be found in the folder r_scripts/pathway_analysis/Vignette__Pathway_Enrichment_Analysis.Rmd.
+
+### Correlation between Cytokines and their signature response genes
+#### Pseudo-bulk 
+#### Conditional Density Clustering
+
