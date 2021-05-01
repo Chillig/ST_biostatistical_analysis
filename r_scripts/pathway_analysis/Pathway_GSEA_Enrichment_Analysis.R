@@ -22,37 +22,38 @@
 # 2. GO enrichment analysis  (Young et al. 2010)
 # 3. KEGG pathway enrichment analysis (Yu et al. 2012)
 ########################################################################################
+# .libPaths() : "/Users/christina.hillig/anaconda3/envs/py37_R4/lib/R/library"
 
 # remove all variables in global environment
 rm(list = ls())
 library(docstring)
 
 # libraries
-library("rWikiPathways")
+# library("rWikiPathways")
 # Gene set enrichment analysis:
-library(fgsea)
+# library(fgsea)
 
 # GO-term Analysis:
-library(goseq)
+# library(goseq)
 library(clusterProfiler)
 
 # for pathway enrichemnt analysis:
-library(DOSE) 
+# library(DOSE) 
 library(ReactomePA)
 
 # Gene, GO-term and Pathway database:
 library(org.Hs.eg.db) # human organism
-library(GO.db)
-library(reactome.db)
+# library(GO.db)
+# library(reactome.db)
 
 # Plot for pathway enrichemnt analysis:
-library(ggplot2)
-library(enrichplot) 
-library(cowplot)
+# library(ggplot2)
+# library(enrichplot) 
+# library(cowplot)
 
 # variable or objects functions:
 library(dplyr) 
-library(Hmisc)
+# library(Hmisc)
 library(pathview)
 library(openxlsx)
 library("xlsx")
@@ -172,9 +173,9 @@ convert_gene_keggid <- function(dge_matrix)
 
 ############## initialization phase
 main = function(sample, date_file, replicate_type, dge_approach, minGSSize,
-                lfc_factor,  fdr_value, p_value, pval_cut, correction_method, bootstrap) 
+                lfc_factor,  fdr_value, p_value, pval_cut, correction_method) 
 {
-  print("-------------------------->  GSEA Analysis  <--------------------------")
+  print("-------------------------->  Pathway enrichment Analysis  <--------------------------")
   
   ############################### 1. Initialization phase
   sub_folders <- list.dirs(path = file.path(getwd(), "Input",
@@ -183,11 +184,11 @@ main = function(sample, date_file, replicate_type, dge_approach, minGSSize,
                            full.names = TRUE, recursive = FALSE)
   
   # output paths
-  dir.create(file.path(getwd(), "Output", "GSEA_output"),  recursive = TRUE,
+  dir.create(file.path(getwd(), "output", "Fig3C__PA_analysis"),  recursive = TRUE,
              showWarnings = FALSE)
-  dir.create(file.path(getwd(), "Output", "GSEA_output", Sys.Date()),  recursive = TRUE,
+  dir.create(file.path(getwd(), "Output", "Fig3C__PA_analysis", Sys.Date()),  recursive = TRUE,
              showWarnings = FALSE)
-  save_dir <- file.path(getwd(), "Output", "GSEA_output", Sys.Date(), 
+  save_dir <- file.path(getwd(), "Output", "Fig3C__PA_analysis", Sys.Date(), 
                         paste(dge_approach, "output", sep = "_"))
   dir.create(save_dir, showWarnings = FALSE,  recursive = TRUE)
   
@@ -202,7 +203,7 @@ main = function(sample, date_file, replicate_type, dge_approach, minGSSize,
     {
       print(dge_filename)
       
-      # output GSEA Analysis
+      # output PA Analysis
       name_comparison = tail(strsplit(dge_filename, split = "[0-9]\\__", 
                                       perl = TRUE)[[1]], n = 1)
       name_comparison <- strsplit(name_comparison, "_DGE|_DEG")[[1]][1]
@@ -213,13 +214,8 @@ main = function(sample, date_file, replicate_type, dge_approach, minGSSize,
                                              "[.]")[[1]][1])
       dir.create(results_save_dir, recursive = TRUE, showWarnings = FALSE)
       
-      # path to csv files
+      # path to input csv files
       dge_results_load_dir <- file.path(sub_folder,  dge_filename)
-      
-      # load pathways: returns a list of pathways from a GMT file. 
-      # c5: Ontology gene sets
-      gmt_df <- gmtPathways(paste(
-        file.path(getwd(), "Input", "input_files", "c7.all.v7.2.symbols.gmt"), sep = ""))
       
       # Load dge list with gene names and p-value (and/or log2FC)
       dge_list_results <- load_files(path_name_file = dge_results_load_dir)
@@ -234,11 +230,15 @@ main = function(sample, date_file, replicate_type, dge_approach, minGSSize,
       # remove NA rows
       dge_list_results <- na.omit(dge_list_results)
       
-      # TODO remove signature cytokine for plots
-      signature_gene = strsplit(name_comparison, .Platform$file.sep)[[1]][1]
-      # dge_list_results = dge_list_results[dge_list_results$gene_symbol != signature_gene, ]
-      # Set log2fc of cytokines to -1
-      # dge_list_results[dge_list_results$gene_symbol == signature_gene, ]$log2fc = -1.00001
+      # TDecide if cytokine shall be considered in analysis 
+      if (plot_signaturecytokine == TRUE) 
+      {
+        signature_gene = strsplit(name_comparison, .Platform$file.sep)[[1]][1]
+      } else 
+      {
+        # remove signature cytokine for plots
+        dge_list_results = dge_list_results[dge_list_results$gene_symbol != signature_gene, ]
+      }
       
       ########################### ---> Preparation <--- ##########################
       # I. replace gene symbol by entrezid of gene
@@ -255,21 +255,14 @@ main = function(sample, date_file, replicate_type, dge_approach, minGSSize,
       }
       
       # I. Rank all genes based on their fold change
-      # gseaDat$unshrunk.logFC # Use the shrunk LFC values
-      if (bootstrap == TRUE) 
+      # Option 2: Determining the DE genes using edgeR 
+      if ('log2fc' %in% colnames(dge_list_results)) 
       {
-        ranks <- dge_list_results$mean_log2fc  
-      }else{
-        # Option 2: Determining the DE genes using edgeR 
-        if ('log2fc' %in% colnames(dge_list_results)) 
-        {
-          ranks <- dge_list_results$log2fc 
-        } else 
-        {
-          ranks <- dge_list_results$log2FC 
-          names(dge_list_results)[names(dge_list_results) == 'log2FC'] <- 'log2fc'
-          }
-
+        ranks <- dge_list_results$log2fc 
+      } else 
+      {
+        ranks <- dge_list_results$log2FC 
+        names(dge_list_results)[names(dge_list_results) == 'log2FC'] <- 'log2fc'
       }
       
       names(ranks) <- dge_list_results$gene_symbol #dge_list_results$entrezid
@@ -278,149 +271,46 @@ main = function(sample, date_file, replicate_type, dge_approach, minGSSize,
       # barplot(ranked_genes)
       
       # III. Define significant DEx genes and background genes
-      if (bootstrap == TRUE)
-      {
-        # 1.a) sort genes into groups belonging either to reference or test (control) condition
-        df.ref <- dge_list_results[dge_list_results$mean_pval < p_value 
-                                   & !is.na(dge_list_results$mean_pval) & 
-                                     dge_list_results$mean_log2fc < -lfc_factor, ]
-        de.ref <- df.ref$entrezid
-        de.ref <- as.character(na.exclude(de.ref))
-        
-        ranked_genes.ref <- df.ref$log2fc
-        names(ranked_genes.ref) <- df.ref$gene_symbol
-        
-        df.ctrl <- dge_list_results[
-          dge_list_results$mean_pval < p_value & !is.na(dge_list_results$mean_pval) & 
-            dge_list_results$mean_log2fc > lfc_factor, ]
-        de.ctrl <- df.ctrl$entrezid
-        de.ctrl <- as.character(na.exclude(de.ctrl))
-        
-        ranked_genes.ctrl <- df.ctrl$log2fc
-        names(ranked_genes.ctrl) <- df.ctrl$gene_symbol
-        
-        # 1.b) get differentially expressed genes either up or down regulated 
-        df.common <- dge_list_results[
-          dge_list_results$mean_pval < p_value  & !is.na(dge_list_results$mean_pval) & 
-            abs(dge_list_results$mean_log2fc) > lfc_factor, ]
-        de.common <- dge_list_results$entrezid
-        de.common <- as.character(na.exclude(de.common))
-      }else{  
-        # Option 2: Determining the DE genes using edgeR 
-        # 1.a) sort genes into groups belonging either to reference or test (control) condition
-        df.ref <- dge_list_results[
-          dge_list_results$pval < p_value & !is.na(dge_list_results$pval) & 
-            dge_list_results$log2fc < -lfc_factor, ]
-        de.ref <- df.ref$entrezid
-        de.ref <- as.character(na.exclude(de.ref))        
-        ranked_genes.ref <- df.ref$log2fc
-        names(ranked_genes.ref) <- df.ref$gene_symbol
-        
-        df.ctrl <- dge_list_results[
-          dge_list_results$pval < p_value & !is.na(dge_list_results$pval) & 
-            dge_list_results$log2fc > lfc_factor, ]
-        de.ctrl <- df.ctrl$entrezid
-        de.ctrl <- as.character(na.exclude(de.ctrl))
-        ranked_genes.ctrl <- df.ctrl$log2fc
-        names(ranked_genes.ctrl) <- df.ctrl$gene_symbol
-        
-        # 1.b) get differentially expressed genes either up or down regulated 
-        char_columns <- 2
-        dge_list_results[ , char_columns] <- as.data.frame(sapply(dge_list_results$log2fc, 
-                                                                  as.numeric))
-        de.common <- dge_list_results$entrezid[dge_list_results$pval < p_value 
-                                               & !is.na(dge_list_results$pval) & 
-                                                 abs(dge_list_results$log2fc) > lfc_factor]
-        de.common <- as.character(na.exclude(de.common))
-      }
+      # Option 2: Determining the DE genes using edgeR 
+      # 1.a) sort genes into groups belonging either to reference or test (control) condition
+      df.ref <- dge_list_results[
+        dge_list_results$pval < p_value & !is.na(dge_list_results$pval) & 
+          dge_list_results$log2fc < -lfc_factor, ]
+      de.ref <- df.ref$entrezid
+      de.ref <- as.character(na.exclude(de.ref))        
+      ranked_genes.ref <- df.ref$log2fc
+      names(ranked_genes.ref) <- df.ref$gene_symbol
+      
+      df.ctrl <- dge_list_results[
+        dge_list_results$pval < p_value & !is.na(dge_list_results$pval) & 
+          dge_list_results$log2fc > lfc_factor, ]
+      de.ctrl <- df.ctrl$entrezid
+      de.ctrl <- as.character(na.exclude(de.ctrl))
+      ranked_genes.ctrl <- df.ctrl$log2fc
+      names(ranked_genes.ctrl) <- df.ctrl$gene_symbol
+      
+      # 1.b) get differentially expressed genes either up or down regulated 
+      char_columns <- 2
+      dge_list_results[ , char_columns] <- as.data.frame(sapply(dge_list_results$log2fc, 
+                                                                as.numeric))
+      de.common <- dge_list_results$entrezid[dge_list_results$pval < p_value 
+                                             & !is.na(dge_list_results$pval) & 
+                                               abs(dge_list_results$log2fc) > lfc_factor]
+      de.common <- as.character(na.exclude(de.common))
+
       # b.) Background genes are all genes from our (sup-) data set
       bg_genes <- as.character(dge_list_results$entrezid)
       
       # transform entrez_id to factor
       dge_list_results$entrezid = as.factor(dge_list_results$entrezid)
-      
-      #############################################################################
-      ################### ---> Gene Set Enrichment Analysis <--- ##################
-      #############################################################################
-      # 1. GSEA Analysis Geneset Enrichment Analysis
-      # Calculate enrichment score (ES)
-      # fgseaRes <- fgseaMultilevel(pathways = gmt_df, 
-      #                             stats = ranked_genes, # order ranked geneList
-      #                             minSize = 15, 
-      #                             maxSize = Inf,
-      #                             eps = p_value, 
-      #                             scoreType = "std")      
-      # 
-      # ## If this command produces a warning it means:
-      # ## The warning indicates that there are few genes that have the same fold change 
-      # ## and so are ranked equally
-      # 
-      # # top 10 Pathways
-      # if (nrow(fgseaRes) > 0 ) 
-      # {
-      #   head(fgseaRes[order(padj, -abs(NES)), ], n = 10)
-      #   
-      #   # Plots 
-      #   # pdf(file = file.path(results_save_dir, "GSEA_Enrichment.pdf"))
-      #   # print(fig.gseaenrichment(df = gmt_df, ranked_gene_list = ranked_genes))
-      #   # dev.off()
-      #   
-      #   
-      #   topUp <- fgseaRes %>% filter(ES > 0) %>% top_n(10, wt = -padj)
-      #   topDown <- fgseaRes %>% filter(ES < 0) %>% top_n(10, wt = -padj)
-      #   topPathways <- bind_rows(topUp, topDown) %>%  arrange(-ES)
-      #   
-      #   # GSEA table plot
-      #   pdf(file = file.path(results_save_dir, "GSEA_Gsea_Table.pdf"))
-      #   print(fig.gseatable(df = gmt_df[topPathways$pathway], ranked_gene_list = ranked_genes,
-      #                 fgsea_res = fgseaRes))
-      #   dev.off()
-      #   
-      # }else{
-      #   print(paste0("No enriched gene set pathways with GSEA found in: ", name_comparison))
-      # }
-      
+
       #############################################################################
       #################### ---> Pathway Enrichment Analysis <--- ##################
       #############################################################################
-      # bitr_kegg(de.ctrl, fromType = "kegg", toType = "Path", organism = "hsa")
-      # bitr_kegg(de.ctrl, fromType = "kegg", toType = "Module", organism = "hsa")
-      # 1. KEGG Enrichment analysis: Database KEGG: Database KEGG 
-      # search_kegg_organism('hsa', by = 'kegg_code')
-      # 1.1 Find enriched Pathways for reference condition
-      kk.ref <- clusterProfiler::enrichKEGG(gene = de.ref, # a vector of entrez gene id
-                                            organism = 'hsa',
-                                            universe = bg_genes,
-                                            pvalueCutoff = pval_cut, 
-                                            pAdjustMethod = correction_method, 
-                                            qvalueCutoff = fdr_value, 
-                                            minGSSize = minGSSize, maxGSSize = 500,
-                                            use_internal_data = TRUE) 
-      
-      # 1.2 Find enriched Pathways for control condition
-      kk.ctrl <- clusterProfiler::enrichKEGG(gene = de.ctrl, # a vector of entrez gene id
-                            organism = 'hsa',
-                            universe = bg_genes,
-                            pvalueCutoff = pval_cut, 
-                            pAdjustMethod = correction_method, 
-                            qvalueCutoff = fdr_value, 
-                            minGSSize = minGSSize, maxGSSize = 500,
-                            use_internal_data = TRUE) 
-      
-      # 1.3 Find enriched Pathways in both condition
-      kk.common <- clusterProfiler::enrichKEGG(gene = de.common, # a vector of entrez gene id
-                              organism = 'hsa',
-                              universe = bg_genes,
-                              pvalueCutoff = pval_cut, 
-                              pAdjustMethod = correction_method,
-                              qvalueCutoff = fdr_value, 
-                              minGSSize = minGSSize, maxGSSize = 500,
-                              use_internal_data = TRUE) 
-      
-      # 2. ReactomePA Pathway enrichment analysis of a gene set: Database REACTOME
+      # 1. ReactomePA Pathway enrichment analysis of a gene set: Database REACTOME
       # Note: Used to determine occuring protein receptors in dataset
       # Given vector of genes, function returns enriched pathways with FDR control.
-      # 2.1 Find enriched Pathways for reference condition
+      # 1.1 Find enriched Pathways for reference condition
       reactome_object.ref <- enrichPathway(gene = de.ref, # a vector of entrez gene id
                                            universe = bg_genes,
                                            organism = 'human', 
@@ -431,7 +321,7 @@ main = function(sample, date_file, replicate_type, dge_approach, minGSSize,
                                            maxGSSize = 500,
                                            readable = T)
       
-      # 2.2 Find enriched Pathways for control condition
+      # 1.2 Find enriched Pathways for control condition
       reactome_object.ctrl <- enrichPathway(gene = de.ctrl, # a vector of entrez gene id
                                             universe = bg_genes,
                                             organism = 'human', 
@@ -441,77 +331,10 @@ main = function(sample, date_file, replicate_type, dge_approach, minGSSize,
                                             minGSSize = minGSSize,
                                             maxGSSize = 500,
                                             readable = T)
-      
-      # 2.3 Find enriched Pathways in both condition
-      reactome_object.common <- enrichPathway(gene = de.common, # a vector of entrez gene id
-                                              universe = bg_genes,
-                                              organism = 'human', 
-                                              qvalueCutoff = fdr_value, 
-                                              pvalueCutoff = pval_cut, 
-                                              pAdjustMethod = correction_method, 
-                                              minGSSize = minGSSize,
-                                              maxGSSize = 500,
-                                              readable = T)
-      
-      
-      
-      # 3. DOSE (Disease Ontology Semantic and Enrichment) analysis based on DisGeNET
-      # Note: Used to determine occuring disease types in dataset
-      # Pathway enrichment analysis with FDR control with DOSE
-      # 3.1 Find enriched Pathways for reference condition
-      dose_enrichment.ref <- enrichDGN(gene = de.ref, # a vector of entrez gene id
-                                       pvalueCutoff = pval_cut, 
-                                       pAdjustMethod = correction_method,
-                                       qvalueCutoff = fdr_value, 
-                                       universe = bg_genes, 
-                                       minGSSize = minGSSize, 
-                                       maxGSSize = 500,
-                                       readable = FALSE)
-      
-      # 3.2 Find enriched Pathways for control condition
-      dose_enrichment.ctrl <- enrichDGN(gene = de.ctrl, # a vector of entrez gene id
-                                        pvalueCutoff = pval_cut, 
-                                        pAdjustMethod = correction_method,
-                                        qvalueCutoff = fdr_value, 
-                                        universe = bg_genes, 
-                                        minGSSize = minGSSize, 
-                                        maxGSSize = 500,
-                                        readable = FALSE)
-      
-      # 3.3 Find enriched Pathways in both condition
-      dose_enrichment.common <- enrichDGN(gene = de.common, # a vector of entrez gene id
-                                          pvalueCutoff = pval_cut, 
-                                          pAdjustMethod = correction_method,
-                                          qvalueCutoff = fdr_value, 
-                                          universe = bg_genes, 
-                                          minGSSize = minGSSize, 
-                                          maxGSSize = 500,
-                                          readable = FALSE)
-      
-      
-      #############################################################################
-      ##################### ---> GSEA Analysis of Pathways <--- ###################
-      #############################################################################
-      # 1. ReactomePA GSEA Pathway enrichment
-      # Note: Gene Set Enrichment Analysis of Reactome Pathway
-      names(ranks) <- dge_list_results$entrezid
-      ranked_genes <- sort(ranks, decreasing = T)
-      gsea_object <- gsePathway(ranked_genes, # order ranked geneList
-                                organism = 'human', 
-                                exponent = 1, # weight of each step
-                                nPerm = 1000,
-                                minGSSize = minGSSize, 
-                                maxGSSize = 500,
-                                pvalueCutoff = pval_cut, 
-                                pAdjustMethod = correction_method, 
-                                by = "fgsea", # or DOSE
-                                verbose = TRUE,
-                                seed = TRUE)
-      
+
       
       ################### ---> convert gene ID to Symbol <--- ################### 
       # Pathway Enrichment
-      reactome.common = setreadable_pa(paenrich_object=reactome_object.common) 
       reactome.ctrl = setreadable_pa(paenrich_object=reactome_object.ctrl)
       reactome.ref = setreadable_pa(paenrich_object=reactome_object.ref) 
       
@@ -521,8 +344,6 @@ main = function(sample, date_file, replicate_type, dge_approach, minGSSize,
       #############################################################################
       # Attention: 
       # ctrl (= negative log2FC) and ref (= positive log2FC) are switched for Immune publication
-      enrichobject_to_df(paenrich_object=reactome.common, condition='Common', 
-                         pa_database='REACTOME', output_path=results_save_dir) 
       enrichobject_to_df(paenrich_object=reactome.ctrl, condition='Cytoneg', 
                          pa_database='REACTOME', output_path=results_save_dir) 
       enrichobject_to_df(paenrich_object=reactome.ref, condition='Cytopos', 
@@ -551,129 +372,7 @@ main = function(sample, date_file, replicate_type, dge_approach, minGSSize,
       height_img = 8
 
       ######### ---> Save Pathway Enrichment Analysis Plots and Files <--- #########
-      # 1. Common
-      # if (!is.null(nrow(reactome.common)) & !is.null(nrow(kegg.common)))
-      # {
-      #   if (nrow(reactome.common) > 1 & nrow(kegg.common) > 1) 
-      #   {
-      #     # Cnetplots to visualise enriched pathways
-      #     pdf(file = file.path(results_save_dir, "Common_Pathway_Enrichment_Analysis.pdf"),
-      #         width = width_img, height = height_img)
-      #     print(fig.pathways(reactome_res = reactome.common, kegg_res = kegg.common,
-      #                        entrezid_log2fc = ranked_genes, showCategories = show_categories))
-      #     dev.off()
-      #     
-      #     # Dotplot to visualise enriched pathways
-      #     pdf(file = file.path(results_save_dir, "Common_Pathway_Enrichment_dotplot.pdf"),
-      #         width = width_img, height = height_img)
-      #     print(fig.pathway.dotplots(reactome_res = reactome.common,
-      #                                kegg_res = kegg.common,
-      #                                showCategories = show_dotplot_categories))
-      #     dev.off()
-      #     
-      #     pdf(file = file.path(results_save_dir, "Common_REACTOME_dotplot.pdf"), 
-      #         width = width_img, height = height_img)
-      #     print(fig.pathway.dotplot(pathway_res=reactome.common, 
-      #                               showCategories=show_dotplot_categories, method='REACTOME'))
-      #     dev.off()
-      #     pdf(file = file.path(results_save_dir, "Common_KEGG_dotplot.pdf"), 
-      #         width = width_img, height = height_img)
-      #     print(fig.pathway.dotplot(pathway_res=kegg.common, 
-      #                               showCategories=show_dotplot_categories, method="KEGG"))
-      #     dev.off()
-      #   }
-      # }
-      
-      if (!is.null(nrow(reactome.common)))
-      {
-        if (nrow(reactome.common) > 1 & any(show_categories %in% reactome.common$Description)) 
-        {
-          # Cnetplots to visualise enriched pathways
-          pdf(file = file.path(results_save_dir,
-                               "Common_REACTOME_Pathway_Enrichment_Analysis.pdf"),
-              width = width_img, height = height_img)
-          print(fig.pathways.REACTOME(reactome_res = reactome.common, 
-                                      entrezid_log2fc = ranked_genes,
-                                      showCategories = show_categories))
-          dev.off()
-          
-          # Dotplot to visualise enriched pathways
-          pdf(file = file.path(results_save_dir, "Common_REACTOME_dotplot.pdf"),
-              width = width_img, height = height_img)
-          print(fig.pathway.dotplot(pathway_res=reactome.common,
-                                    showCategories=show_dotplot_categories, 
-                                    method='REACTOME'))
-          dev.off()
-        }
-      }
-      
-      # if (!is.null(nrow(kegg.common)))
-      # {
-      #   if (nrow(kegg.common) > 1) 
-      #   {
-      #     pdf(file = file.path(results_save_dir,
-      #                          "Common_KEGG_Pathway_Enrichment_Analysis.pdf"),
-      #         width = width_img, height = height_img)
-      #     print(fig.pathways.KEGG(kegg_res = kegg.common, entrezid_log2fc = ranked_genes,
-      #                             showCategories = show_categories))
-      #     dev.off()
-      #   }
-      # }
-      
-      # if (!is.null(nrow(dose.common)))
-      # {
-      #   if (nrow(dose.common) > 1) 
-      #   {
-      #     # Cnetplots to visualise enriched pathways
-      #     pdf(file = file.path(results_save_dir, "Common_DOSE_Pathway_Enrichment_Analysis.pdf"),
-      #         width = width_img, height = height_img)
-      #     print(fig.pathways.dose(dose_res = dose.common, entrezid_log2fc = ranked_genes,
-      #                             showCategories = show_categories))
-      #     dev.off()
-      #     
-      #     # Upsetplot DOSE Pathway Enrichment
-      #     pdf(file = file.path(results_save_dir, 
-      #                          "Common_DOSE_Pathway_enrichment_upsetplot.pdf"),
-      #         width = width_img, height = height_img)
-      #     print(fig.upsetplot(pathway_res = dose.common))
-      #     dev.off()
-      #   }
-      # }
-      
-      # 2. Reference Condition
-      # if (!is.null(nrow(reactome.ref)) & !is.null(nrow(kegg.ref)))
-      # {
-      #   if (nrow(reactome.ref) > 1 & nrow(kegg.ref) > 1) 
-      #   {
-      #     # Cnetplots to visualise enriched pathways
-      #     pdf(file = file.path(results_save_dir, "Reference_Pathway_Enrichment_Analysis.pdf"),
-      #         width = width_img, height = height_img)
-      #     print(fig.pathways(reactome_res = reactome.ref, kegg_res = kegg.ref,
-      #                        entrezid_log2fc = ranked_genes, showCategories = show_categories))
-      #     dev.off()
-      #     
-      #     # Dotplot to visualise enriched pathways
-      #     pdf(file = file.path(results_save_dir, "Reference_Pathway_Enrichment_dotplot.pdf"),
-      #         width = width_img, height = height_img)
-      #     print(fig.pathway.dotplots(reactome_res = reactome.ref,
-      #                                kegg_res = kegg.ref,
-      #                                showCategories = show_dotplot_categories))
-      #     dev.off()
-      #     
-      #     pdf(file = file.path(results_save_dir, "Reference_REACTOME_dotplot.pdf"), 
-      #         width = width_img, height = height_img)
-      #     print(fig.pathway.dotplot(pathway_res=reactome.ref, 
-      #                               showCategories=show_dotplot_categories, method='REACTOME'))
-      #     dev.off()
-      #     pdf(file = file.path(results_save_dir, "Reference_KEGG_dotplot.pdf"), 
-      #         width = width_img, height = height_img)
-      #     print(fig.pathway.dotplot(pathway_res=kegg.ref, 
-      #                               showCategories=show_dotplot_categories, method="KEGG"))
-      #     dev.off()
-      #     
-      #   }
-      # }
-      
+      # 1. Reference Condition
       # If a gene is associated with two or more enriched PAs 
       # but less than those are shown than this results in a bug 
       # -> the log2fc of that gene is not correctly shown
@@ -701,76 +400,7 @@ main = function(sample, date_file, replicate_type, dge_approach, minGSSize,
         }
       }
       
-      # if (!is.null(nrow(kegg.ref)))
-      # {
-      #   if (nrow(kegg.ref) > 1) 
-      #   {
-      #     pdf(file = file.path(results_save_dir,
-      #                          "Reference_KEGG_Pathway_Enrichment_Analysis.pdf"),
-      #         width = width_img, height = height_img)
-      #     print(fig.pathways.KEGG(kegg_res = kegg.ref, entrezid_log2fc = ranked_genes,
-      #                             showCategories = show_categories))
-      #     dev.off()
-      #   }
-      # }
-      
-      
-      # if (!is.null(nrow(dose.ref)))
-      # {
-      #   if (nrow(dose.ref) > 1) 
-      #   {
-      #     # Cnetplots to visualise enriched pathways
-      #     pdf(file = file.path(results_save_dir,
-      #                          "Reference_DOSE_Pathway_Enrichment_Analysis.pdf"),
-      #         width = width_img, height = height_img)
-      #     print(fig.pathways.dose(dose_res = dose.ref, entrezid_log2fc = ranked_genes,
-      #                             showCategories = show_categories))
-      #     dev.off()
-      #     
-      #     # Upsetplot DOSE Pathway Enrichment
-      #     pdf(file = file.path(results_save_dir, 
-      #                          "Reference_DOSE_Reference_Pathway_enrichment_upsetplot.pdf"),
-      #         width = width_img, height = height_img)
-      #     print(fig.upsetplot(pathway_res = dose.ref))
-      #     dev.off()
-      #   }
-      # }
-      
-      
-      # # 3. Control Condition
-      # if (!is.null(nrow(reactome.ctrl)) & !is.null(nrow(kegg.ctrl)))
-      # {
-      #   if (nrow(reactome.ctrl) > 1 & nrow(kegg.ctrl) > 1) 
-      #   {
-      #     # Cnetplots to visualise enriched pathways
-      #     pdf(file = file.path(results_save_dir, "Control_Pathway_Enrichment_Analysis.pdf"),
-      #         width = width_img, height = height_img)
-      #     print(fig.pathways(reactome_res = reactome.ctrl, kegg_res = kegg.ctrl,
-      #                        entrezid_log2fc = ranked_genes, showCategories = show_categories))
-      #     dev.off()
-      #     
-      #     # Dotplot to visualise enriched pathways
-      #     pdf(file = file.path(results_save_dir, "Control_Pathway_Enrichment_dotplot.pdf"),
-      #         width = width_img, height = height_img)
-      #     print(fig.pathway.dotplots(reactome_res = reactome.ctrl,
-      #                                kegg_res = kegg.ctrl,
-      #                                showCategories = show_dotplot_categories))
-      #     dev.off()
-      #     
-      #     pdf(file = file.path(results_save_dir, "Control_REACTOME_dotplot.pdf"), 
-      #         width = width_img, height = height_img)
-      #     print(fig.pathway.dotplot(pathway_res=reactome.ctrl, 
-      #                               showCategories=show_dotplot_categories, method='REACTOME'))
-      #     dev.off()
-      #     pdf(file = file.path(results_save_dir, "Control_KEGG_dotplot.pdf"), 
-      #         width = width_img, height = height_img)
-      #     print(fig.pathway.dotplot(pathway_res=kegg.ctrl, 
-      #                               showCategories=show_dotplot_categories, method="KEGG"))
-      #     dev.off()
-      #   }
-      # }
-      
-      
+      # # 2. Control Condition
       if (!is.null(nrow(reactome.ctrl)))
       {
         if (nrow(reactome.ctrl) > 1 & any(show_categories %in% reactome.ctrl$Description)) 
@@ -793,56 +423,13 @@ main = function(sample, date_file, replicate_type, dge_approach, minGSSize,
           dev.off()
         }
       }
-      
-      # if (!is.null(nrow(kegg.ctrl)))
-      # {
-      #   if (nrow(kegg.ctrl) > 1) 
-      #   {
-      #     pdf(file = file.path(results_save_dir,
-      #                          "Control_KEGG_Pathway_Enrichment_Analysis.pdf"),
-      #         width = width_img, height = height_img)
-      #     print(fig.pathways.KEGG(kegg_res = kegg.ctrl, entrezid_log2fc = ranked_genes,
-      #                             showCategories = show_categories))
-      #     dev.off()
-      #   }
-      # }
-      
-      
-      # if (!is.null(nrow(dose.ctrl)))
-      # {
-      #   if (nrow(dose.ctrl) > 1) 
-      #   {
-      #     # Cnetplot to visualise enriched pathways
-      #     pdf(file = file.path(results_save_dir, 
-      #                          "Control_DOSE_Pathway_Enrichment_Analysis.pdf"),
-      #         width = width_img, height = height_img)
-      #     print(fig.pathways.dose(dose_res = dose.ctrl, entrezid_log2fc = ranked_genes,
-      #                             showCategories = show_categories))
-      #     dev.off()
-      #   }
-      # }
-      
-      
-      ##################### ---> GSEA Analysis of Pathways <--- ###################
-      # if (!is.null(nrow(gsea_object_1)))
-      # {
-      #   if (nrow(gsea_object_1) > 1) 
-      #   {
-      #     pdf(file = file.path(results_save_dir, "GSEA_Pathways.pdf"),
-      #         width = width_img, height = height_img)
-      #     print(fig.gsea_pathways(gsea_res = gsea_object_1, entrezid_log2fc = ranked_genes,
-      #                             showCategories = show_categories))
-      #     dev.off()
-      #   }
-      # }
-      
     }
   }
   
   sessionInfo()
 }
 
-date_file <- "2021-02-01" #"2019-06-26" 
+date_file <- "2021-02-01"
 replicate_type = "biological"
 sample = "spatial"
 dge_approach = "T-cell_countmatrix"
@@ -856,9 +443,7 @@ minGSSize = 10
 # FDR and BH are more conservative than bonferroni
 test_method =  "BH" 
 
-bootstrap = FALSE
-
 main(date_file = date_file, sample = sample, dge_approach = dge_approach, 
      replicate_type = replicate_type,
      lfc_factor = lfc_factor, fdr_value = fdr_value, p_value = p_value, pval_cut = pval_cut, 
-     correction_method = test_method, bootstrap = bootstrap, minGSSize=minGSSize)
+     correction_method = test_method, minGSSize=minGSSize)
