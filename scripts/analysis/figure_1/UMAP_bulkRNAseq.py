@@ -93,24 +93,6 @@ def apply_scanpy_pca(adata, save_folder, n_comps=50):
     return adata
 
 
-def plot_pca(adata, observable, save_folder):
-    fig, ax = plt.subplots(figsize=fig_size)
-    if len(np.unique(adata.obs[observable])) > 4:
-        sc.pl.pca(adata, color=observable, ax=ax, show=False)
-    elif observable == 'diseases':
-        sc.pl.pca(adata, color=observable, ax=ax, show=False,
-                  palette=["#e41a1c", 'darkgreen', '#ff7f00', "#377eb8", "mediumblue"])
-    else:
-        sc.pl.pca(adata, color=observable, ax=ax, show=False, palette=["#e41a1c", '#ff7f00', "#377eb8", "mediumblue"])
-    ax.set_xlabel("PC1 ({:.0f}% Variance explained)".format(adata.uns["pca"]["variance_ratio"][0] * 100))
-    ax.set_ylabel("PC2 ({:.0f}% Variance explained)".format(adata.uns["pca"]["variance_ratio"][1] * 100))
-    ax.spines["top"].set_visible(False)
-    ax.spines["right"].set_visible(False)
-    plt.tight_layout()
-    plt.savefig(os.path.join(save_folder, "".join(["PCA-Bulk", observable.capitalize(), fileformat])))
-    plt.close()
-
-
 def plot_umap(adata, observable, save_folder):
     fig, ax = plt.subplots(figsize=fig_size)
     if len(np.unique(adata.obs[observable])) > 5:
@@ -169,12 +151,6 @@ def main(save_folder, bulk_rnaseq, metadata):
         sc.pp.neighbors(sub_bulk_adata, n_pcs=n_comps, n_neighbors=15, knn=True)
     sc.tl.umap(sub_bulk_adata)
 
-    plot_pca(adata=sub_bulk_adata, observable='diagnosis', save_folder=save_folder)
-    plot_pca(adata=sub_bulk_adata, observable='diseases', save_folder=save_folder)
-    plot_pca(adata=sub_bulk_adata, observable='age', save_folder=save_folder)
-    plot_pca(adata=sub_bulk_adata, observable='gender', save_folder=save_folder)
-    plot_pca(adata=sub_bulk_adata, observable='skin', save_folder=save_folder)
-
     plot_umap(adata=sub_bulk_adata, observable='diagnosis', save_folder=save_folder)
     plot_umap(adata=sub_bulk_adata, observable='diseases', save_folder=save_folder)
     plot_umap(adata=sub_bulk_adata, observable='age', save_folder=save_folder)
@@ -190,7 +166,7 @@ if __name__ == '__main__':
     os.makedirs(output_path, exist_ok=True)
 
     # input path
-    input_path = "/Users/christina.hillig/PycharmProjects/ST_Immune_publication/Publication_analysis/input/bulk_RNAseq"
+    input_path = os.path.join(wd_path, "input", "bulk_RNAseq")
 
     # Read bulk-RNAseq count matrix
     bulk_data = pd.read_csv(os.path.join(input_path, "bulkRNA_countMat.txt"), sep='\t')

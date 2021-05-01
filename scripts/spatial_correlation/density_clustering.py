@@ -7,7 +7,9 @@
 """
 
 # import scripts
-from scripts.spatial_correlation import tools, plot_correlation_counts_distribution, condition_graphs as cyto_graphs
+from scripts.spatial_correlation import tools, condition_graphs as cyto_graphs
+from scripts.spatial_correlation import plot_clusters, plot_spatial_correlation, plot_evaluations, \
+    plot_count_distributions
 from scripts.utils import gene_lists
 
 import numpy as np
@@ -18,15 +20,22 @@ from collections import OrderedDict
 
 # -------------------------------------------------------------------------------------------------------------------- #
 def index_spots(spot_coordinate, d):
-    """
-    Get index of nearest neighbor spots
-    k: index of row
-    m: index of column
+    """Get index of nearest neighbor spots
+        k: index of row
+        m: index of column
 
-    :param spot_coordinate: coordinate of spot of interest
-    :param d: distance of spot of interest to its next neighbor spots
-    :return:
+    Parameters
+    ----------
+    spot_coordinate : numpy.array
+        coordinate of spot of interest
+    d : int
+        distance of spot of interest to its next neighbor spots
+
+    Returns
+    -------
+
     """
+
     ind_list = []
     for k in range(-d, d + 1):
         m_max = 2 * d - np.abs(k)
@@ -35,19 +44,25 @@ def index_spots(spot_coordinate, d):
                 continue
             else:
                 ind_list.append((spot_coordinate[0] + m, spot_coordinate[1] + k))
-            # ind_list.append((spot_coordinate[0] + m, spot_coordinate[1] + k))
 
     return ind_list
 
 
 def get_location_spots(center_coord, distance, all_coordinates):
-    """
-    Get index of spots in all_coordiantes from center spot and nn spots
+    """Get index of spots in all_coordiantes from center spot and nn spots
 
-    :param center_coord: [tuple] coordinate of center spot
-    :param distance: [int] radius starting from center spot
-    :param all_coordinates: [list of tuples] list conatining all coordinates
-    :return:
+    Parameters
+    ----------
+    center_coord : tuple
+        coordinate of center spot
+    distance : int
+        radius starting from center spot
+    all_coordinates : list of tuples
+        list conatining all coordinates
+
+    Returns
+    -------
+
     """
     # 1. Get index of nn spots
     nn_indices = index_spots(center_coord, d=int(distance))
@@ -204,11 +219,6 @@ def get_cluster_counts(adata, tissue_types, cytokine_responders, save_folder, di
                 subgraph_cyto_spots = cyto_graphs.get_connections(coordinates=np.array(cyto_coordinates),
                                                                   distance=2)
 
-                # Plot example with lines (plot needs to be improved due to overlapping lines and points)
-                plot_correlation_counts_distribution.plot_graphs(
-                    all_coordinates=all_coordinates, cluster_coordinates=cyto_coordinates,
-                    graph=subgraph_cyto_spots, save_folder=save_folder,
-                    title='_'.join(['Graphs', str(distance), sample, cyto]))
                 # 4.2 loop -- read out responder and cytokine counts per sub-graph
                 index_counter_sample = 0
                 for ind_subgraph, subgraph in enumerate(subgraph_cyto_spots):
@@ -256,13 +266,7 @@ def get_cluster_counts(adata, tissue_types, cytokine_responders, save_folder, di
                     index_counter_sample = index_counter_sample + 1
 
                 if get_plots:
-                    # 10. Plot example with lines (plot needs to be improved due to overlapping lines and points)
-                    plot_correlation_counts_distribution.plot_graphs(
-                        all_coordinates=all_coordinates, cluster_coordinates=all_coordinates,
-                        graph=final_cluster_indices, save_folder=save_folder,
-                        title='_'.join(['Final_Graph', str(distance), sample, cyto]))
-
-                    plot_correlation_counts_distribution.plot_counts(
+                    plot_count_distributions.plot_counts(
                         dfx=df_counts["_".join([cyto, 'responder'])], dfy=df_counts[cyto],
                         index_counter=index_counter, index_counter_sample=index_counter_sample, cyto=cyto,
                         sample=sample, save_folder=save_folder, distance=distance)
@@ -274,7 +278,7 @@ def get_cluster_counts(adata, tissue_types, cytokine_responders, save_folder, di
                         adata=sevenspots_adata, cyto_responder_genes=sub_dict)
                     obs_label = "_".join([cyto, 'responders'])
                     obs_counts = "_".join([cyto, 'counts'])
-                    plot_correlation_counts_distribution.plot_clusters_counts(
+                    plot_clusters.plot_clusters_counts(
                         sevenspots_adata, cyto, save_folder=save_folder, obs_label=obs_label, obs_counts=obs_counts)
 
                 # 11. Investigate distribution of all responder spots which are excluded in the correlation analysis
@@ -331,34 +335,31 @@ def run_spatialcorrelation(adata, tissue_types, cytokine_responders, save_folder
         distance=radius, save_folder=save_folder, get_plots=get_plots)
 
     # 4. Plot correlation
+    # Pearson Correlation -> Workflow Figure 1
+    _ = plot_spatial_correlation.plot__spatial_correlation(
+        df_counts=df_counts, cytokine_responders=cytokine_responders, save_folder=save_folder, distance=radius)
     # Weighted Pearson Correlation by number of cytokines in cluster -> Figure 4C
-    corr_pval = plot_correlation_counts_distribution.plot_st_weightedcorrelation(
-        df_counts=df_counts, cytokine_responders=cytokine_responders, save_folder=save_folder, distance=radius)
-    # Pearson Correlation
-    _ = plot_correlation_counts_distribution.plot_spatial_correlation(
-        df_counts=df_counts, cytokine_responders=cytokine_responders, save_folder=save_folder, distance=radius)
-    # Weighted Pearson Correlation by number of cytokines in cluster
-    _ = plot_correlation_counts_distribution.plot_weighted_spatialcorrelation_wotissuelabels(
+    corr_pval = plot_spatial_correlation.plot__spatial_weighted__correlation_wotissuelabels(
         df_counts=df_counts, cytokine_responders=cytokine_responders, save_folder=save_folder, distance=radius)
 
     # 5.1 Plot distribution of responder spot counts which a excluded in the analysis
-    plot_correlation_counts_distribution.plot_excluded_responder_spots(
+    plot_count_distributions.plot_excluded_responder_spots(
         df_spot_counts=df_excluded_spot_counts, cytokines=list(cytokine_responders.keys()), save_folder=save_folder)
-    plot_correlation_counts_distribution.plot_included_responder_spots(
+    plot_count_distributions.plot_included_responder_spots(
         df_spot_counts=df_included_spots, cytokines=cytokine_responders.keys(), save_folder=save_folder)
     # 5.2 Plot distribution of responder spot counts
-    plot_correlation_counts_distribution.plot_distribution_respondercounts(
+    plot_count_distributions.plot_distribution_respondercounts(
         adata=adata, t_cell_cytocines=list(cytokine_responders.keys()), save_folder=save_folder)
 
     # 5.3 Plot distribution of responder in cyto+ spots against responder counts in cyto- spots
-    plot_correlation_counts_distribution.plot_responder_boxplot(
+    plot_count_distributions.plot_responder_boxplot(
         df=df_counts_responders, cytokines=cytokine_responders.keys(), save_folder=save_folder)
 
-    plot_correlation_counts_distribution.plot_compare_inex_respondercounts(
+    plot_count_distributions.plot_compare_inex_respondercounts(
         adata=adata, df_includedcounts=df_included_spots, df_excludedcounts=df_excluded_spot_counts,
         cytokines=cytokine_responders.keys(), save_folder=save_folder)
 
-    plot_correlation_counts_distribution.plot_responder_distributions(
+    plot_count_distributions.plot_responder_distributions(
         adata=adata, df_included_responder=df_included_spots, df_excluded_responder=df_excluded_spot_counts,
         t_cell_cytocines=cytokine_responders.keys(), save_folder=save_folder)
 
@@ -443,5 +444,5 @@ def main(adata, save_folder, tissue_types, radii, get_plots=False):
 
     if len(sig) > 1:
         # 6. Evaluate distance via elbow plot
-        plot_correlation_counts_distribution.plot_evaluate_distance(
+        plot_evaluations.plot_evaluate_distance(
             significance=sig, cytokines=conditional_genes, save_folder=save_folder)
