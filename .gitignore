@@ -15,6 +15,7 @@
 *.xlsx
 *.png
 *.txt
+*.html
 
 # Database files
 *.sql
@@ -58,3 +59,4 @@ input/
 r_scripts/data
 r_scripts/environment
 r_scripts/results
+.Rproj.user
