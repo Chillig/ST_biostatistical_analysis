@@ -290,10 +290,6 @@ def store_categories_as_clusters(adata, annotations):
                 # define weights using the number of spots assigned to these labels
                 spots_counts = [spots_per_label.get(cat) for cat in labels]
                 index_spot = random.choices(sequence_selection, weights=1/np.asarray(spots_counts), k=1)[0]
-                # index_spot = random.choice(sequence_selection)
-                # get index of category with lowest number of spots assigned to it
-                # spot_selection = [spots_per_label[x] for x in labels]
-                # index_min_n_spots = np.argmin(spot_selection)
 
                 # save cluster label with int values from 0 to number of tissue/cell type annotations
                 value_per_spot.append(indices[index_spot])
