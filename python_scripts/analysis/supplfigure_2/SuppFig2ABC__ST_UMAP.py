@@ -1,4 +1,12 @@
-from python_scripts.utils import gene_lists, add_observables, get_condition_spots
+#!/usr/bin/env python
+"""Plot UMAP of diagnosis, skin layers, skin layers + cytokine double positive spots
+    File name: SuppFig2ABC__ST_UMAP.py
+    Author: Christina Hillig
+    Date created: December/xx/2020
+    Date last modified: May/02/2021
+    Python Version: 3.7
+"""
+from python_scripts.utils import gene_lists, add_observables
 
 import scanpy as sc
 import numpy as np
@@ -28,6 +36,16 @@ file_format = '.pdf'
 img_key = 'hires'
 
 
+def get_color_palette(num_colors):
+    if 20 < num_colors < 28:
+        palette = sc.pl.palettes.zeileis_28
+    elif 28 <= num_colors < 102:
+        palette = sc.pl.palettes.godsnot_102
+    else:
+        palette = sc.pl.palettes.vega_20_scanpy
+    return palette
+
+
 def plot_tissueregions_cyto(adata, obs_name, title, save_folder, gene_colors=None):
     if not gene_colors:
         gene_colors = []
@@ -50,31 +68,55 @@ def plot_tissueregions_cyto(adata, obs_name, title, save_folder, gene_colors=Non
     ax.spines["right"].set_visible(False)
 
     fig.tight_layout()
-    plt.savefig(os.path.join(save_folder, "_".join(['UMAP', title, "Tissuelayers", file_format])))
+    plt.savefig(os.path.join(save_folder, "_".join(['UMAP', title, "Skinlayers", file_format])))
     plt.close()
 
 
-def include_cytokine_dp(adata, cytokines, label, save_folder, key, paper_figure):
-    """Include double cytokine positive cells in DGE analysis
+def visualise_clusters(adata, save_folder, key, title):
+    """
+
+    :param adata:
+    :param save_folder:
+    :param key: [string] Name of cluster algorithm and resolution eg: leiden_r1
+    :param title:
+    :return:
+    """
+    num_clusters = len(np.unique(adata.obs[key]))
+    palette = get_color_palette(num_colors=num_clusters)
+
+    fig = plt.figure(facecolor='w', edgecolor='k', figsize=figure_size)
+    ax = fig.add_subplot(1, 1, 1)
+    sc.pl.umap(adata, color=key, use_raw=False, palette=palette, frameon=True, show=False, title='', ax=ax)
+    # sc.pl.umap(adata, color='Cytokines', use_raw=False, palette=palette, frameon=True, show=False, title='', ax=ax)
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    plt.tight_layout()
+    plt.savefig(os.path.join(save_folder, "_".join(['UMAP_annotated_clusters', key, title, ".pdf"])))
+    plt.close()
+
+
+def exclude_cytokine_dp(adata, cytoresps_dict):
+    """Exclusively label double positive cells as double positive
 
     Parameters
     ----------
     adata : annData
-    cytokines : list
-    label : str
-    save_folder : str
-    key : str
-    paper_figure : str
+    cytoresps_dict : dict
 
     Returns
     -------
 
     """
-    for cyto in cytokines:
-        if "_".join(['cytokine', cyto]) in adata.obs_keys():
-            get_condition_spots.get_spots_per_condition(
-                adata=adata, observable="_".join(["cytokine", cyto]), save_folder=save_folder, key=key,
-                paper_figure=paper_figure, cell_label=label)
+    cytodict = gene_lists.cyto_asdict()
+    # check if all genes are in adata
+    cells = list(set(adata.var.index) & set(cytodict.keys()))
+    remove_key = np.setdiff1d(list(cytoresps_dict.keys()), cells)
+    if len(remove_key) > 0:
+        cytodict.pop(remove_key[0], None)
+    adata, obs_name = add_observables.convert_variable_to_observable(
+        adata=adata, gene_names=cytodict, task='annotate_cells', label='cytokines', condition=[np.all, np.all, np.all])
+
+    return adata, obs_name
 
 
 def get_celltypes_data(adata, genes):
@@ -127,53 +169,56 @@ def get_tissueregions(adata, tissue_label):
 
 
 def main(save_folder, spatial_adata):
-    """Read out data for ST and scRNA-seq DGE Analysis and create UMAPs for Figure 3A/E and Suppl. Figures 3
+    """
+    Read out data for ST and scRNA-seq DGE Analysis and create UMAPs for Figure 3A/E and Suppl. Figures 3
 
     :return:
     """
     spatial_cluster_label = 'tissue_type'
 
-    # load data
+    # 1. load gene lists
     cytokines, allinone, cytoresps_dict = gene_lists.get_publication_cyto_resps()
     leukocyte_markers = gene_lists.leukocyte_markers()
 
-    # remove all spots without a tissue label
+    # 2. remove all spots without a tissue label
     spatial_adata = spatial_adata[spatial_adata.obs[spatial_cluster_label] != 'Unknown']
 
-    # 1. get observable for cytokine genes
+    # 3. get observable for cytokine genes and leukocyte markers
     spatial_adata, obs_name = add_observables.convert_variable_to_observable(
         adata=spatial_adata, gene_names=cytokines, task='cell_gene', label='celltype', condition=None)
 
-    spatial_adata, _ = add_observables.convert_variable_to_observable(
-        adata=spatial_adata, gene_names=leukocyte_markers,
-        task='cell_gene', label='celltype', condition=None)
+    spatial_adata, obs_name = add_observables.convert_variable_to_observable(
+        adata=spatial_adata, gene_names=leukocyte_markers, task='cell_gene', label='celltype', condition=None)
 
-    # # 2. Read out counts and metaData for DGE Analysis including double positive cytokine cells
-    # 2.1 Read out only leukocytes spots by 'CD2', 'CD3D', 'CD3E', 'CD3G', 'CD247' and 'PTPRC' surface markers
+    # 4. Read out only leukocytes spots by 'CD2', 'CD3D', 'CD3E', 'CD3G', 'CD247' and 'PTPRC' surface markers
     adata_leukocytes = get_celltypes_data(spatial_adata, genes=leukocyte_markers)
 
-    # 2.2 Merge layers of epidermis and save it as epidermis and merge dermis depths and save it as dermis
+    # keys: 'patient', 'biopsy_type', 'disease', 'tissue_type'
+    # Suppl Figure 2A
+    visualise_clusters(adata=spatial_adata, save_folder=save_folder, key='healthy_disease', title="Biopsy_types")
+    # Suppl. Figure 2C
+    visualise_clusters(adata=adata_leukocytes, save_folder=save_folder, key='tissue_type',
+                       title="Leukocytes_tissuelayers")
+
+    # 5. Read out spots which either have IL17A, IL13 or INFG genes
+    adata_leukocytes, obs_name = exclude_cytokine_dp(adata=adata_leukocytes, cytoresps_dict=cytoresps_dict)
+
+    # 6. Merge layers of epidermis and save it as epidermis and merge dermis depths and save it as dermis
     adata_leukocytes = get_tissueregions(adata=adata_leukocytes, tissue_label=spatial_cluster_label)
 
-    # 3. Highlicht tissues epidermis and dermis + cytokines and for each single cytokine
-    plot_tissueregions_cyto(adata=adata_leukocytes, obs_name='cytokine_IL13', title='Leukocytes_IL13',
-                            save_folder=save_folder)
-    plot_tissueregions_cyto(adata=adata_leukocytes, obs_name='cytokine_IFNG', title='Leukocytes_IFNG',
-                            save_folder=save_folder)
-
-    # 4. Read out all leukocyte psotive spots
-    include_cytokine_dp(adata=adata_leukocytes, cytokines=cytokines, save_folder=save_folder,
-                        label=spatial_cluster_label, key='ST', paper_figure='3AC_Leukocytes')
+    # Suppl. Figure 2B
+    plot_tissueregions_cyto(adata=adata_leukocytes, obs_name=obs_name, title='Leukocytes_Cytokines',
+                            save_folder=save_folder, gene_colors=["#ff7f00", "#e41a1c", 'darkgoldenrod', 'purple',
+                                                                  "#377eb8", 'deeppink'])
 
 
 if __name__ == '__main__':
     today = date.today()
-    wd_path = os.environ['PYTHONPATH'].split(os.pathsep)[0]
     # create saving folder
-    output_path = os.path.join(wd_path, "output", "SupplFigure_3AC", str(today))
+    output_path = os.path.join("..", "..", "..", "output", "SupplFigure_2ABC", str(today))
     os.makedirs(output_path, exist_ok=True)
 
     # Load data:
-    pp_st_adata = sc.read(os.path.join(wd_path, 'adata_storage/2020-12-04_Visium_Data_QC_BC_clustered.h5'))
+    pp_st_adata = sc.read(os.path.join("..", "..", "..", 'adata_storage", "2020-12-04_Visium_Data_QC_BC_clustered.h5'))
 
     main(save_folder=output_path, spatial_adata=pp_st_adata)

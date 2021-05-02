@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Read out of cytokine counts in RNA-seq data and visualisation of data in PCA and UMAP plots
+"""Read out of cytokine counts in RNA-seq data and visualisation of data in UMAP plots
     File name: bulk_RNAseq_data.py
     Author: Christina Hillig
     Date created: 3/11/2020
@@ -14,6 +14,7 @@ import os
 import matplotlib.pyplot as plt
 import anndata
 import scanpy as sc
+import sys
 
 fig_size = (8, 8)
 xy_fontsize = 16
@@ -160,13 +161,12 @@ def main(save_folder, bulk_rnaseq, metadata):
 
 if __name__ == '__main__':
     today = date.today()
-    wd_path = os.environ['PYTHONPATH'].split(os.pathsep)[0]
     # create saving folder
-    output_path = os.path.join(wd_path, "output", "Figure_1_Bulk_RNAseq", str(today))
+    output_path = os.path.join("..", "..", "..", "output", "Figure_1_Bulk_RNAseq", str(today))
     os.makedirs(output_path, exist_ok=True)
 
     # input path
-    input_path = os.path.join(wd_path, "input", "bulk_RNAseq")
+    input_path = os.path.join("..", "..", "..", "input", "bulk_RNAseq")
 
     # Read bulk-RNAseq count matrix
     bulk_data = pd.read_csv(os.path.join(input_path, "bulkRNA_countMat.txt"), sep='\t')

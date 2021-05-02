@@ -1,7 +1,20 @@
+#! /usr/bin/python
+"""Create config file with used parameters for analysis
+    File name: init_variables.py
+    Author: Christina Hillig
+    Date created: April/29/2021
+    Date last modified: May/02/2021
+    Python Version: 3.7
+"""
+
 from datetime import date
 import os
+import sys
 import numpy as np
-import configparser
+try:
+    import configparser  # for python3
+except ImportError:
+    import ConfigParser as configparser  # for python2
 
 
 def create_config(path):
@@ -63,11 +76,9 @@ def create_config(path):
 
         config.add_section("input_files")
         config.set("input_files", "cell_cycle",
-                   os.path.join(os.environ['PYTHONPATH'].split(os.pathsep)[0], 'input', 'cell_cycle',
-                                'Macosko_cell_cycle_genes_2015.csv'))
+                   os.path.join("..", "..", 'input', 'cell_cycle', 'Macosko_cell_cycle_genes_2015.csv'))
         config.set("input_files", "rawdata_paths",
-                   os.path.join(os.environ['PYTHONPATH'].split(os.pathsep)[0], 'input', 'rawdata_paths',
-                                'P15509_P16357_wo_4_7.csv'))
+                   os.path.join("..", "..", 'input', 'rawdata_paths', 'P15509_P16357_wo_4_7.csv'))
 
         config.add_section("visualisation_options")
         config.set("visualisation_options", "image_res", "hires")
@@ -83,7 +94,7 @@ def init_vars():
     # initialization variables
     # create saving folder in current project path
     today = date.today()
-    savepath = os.path.join(os.environ['PYTHONPATH'].split(os.pathsep)[0], "adata_storage", str(today))
+    savepath = os.path.join("..", "..", "adata_storage", str(today))
     os.makedirs(savepath, exist_ok=True)
 
     # Create config file

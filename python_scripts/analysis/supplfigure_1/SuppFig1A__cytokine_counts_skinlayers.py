@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 """Get Distribution of UMI-counts of cytokines
-    File name: Correlation.py
+    File name: SuppFig1A__cytokine_counts_skinlayers.py
     Author: Christina Hillig
-    Date created: 23/11/2020
-    Date last modified: 3/21/2021
+    Date created: January/xx/2021
+    Date last modified: May/02/2021
     Python Version: 3.7
 
     Script description:
@@ -316,22 +316,21 @@ def apply_wilcoxontest(df_highcounts, df_lowcounts, save_folder):
         print("Distributions are not significantly different")
 
 
-def main():
-    today = date.today()
-    wd_path = os.environ['PYTHONPATH'].split(os.pathsep)[0]
-    # create saving folder
-    save_folder = os.path.join(os.sep, wd_path, "Output", "ImmunePublication_Figure2A", str(today))
-    os.makedirs(save_folder, exist_ok=True)
-
-    # Load QCed but not normalised annData object
-    adata = sc.read(os.path.join(wd_path, "adata_storage/2020-10-06/st_adata_P15509_P16357_wo_4_7_unpp.h5"))
-
+def main(save_folder, adata):
     # 1. Split data set into lesional and non-lesional
     adata, df_l, df_nl = divide_lnl_adata(adata, save_folder=save_folder)
 
-    """Paper Figure 2A: Test if cytokines are enriched in any tissue parts"""
+    """ Suppl. Figure 1A """
     plot_signature_umicounts(df_l, df_nl, save_folder)
 
 
 if __name__ == '__main__':
-    main()
+    today = date.today()
+    # create saving folder
+    savepath = os.path.join("..", "..", "..", "output", "SuppFig1A", str(today))
+    os.makedirs(savepath, exist_ok=True)
+
+    # Load QCed but not normalised annData object
+    unpp_st_adata = sc.read(os.path.join("..", "..", "..", "adata_storage",
+                                         "2020-10-06", "st_adata_P15509_P16357_wo_4_7_unpp.h5"))
+    main(save_folder=savepath, adata=unpp_st_adata)

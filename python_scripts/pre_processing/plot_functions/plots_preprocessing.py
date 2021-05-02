@@ -11,7 +11,7 @@ from matplotlib.colors import LogNorm
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 import seaborn as sns
 
-import scripts.pre_processing.plot_functions.helper_functions as hf
+import python_scripts.pre_processing.plot_functions.helper_functions as hf
 
 # Initializing scanpy
 sc.settings.verbosity = 3             # verbosity: errors (0), warnings (1), info (2), hints (3)

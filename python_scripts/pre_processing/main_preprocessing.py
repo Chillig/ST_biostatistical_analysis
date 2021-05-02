@@ -1,3 +1,11 @@
+#! /usr/bin/python
+"""Start pre-processing of data
+    File name: main_preprocessing.py
+    Author: Christina Hillig
+    Date created: April/02/2020
+    Date last modified: May/02/2021
+    Python Version: 3.7
+"""
 from python_scripts.pre_processing import batch_correction, cell_cycle_storing, pc_determination, scaling_and_regression, \
     calculate_visualizations, quality_control, normalization, highly_variable_genes, init_variables, doublet_detection
 from python_scripts.utils import loading_matrices, helper_tools as ht, sc_loading_matrices
@@ -26,7 +34,7 @@ def load_dataset(configs):
     list_sample_ids : list
 
     """
-    if configs['data']['dataset_type'] == 'Spatial Transcriptomics':
+    if configs['data']['data_type'] == 'Spatial Transcriptomics':
         raw_adata, filtered_adata, configs_path, list_sample_ids = loading_matrices.main(
             filename=configs['input_files']['rawdata_paths'],
             read_raw_matrix=configs.getboolean('preprocessing', 'read_raw_matrix'),
@@ -445,7 +453,7 @@ def main(configs, adata, save_folder):
 
 
 if __name__ == '__main__':
-    output_path = os.path.join(os.environ['PYTHONPATH'].split(os.pathsep)[0], "output", str(date.today()))
+    output_path = os.path.join("..", "..", "output", str(date.today()))
     adata_savepath = init_variables.init_vars()
     configs_file = ht.load_config(config_path=adata_savepath)
 

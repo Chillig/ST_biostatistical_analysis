@@ -1,3 +1,11 @@
+#! /usr/bin/python
+"""Plot UMAP of Spatial Transcriptomics data together with IL-17A positive spots
+    File name: Fig3A__ST_UMAP_IL17A_tissuelayers.py
+    Author: Christina Hillig
+    Date created: December/xx/2020
+    Date last modified: May/02/2021
+    Python Version: 3.7
+"""
 from python_scripts.utils import gene_lists, add_observables, get_condition_spots
 
 import scanpy as sc
@@ -127,7 +135,7 @@ def get_tissueregions(adata, tissue_label):
 
 
 def main(save_folder, spatial_adata):
-    """Read out data for ST and scRNA-seq DGE Analysis and create UMAPs for Figure 3A/E and Suppl. Figures 3
+    """Read out data for ST DGE Analysis and create UMAPs for Figure 3A
 
     :return:
     """
@@ -166,12 +174,11 @@ def main(save_folder, spatial_adata):
 
 if __name__ == '__main__':
     today = date.today()
-    wd_path = os.environ['PYTHONPATH'].split(os.pathsep)[0]
     # create saving folder
-    output_path = os.path.join(wd_path, "output", "Figure_3A", str(today))
+    output_path = os.path.join("..", "..", "..", "output", "Figure_3A", str(today))
     os.makedirs(output_path, exist_ok=True)
 
     # Load data:
-    pp_st_adata = sc.read(os.path.join(wd_path, 'adata_storage/2020-12-04_Visium_Data_QC_BC_clustered.h5'))
+    pp_st_adata = sc.read(os.path.join("..", "..", "..", 'adata_storage', '2020-12-04_Visium_Data_QC_BC_clustered.h5'))
 
     main(save_folder=output_path, spatial_adata=pp_st_adata)

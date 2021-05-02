@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """Calculate Pearson Correlation between Cytokines and their corresponding responder genes UMI-counts
-    File name: 4A__ST_pseudobulk_aggregation_Correlation.py
+    File name: Fig4A__ST_pseudobulk_aggregation_Correlation.py
     Author: Christina Hillig
     Date created: 23/11/2020
     Date last modified: 4/29/2021
@@ -39,7 +39,7 @@ def get_bulk_cytoresp_counts(adata, genes_dict, tissue_types=None):
     adata : annData
     genes_dict : dict
         keys are the cytokines and entries are the responder genes
-    tissue_types : str
+    tissue_types : str, list
 
     Returns
     -------
@@ -154,7 +154,10 @@ def correlation_plot(df_counts_cytoresps, genes_dict, save_folder):
             plt.close()
 
 
-def main(save_folder, adata, tissue_types):
+def main(save_folder, adata):
+    # parameter
+    tissue_types = ['upper EPIDERMIS', 'middle EPIDERMIS', 'basal EPIDERMIS']
+
     adata.obs['n_counts'] = adata.X.sum(1)
     # number of counts per spot in log
     adata.obs['log_counts'] = np.log(adata.obs['n_counts'])
@@ -170,7 +173,7 @@ def main(save_folder, adata, tissue_types):
         adata = adata[np.where(adata.obs[tissue_cell_labels].to_numpy().any(axis=1))[0]]
 
     # 1. Get cytokines and responders
-    _, cytokine_responders = gene_lists.get_permuted_respondergenes()
+    t_cell_cytocines, cyto_resps_list, cytokine_responders = gene_lists.get_publication_cyto_resps()
 
     # 2. Subset adata to tissue_types of interest: upper EPIDERMIS', 'middle EPIDERMIS', 'basal EPIDERMIS'
     if tissue_types:
@@ -186,14 +189,12 @@ def main(save_folder, adata, tissue_types):
 if __name__ == '__main__':
     today = date.today()
 
-    # parameter
-    tissue_layers = ['upper EPIDERMIS', 'middle EPIDERMIS', 'basal EPIDERMIS']
-
     # create saving folder in current project path
-    savepath = os.path.join(os.environ['PYTHONPATH'].split(os.pathsep)[0], "output", "Figure_4A", str(today))
+    savepath = os.path.join("..", "..", "..", "output", "Figure_4A", str(today))
     os.makedirs(savepath, exist_ok=True)
 
     # Load Raw anndata --> used for publication figure
-    unpp_st_adata = sc.read(os.path.join(savepath, "adata_storage/2020-10-06/st_adata_P15509_P16357_wo_4_7_unpp.h5"))
+    unpp_st_adata = sc.read(
+        os.path.join("..", "..", "..", "adata_storage", '2020-10-06', "st_adata_P15509_P16357_wo_4_7_unpp.h5"))
 
-    main(save_folder=savepath, adata=unpp_st_adata, tissue_types=tissue_layers)
+    main(save_folder=savepath, adata=unpp_st_adata)

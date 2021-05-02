@@ -1,3 +1,11 @@
+#!/usr/bin/env python
+"""Plot single cell data clusters
+    File name: SuppFig4B__SC_UMAP_IFNG.py
+    Author: Christina Hillig
+    Date created: March/xx/2021
+    Date last modified: April/30/2021
+    Python Version: 3.7
+"""
 from python_scripts.utils import gene_lists, add_observables, get_condition_spots
 
 from datetime import date
@@ -207,13 +215,12 @@ def main(save_folder, adata):
 
 if __name__ == '__main__':
     today = date.today()
-    wd_path = os.environ['PYTHONPATH'].split(os.pathsep)[0]
     # create saving folder
-    output_path = os.path.join(wd_path, "output", "SupplFigure_4B", str(today))
+    output_path = os.path.join("..", "..", "..", "output", "SupplFigure_4B", str(today))
     os.makedirs(output_path, exist_ok=True)
 
     # Load data:
     # Use merged scRNAseq samples for publication
-    clustered_adata_sc = sc.read(os.path.join(wd_path, 'adata_storage/2020-12-04_SC_Data_QC_clustered.h5'))
+    clustered_adata_sc = sc.read(os.path.join("..", "..", "..", 'adata_storage', '2020-12-04_SC_Data_QC_clustered.h5'))
 
     main(save_folder=output_path, adata=clustered_adata_sc)

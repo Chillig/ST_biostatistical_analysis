@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """Create Volcano and Violin plots using the DGE Analysis result
-    File name: 4CD__SC_Volcano_cytokines.py
+    File name: SuppFig4CD__SC_Volcano_cytokines.py
     Author: Christina Hillig
     Date created: 3/11/2020
     Date last modified: April/30/2021
@@ -559,9 +559,8 @@ def main(dataset_type, save_folder, df_keys, log, dge_results_folder):
         obs_label_condition = "_".join(['cytokine', cyto])
         genes_labeling = genes_to_highlight[cyto]
 
-        pathname = os.path.join(os.environ['PYTHONPATH'].split(os.pathsep)[0], dge_results_folder)
         all_csv_files = [file
-                         for path, subdir, files in os.walk(pathname)
+                         for path, subdir, files in os.walk(dge_results_folder)
                          for file in glob.glob(os.path.join(path, '*.csv'))]
 
         pattern = "".join(['*', cyto, '*all_genes.csv'])
@@ -640,10 +639,11 @@ if __name__ == '__main__':
     columns = ['log2fc', 'pval', 'gene_symbol']
     log_transform = False
 
-    input_folder = 'input/dge_analysis/2021-02-01_single_cell__cdr_annotation_cyto'
+    input_folder = os.path.join("..", "..", "..", 'input', 'dge_analysis',
+                                '2021-02-01_single_cell__cdr_annotation_cyto')
 
     # create output path
-    output_path = os.path.join(os.environ['PYTHONPATH'].split(os.pathsep)[0], "output", "SupplFigure_4CD", str(today))
+    output_path = os.path.join("..", "..", "..", "output", "SupplFigure_4CD", str(today))
     os.makedirs(output_path, exist_ok=True)
 
     main(dataset_type=dataset, save_folder=output_path, df_keys=columns, log=log_transform,

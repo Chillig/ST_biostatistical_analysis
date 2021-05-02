@@ -1,3 +1,11 @@
+#!/usr/bin/env python
+"""Plot single cell data clusters
+    File name: SuppFig4A__SC_UMAP_clusters.py
+    Author: Christina Hillig
+    Date created: March/xx/2021
+    Date last modified: April/30/2021
+    Python Version: 3.7
+"""
 from python_scripts.utils import gene_lists, add_observables
 
 import scanpy as sc
@@ -144,33 +152,30 @@ def main(save_folder, pp_adata, cluster_algorithm):
     # 1. load gene list
     cytokines, allinone, cytoresps_dict = gene_lists.get_publication_cyto_resps()
 
-    # 2. Apply normalisation, HVG, PCA -> UMAP
-    # normed_sc_adata = init.preparation(adata=unpp_adata, save_folder=save_folder, key="unbc_sc", vg='HVG')
-
-    # 3. Get observable for cytokine genes
+    # 2. Get observable for cytokine genes
     pp_adata, _ = add_observables.convert_variable_to_observable(
         adata=pp_adata, gene_names=cytokines, task='cell_gene', label='celltype', condition=None)
 
-    # 4. Apply cluster algorithm
+    # 3. Apply cluster algorithm
     pp_adata, key = apply_clusteralgo(adata=pp_adata, algorithm=cluster_algorithm, resolution=0.1)
 
-    # 5. Annotate clusters with expert opinion - before the best resolution r=0.1 was identified
+    # 4. Annotate clusters with expert opinion - before the best resolution r=0.1 was identified
     pp_adata = annotate_cluster(adata=pp_adata, cluster_algorithm=cluster_algorithm, resolution=0.1)
 
-    # 6. Plot UMAP scRNAseq data
+    # 5. Plot UMAP scRNAseq data
     visualise_clusters(adata=pp_adata, save_folder=save_folder, key='cluster_labels', title="SC")
 
 
 if __name__ == '__main__':
     today = date.today()
-    wd_path = os.environ['PYTHONPATH'].split(os.pathsep)[0]
     # create saving folder
-    output_path = os.path.join(wd_path, "output", "SupplFigure_4A", str(today))
+    output_path = os.path.join("..", "..", "..", "output", "SupplFigure_4A", str(today))
     os.makedirs(output_path, exist_ok=True)
 
     # Load data:
     # Use merged scRNAseq samples for publication
-    pp_adata_sc = sc.read(os.path.join(wd_path, 'adata_storage/2020-10-19/sc_adata_minumi_600_maxumi_25000_mg_500_mc_20_mt_0_25.h5'))
+    pp_adata_sc = sc.read(os.path.join("..", "..", "..", 'adata_storage', '2020-10-19',
+                                       'sc_adata_minumi_600_maxumi_25000_mg_500_mc_20_mt_0_25.h5'))
 
     unsupvised_cluster_algo = 'leiden'
 

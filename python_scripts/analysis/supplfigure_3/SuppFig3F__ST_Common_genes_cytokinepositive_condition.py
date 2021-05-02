@@ -1,3 +1,12 @@
+#!/usr/bin/env python
+"""Find common up-regulated genes in the cytokine positive groups across IL-17A, IL-13, and IFN-g
+    File name: SuppFig3F__ST_Common_genes_cytokinepositive_condition.py
+    Author: Christina Hillig
+    Date created: March/xx/2021
+    Date last modified: April/30/2021
+    Python Version: 3.7
+"""
+
 import pandas as pd
 import os
 from datetime import date
@@ -25,16 +34,17 @@ def save_genes(genes, output_path, title):
     df.to_excel(os.path.join(output_path, "".join([title, '.xlsx'])))
 
 
-def main():
+def main(save_folder):
     today = date.today()
     # create output path
-    output_path = os.path.join(os.environ['PYTHONPATH'].split(os.pathsep)[0], "results", "Pan_ncISDgenes", str(today))
+    output_path = os.path.join(save_folder, "Pan_ncISDgenes", str(today))
     os.makedirs(output_path, exist_ok=True)
 
-    input_path = "/Users/christina.hillig/PycharmProjects/Cellranger_analysis/results/PaperFigure_3B/2021-03-22/spatial/Whole_T_cell_matrix__cdr_patient_annotation_cyto"
-    df_il17a = load_files(os.path.join(input_path, "IL17A/IL17A_glmGamPoi_DGE.csv"))
-    df_il13 = load_files(os.path.join(input_path, "IL13/IL13_glmGamPoi_DGE.csv"))
-    df_ifng = load_files(os.path.join(input_path, "IFNG/IFNG_glmGamPoi_DGE.csv"))
+    input_path = os.path.join(save_folder, "output", "Figure_3B", str(today),
+                              "spatial", "Whole_T_cell_matrix__cdr_patient_annotation_cyto")
+    df_il17a = load_files(os.path.join(input_path, "IL17A", "IL17A_glmGamPoi_DGE.csv"))
+    df_il13 = load_files(os.path.join(input_path, "IL13", "IL13_glmGamPoi_DGE.csv"))
+    df_ifng = load_files(os.path.join(input_path, "IFNG", "IFNG_glmGamPoi_DGE.csv"))
 
     # get significant in cyto+ group
     m_sig_il17a = (df_il17a['pval'].values <= 0.05) & (df_il17a['log2fc'].values <= -1)
@@ -58,7 +68,8 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    savepath = os.path.join("..", "..", "..", "output")
+    main(save_folder=savepath)
 
 
 # todo path and copy input

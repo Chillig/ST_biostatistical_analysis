@@ -1,3 +1,12 @@
+#! /usr/bin/python
+"""Get counts of cytokine and CD4/8 positive cells
+    File name: Fig2C_SC_cytokine_expression.py
+    Author: Christina Hillig
+    Date created: xx/xx/2020
+    Date last modified: May/02/2021
+    Python Version: 3.7
+"""
+
 from python_scripts.utils import gene_lists, add_observables as ctools
 
 import scanpy as sc
@@ -138,13 +147,12 @@ def main(save_folder, adata):
 
 if __name__ == '__main__':
     today = date.today()
-    wd_path = os.environ['PYTHONPATH'].split(os.pathsep)[0]
     # create saving folder
-    output_path = os.path.join(wd_path, "output", "Figure_2C", str(today))
+    output_path = os.path.join("..", "..", "..", "output", "Figure_2C", str(today))
     os.makedirs(output_path, exist_ok=True)
 
     # Load data:
     # Use merged scRNAseq samples for publication
-    adata_sc = sc.read(os.path.join(wd_path, 'adata_storage/2020-11-30/sc_adata_unpp.h5'))
+    adata_sc = sc.read(os.path.join("..", "..", "..", 'adata_storage', '2020-11-30', 'sc_adata_unpp.h5'))
 
     main(save_folder=output_path, adata=adata_sc)

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """Signed log10-transformed p-value plot comparing DGE Analysis results of ST and scRNA-seq data sets
-    File name: 3E__STSC_Correlation_IL17A.py
+    File name: Fig3E__STSC_Correlation_IL17A.py
     Author: Christina Hillig
     Date created: March/06/2021
     Date last modified: April/29/2021
@@ -601,14 +601,11 @@ if __name__ == '__main__':
     today = date.today()
 
     # 2. create saving folder in current project path
-    savepath = os.path.join(os.environ['PYTHONPATH'].split(os.pathsep)[0],
-                            "output", "Figure_3E", str(today))
+    savepath = os.path.join("..", "..", "..", "output", "Figure_3E", str(today))
     os.makedirs(savepath, exist_ok=True)
 
     # 3. Load DGE Analysis results
-    user_path = "/Users/christina.hillig"
-    input_path = os.path.join(
-        user_path, "PycharmProjects/ST_Immune_publication/Publication_analysis/input/dge_analysis")
+    input_path = os.path.join("..", "..", "..", "input", "dge_analysis")
 
     # load df's using pandas
     comparisons = "_".join([cytokine, 'vs_Others'])

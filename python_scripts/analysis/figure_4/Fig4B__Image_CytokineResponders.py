@@ -1,3 +1,11 @@
+#!/usr/bin/env python
+"""Visualise cytokine and responder positive spots with counts on an image
+    File name: Fig4B__Image_CytokineResponders.py
+    Author: Christina Hillig
+    Date created: November/xx/2020
+    Date last modified: 4/29/2021
+    Python Version: 3.7
+"""
 from python_scripts.utils import gene_lists, add_observables as ctools
 
 import scanpy as sc
@@ -235,7 +243,8 @@ def convert_categories_cytokines_responders_others(adata, cyto_responder_genes, 
     return adata
 
 
-def main(save_folder, adata, img_key):
+def main(save_folder, adata):
+    img_key = 'hires'
     # 1. Get cytokines and responders
     t_cell_cytocines, cyto_resps_list, cytokine_responders = gene_lists.get_publication_cyto_resps()
 
@@ -253,12 +262,11 @@ def main(save_folder, adata, img_key):
 if __name__ == '__main__':
     today = date.today()
     # create saving folder in current project path
-    savepath = os.path.join(os.environ['PYTHONPATH'].split(os.pathsep)[0], "output", "Figure_4B", str(today))
+    savepath = os.path.join("..", "..", "..", "output", "Figure_4B", str(today))
     os.makedirs(savepath, exist_ok=True)
 
     # 2. Load unpre-processed anndata object
-    unpp_st_adata = sc.read(os.path.join(os.environ['PYTHONPATH'].split(os.pathsep)[0],
-                                         "adata_storage/2020-10-06/st_adata_P15509_P16357_wo_4_7_unpp.h5"))
+    unpp_st_adata = sc.read(
+        os.path.join("..", "..", "..", "adata_storage", "2020-10-06", "st_adata_P15509_P16357_wo_4_7_unpp.h5"))
 
-    img_resolution = 'hires'
-    main(save_folder=savepath, adata=unpp_st_adata, img_key=img_resolution)
+    main(save_folder=savepath, adata=unpp_st_adata)
