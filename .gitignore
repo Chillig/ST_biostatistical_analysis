@@ -9,7 +9,8 @@
 *.hdf5
 *.h5
 
-# General files 
+# General files
+*.ini
 *.pdf
 *.csv
 *.xlsx
@@ -52,10 +53,7 @@ __pycache__/
 *.tar.gz
 
 # All input and output directories
-adata_storage/
 data/
-output/
-input/
 r_scripts/data
 r_scripts/environment
 r_scripts/results
