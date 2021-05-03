@@ -29,7 +29,7 @@ leukocytes, density clustering, .. <br>
 Short summary of key message <br>
 
 add Workflow figure <br>
-![]()
+![Workflow_final.pdf](/Users/christina.hillig/Documents/Projects/IGSSE-TUM_Projects/K_Eyerich_skin_spatial_transcriptomics/Paper/Low_mRNA_cytokines/Figure_1/Workflow_final.pdf)
 
 
 ## Lets get started!
@@ -74,31 +74,27 @@ These 56 samples were then used for the analysis.
 In a second step the data was filtered for low expressed genes and putative batch effects were identified.
 
 
+
 ### Preprocessing
 Before the samples are analysed, they have been preprocessed by applying the standard procedures 
 such as quality control (QC), filtering, normalisation and batch correction. 
 You can find the scripts here: [Source code - Preprocessing](https://github.com/Chillig/ST_biostatistical_analysis/tree/main/python_scripts/pre_processing) <br>
-In a first step, a config file is generated containing the information about, for instance, 
-data set type, applied preprocessing steps, and path variables. This gives you the possibility to check later which 
-parameters and thresholds you have set. The in the script 
-```{bash}
-# Run script init_variables.py in terminal:
-/path/to/conda_dir/py37_sc_rpy2_diffxpy/bin/python /path/to/Publication_analysis/python_scripts/pre_processing/init_variables.py
-
-# If you open the script in PyCharm select the conda environment py37_sc_rpy2_diffxpy and press play :)
-```
-In a second step, the preprocessing is initiated by running the preprocessing/main_preprocessing.py script. 
-It starts with loading the config file and continues with the count matrix together with the images, manual annotations, spot positions, 
-and further information. The input is saved in an annData object. <br>
+The preprocessing is initiated by running [main_preprocessing.py](https://github.com/Chillig/ST_biostatistical_analysis/tree/main/python_scripts/pre_processing/main_preprocessing.py):
+```{python}
+/path/to/conda_dir/py37_sc_rpy2_diffxpy/bin/python /path/to/Publication_analysis/python_scripts/pre_processing/main_preprocessing.py
+``` 
+It starts with creating a config file [Config - init_variables.py](https://github.com/Chillig/ST_biostatistical_analysis/tree/main/python_scripts/pre_processing/init_variables.py) 
+and continues with loading the count matrix together with the images, manual annotations, spot positions, 
+and further information. The input is saved in [adata_storage](). <br>
+The config file contains information about, for instance, data set type, applied preprocessing steps, and path variables.
+This gives you the possibility to check later which parameters and thresholds you have set. <br>
 During the preprocessing phase, the script will ask you which thresholds for the QC and how many 
 Principal Components (PCs) to use.
-```{python}
 
-```
 
 ### Analysis
-Figures created with the source code can be recreated by running 
-[main_analysis.py](https://github.com/Chillig/ST_biostatistical_analysis/blob/main/python_scripts/analysis/main_analysis.py)  by the command: 
+Figures generated with the source code can be recreated by running 
+[Analysis - main_analysis.py](https://github.com/Chillig/ST_biostatistical_analysis/blob/main/python_scripts/analysis/main_analysis.py):
 ```{python}
 /path/to/conda_dir/py37_sc_rpy2_diffxpy/bin/python /path/to/Publication_analysis/python_scripts/analysis/main_analysis.py
 ```
