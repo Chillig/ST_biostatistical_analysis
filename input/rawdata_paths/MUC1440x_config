@@ -1,0 +1,11 @@
+{"file_path": "/Volumes/Samsung_T5/IGSSE-TUM__datasets/Skin_singel-cell_RNA-seq__Stefanie_Eyerich/results_cell_ranger_pipeline/cellranger/",
+"sample_strings": "MUC1440",
+"sample_id_strings": ["1", "2"],
+"output_type_matrix": "/count_matrices/",
+"raw_feature_bc_matrix_folder": "raw_feature_bc_matrix/",
+"filtered_feature_bc_matrix_folder": "filtered_feature_bc_matrix/",
+"barcode_file_end": "barcodes.tsv",
+"features_file_end": "features.tsv",
+"matrix_file_end": "matrix.mtx",
+"raw_hdf5_file_end": "raw_feature_bc_matrix.h5",
+"filtered_hdf5_file_end": "filtered_feature_bc_matrix.h5"}
