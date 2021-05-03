@@ -91,13 +91,13 @@ This gives you the possibility to check later which parameters and thresholds yo
 During the preprocessing phase, the script will ask you which thresholds for the QC and how many 
 Principal Components (PCs) to use.<br>
 #### Overview of used Threshold and algorithms
-Applied Thresholds: <br>
-QC: 
-1. 
-1. 
-1. 
-PCs: 8 n_pcs ST and 7 n_pcs for singel cell data
-Batch correction algorithm: [scanorama]()
+Applied thresholds: <br>
+QC: <br>
+1. <br>
+2. <br>
+3. <br>
+PCs: 8 n_pcs ST and 7 n_pcs for singel cell data<br>
+Batch correction algorithm: [ADD URL - scanorama]()
 
 
 ### Analysis
@@ -106,10 +106,10 @@ Figures generated with the source code can be recreated by running
 ```{python}
 /path/to/conda_dir/py37_sc_rpy2_diffxpy/bin/python /path/to/Publication_analysis/python_scripts/analysis/main_analysis.py
 ```
-List Parameters: <br>
-1. p-value cut-off: 0.05
-1. log2FC cut: 1.0
-1. adjusted p-value: 0.05
+List parameters: <br>
+1. p-value cut-off: 0.05 <br>
+2. log2FC cut: 1.0<br>
+3. adjusted p-value: 0.05<br>
 
 ### DGE analysis
 In order to determine characteristic genes associated with cytokine-expressing leukocytes, 
