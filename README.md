@@ -85,29 +85,37 @@ The preprocessing is initiated by running [main_preprocessing.py](https://github
 ``` 
 It starts with creating a config file [Config - init_variables.py](https://github.com/Chillig/ST_biostatistical_analysis/tree/main/python_scripts/pre_processing/init_variables.py) 
 and continues with loading the count matrix together with the images, manual annotations, spot positions, 
-and further information. The input is saved in [adata_storage](). <br>
+and further information. The input is saved in [adata_storage](https://github.com/Chillig/ST_biostatistical_analysis/blob/main/python_scripts/adata_storage). <br>
 The config file contains information about, for instance, data set type, applied preprocessing steps, and path variables.
 This gives you the possibility to check later which parameters and thresholds you have set. <br>
 During the preprocessing phase, the script will ask you which thresholds for the QC and how many 
-Principal Components (PCs) to use.
+Principal Components (PCs) to use.<br>
+#### Overview of used Threshold and algorithms
+Applied Thresholds: <br>
+QC: 
+1. 
+1. 
+1. 
+PCs: 8 n_pcs ST and 7 n_pcs for singel cell data
+Batch correction algorithm: [scanorama]()
 
 
 ### Analysis
 Figures generated with the source code can be recreated by running 
-[Analysis - main_analysis.py](https://github.com/Chillig/ST_biostatistical_analysis/blob/main/python_scripts/analysis/main_analysis.py):
+[main_analysis.py - Analysis](https://github.com/Chillig/ST_biostatistical_analysis/blob/main/python_scripts/analysis/main_analysis.py):
 ```{python}
 /path/to/conda_dir/py37_sc_rpy2_diffxpy/bin/python /path/to/Publication_analysis/python_scripts/analysis/main_analysis.py
 ```
-
-
-### Clustering
-
+List Parameters: <br>
+1. p-value cut-off: 0.05
+1. log2FC cut: 1.0
+1. adjusted p-value: 0.05
 
 ### DGE analysis
 In order to determine characteristic genes associated with cytokine-expressing leukocytes, 
 a DGE analysis was performed between spots / cells containing cytokine-positive leukocytes and 
 cytokine-negative leukocytes. A Vignette can be found here 
-[Vignette - DGE_Analysis](https://github.com/Chillig/ST_biostatistical_analysis/blob/main/r_scripts/dge_analysis/Vignette__DGE_Analysis.Rmd).
+[Vignette - DGE Analysis](https://github.com/Chillig/ST_biostatistical_analysis/blob/main/r_scripts/dge_analysis/Vignette__DGE_Analysis.Rmd).
 
 ### Pathway enrichment analysis
 The output of the DGE analysis containing the gene names, p-values, and log2FC are used as input for 
@@ -119,3 +127,6 @@ this type of analysis. A Vignette can be found here
 #### Conditional density clustering
 
 #### Spatially weighted correlation 
+
+## References
+
