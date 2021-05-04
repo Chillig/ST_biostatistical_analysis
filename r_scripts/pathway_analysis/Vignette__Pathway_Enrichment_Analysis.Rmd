@@ -2,7 +2,9 @@
 title: "Vignette__Pathway_Enrichment_Analysis"
 author: "Christina Hillig"
 date: "3/15/2021"
-output: html_document
+output:
+  html_document: default
+  pdf_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -11,7 +13,7 @@ knitr::opts_chunk$set(eval = FALSE)
 ```
 
 # Introduction
-The following section describes the pathway enrichment analysis of upregulated genes in the IL17A transcript positive and negative group in T-cell spots in the ST data set. 
+The following section describes the pathway enrichment analysis of up-regulated genes in the IL17A transcript positive and negative group in Leukocytes in the ST data set. 
 
 # Initialisation
 ```{r, echo=FALSE}
@@ -23,7 +25,7 @@ print("Running under: macOS Catalina 10.15.7)")
 Load required R and Bioconductor packages:
 ```{r, message=FALSE}
 # R packages
-rlibs <- c("dplyr", "gtools", "hash", "kableExtra", "knitr", "stringr", "tibble", "xlsx")
+rlibs <- c("dplyr", "gtools", "hash", "kableExtra", "knitr", "stringr", "tibble", "xlsx", "hash")
 invisible(lapply(rlibs, require, character.only = TRUE))
 # Bioconductor packages
 bioclibs <- c("ReactomePA", "pathview",  "enrichplot")
@@ -33,58 +35,228 @@ getwd()
 environment()
 
 # Source R-scripts
-source('../scripts/init.R')
-source('../scripts/load_data.R')
-source('../scripts/utils.R')
+source('./init.R')
+source('./load_data.R')
+source('./utils.R')
 # R-script to import immune Pathways which shall be highlighted in the publication
-source('../scripts/"ImmunePublication_pathways.R"', local=environment())
+source('./pathway_lists.R', local=environment())
 # R-script to plot the Pathway enrichment result
-source("../scripts/PA_plotting_functions.R", , local=environment())
+source("./plot_pathways.R", , local=environment())
 ```
 
 Define input directory.
 ```{r}
 ## Input 
 # Input directory 
-input.folder = "/Users/christina.hillig/R_studio/NGS_Pathway_analysis/Input"
+# TODO change to relative path
+input.folder = "/Users/christina.hillig/PycharmProjects/ST_Immune_publication/Publication_analysis/input/pathway_analysis"
 # Date
 date = "2021-02-01"
 # Data set 
-dataset.type = 'Tcells'
+dataset.type = 'Leukocytes'
 # Sequencing technique
 seq.technique = "ST"  
 # Comparison
 cytokine = 'IL17A'
+comparison = 'IL17A_vs_Others'
+plot_cytokine = TRUE
 
+# Used design function:
+design.function = "cdr_patient_annotation_cyto"
 
 # General input directory
-input.dir = get_inputdir(input.dir=input.folder, date.file=date, dataset.type=dataset.type, seq.technique=seq.technique, comparison=cytokine)
+input.dir = get_inputdir(input.folder = input.folder, date.file = date, 
+                         dataset.type = dataset.type, seq.technique = seq.technique, 
+                         comparison = comparison, design.function = design.function,
+                         genename=cytokine)
 
 print(input.dir)
 
 num.samples_per_donor = 2
 ```
-Determine cut-parameters applied to identify differential expressed (DEx) genes.
+Determine cut-parameters to identify differential expressed genes and enriched pathways.
 ```{r}
-## DGE Analysis parameters
-# Used DGE Analysis library
-dge.method = 'glmGamPoi'
-
 # Cut parameter
 l2fc.factor = 1
 fdr.value = 0.05
-pval_cut = 0.05
-p_value = 0.05
+pval.cut = 0.05
+p.value = 0.05
 minGSSize = 10
 # Multi-test method Benjamini-Hochberg (BH)
 multitest.method =  "BH" 
+```
+```{r}
+# Plot Parameters
+show_dotplot_categories = 15
 
+width_img = 16
+height_img = 8
 ```
 Create output directory.
 ```{r}
 ## Output
+output.folder = file.path("..", "..")
 # General output directory
-output.dir <- get_outputdir(dataset.type = dataset.type, dge.method = dge.method, 
-                            seq.technique = seq.technique)
+output.dir <- get_outputdir(output.folder = output.folder, dataset.type = dataset.type,
+                            seq.technique = seq.technique, genename=cytokine)
 print(output.dir)
 ```
+Load DGE analysis results and prepare dataframe for further analysis steps.
+```{r}
+# 1. Get all DGE .csv files in subfolders
+all_filenames = list.files(path = input.dir, pattern = c("*.csv|*.xlsx"), recursive = TRUE)
+# 2. remove metaData from list
+dge_filename = all_filenames[!grepl("metaData*", all_filenames)]
+# 3. Load DGE Analysis result file with colnames: 
+# "X" "gene_symbol" "gene_name" "entrezid" "pval" "padj" "log2fc" "hkg"
+df.dge_res = load_files(path_name_file = file.path(input.dir,  dge_filename))
+
+# 4. Filter data for duplicates, unwanted columns
+df.dge_res <- filter_data(df.data = df.dge_res, signature_gene = cytokine,
+                          plot_signaturecytokine=TRUE) 
+```
+
+# Pathway enrichment analysis
+## Gene symbol to entrezID
+```{r}
+df.dge_res = rename_genetoentrezid(df.dge_results = df.dge_res) 
+```
+## Get significantly DEx genes and background genes
+```{r}
+# II. Define significant DEx genes and background genes
+# II.a) sort genes into groups belonging either to reference or test (control) condition
+df.ref_degenes = get_significantgenes(df.dge_results = df.dge_res, p_value = p.value,
+                              lfc_factor = -l2fc.factor, op = `<`) 
+df.ref = df.ref_degenes[[1]]
+# II. Rank genes based on their fold change
+ranked_genes.ref = do_rank_genes(df.dge_results = df.ref)
+
+df.ctrl_degenes = get_significantgenes(df.dge_results = df.dge_res, p_value = p.value,
+                                       lfc_factor = l2fc.factor, op = `>`) 
+df.ctrl = df.ctrl_degenes[[1]]
+
+# II. Rank  genes based on their fold change
+ranked_genes.ctrl = do_rank_genes(df.dge_results = df.ctrl)
+
+# II.b) Background genes are all genes from our (sup-) data set
+bg_genes <- as.character(df.dge_res$entrezid)
+```
+## Identify enriched pathways using ReactomePA
+```{r}
+# III.a) Find enriched Pathways for reference condition
+reactome_object.ref <- enrichPathway(gene = df.ref_degenes[[2]], # a vector of entrezID
+                                     universe = bg_genes,
+                                     organism = 'human', 
+                                     qvalueCutoff = fdr.value, 
+                                     pvalueCutoff = pval.cut, 
+                                     pAdjustMethod = multitest.method, 
+                                     minGSSize = minGSSize,
+                                     maxGSSize = 500,
+                                     readable = T)
+
+# III.b) Find enriched Pathways for control condition
+reactome_object.ctrl <- enrichPathway(gene = df.ctrl_degenes[[2]], # a vector of entrezID
+                                      universe = bg_genes,
+                                      organism = 'human', 
+                                      qvalueCutoff = fdr.value, 
+                                      pvalueCutoff = pval.cut, 
+                                      pAdjustMethod = multitest.method, 
+                                      minGSSize = minGSSize,
+                                      maxGSSize = 500,
+                                      readable = T)
+
+################### ---> convert gene ID to Symbol <--- ################### 
+# Pathway Enrichment
+reactome.ctrl = setreadable_pa(paenrich_object = reactome_object.ctrl)
+reactome.ref = setreadable_pa(paenrich_object = reactome_object.ref) 
+```
+
+## Save Pathwyas
+```{r}
+#############################################################################
+################### ---> Save results to csv file <--- ###################### 
+#############################################################################
+# Attention: 
+# ctrl (= negative log2FC) and ref (= positive log2FC) are switched for Immune publication
+save_enrichobject_as_csv(paenrich_object = reactome.ctrl, condition = 'Cytoneg', 
+                         pa_database = 'REACTOME', output_path = output.dir) 
+save_enrichobject_as_csv(paenrich_object = reactome.ref, condition = 'Cytopos', 
+                         pa_database = 'REACTOME', output_path = output.dir) 
+```
+## Plot pathways
+```{r}
+#############################################################################
+############################### ---> PLOTS <--- ############################# 
+#############################################################################
+# IV.a) Plot variables
+# select pathways or Enriched gene sets manually
+publication_pas = pathwaysofinterest()
+if (sample == 'single_cell') 
+{
+  pas_publication = grep(paste('sc', cytokine, sep = "_"), hash::keys(publication_pas), 
+                         value = TRUE)
+} else 
+{
+  pas_publication = grep(paste('st', cytokine, sep = "_"), hash::keys(publication_pas), 
+                         value = TRUE)
+}
+show_categories = publication_pas[[pas_publication]]
+
+######### ---> Save Pathway Enrichment Analysis Plots and Files <--- #########
+# IV.b) Reference Condition
+# If a gene is associated with two or more enriched PAs 
+# but less than those are shown than this results in a bug 
+# ==> the log2FC of that gene is not correctly shown
+if (!is.null(nrow(reactome.ref)))
+{
+  if (nrow(reactome.ref) > 1 & any(show_categories %in% reactome.ref$Description)) 
+  {
+    # Cnetplots to visualise enriched pathways
+    pdf(file = file.path(output.dir, "Cytopos_REACTOME_Pathway_Enrichment_Analysis.pdf"),
+        width = width_img, height = height_img)
+    print(fig.pathways.REACTOME(reactome_res = reactome.ref, 
+                                entrezid_log2fc = ranked_genes.ref,
+                                showCategories = show_categories))
+    dev.off()
+    
+    # Dotplot to visualise enriched pathways
+    pdf(file = file.path(output.dir, "Cytopos_REACTOME_dotplot.pdf"),
+        width = height_img, height = height_img)
+    print(fig.pathway.dotplot(pathway_res = reactome.ref,
+                              showCategories = show_dotplot_categories, 
+                              method = 'REACTOME'))
+    dev.off()
+    
+  }
+}
+
+# IV.c) Control Condition
+if (!is.null(nrow(reactome.ctrl)))
+{
+  if (nrow(reactome.ctrl) > 1 & any(show_categories %in% reactome.ctrl$Description)) 
+  {
+    # Cnetplots to visualise enriched pathways
+    pdf(file = file.path(output.dir, "Cytoneg_REACTOME_Pathway_Enrichment_Analysis.pdf"),
+        width = width_img, height = height_img)
+    print(fig.pathways.REACTOME(reactome_res = reactome.ctrl, 
+                                entrezid_log2fc = ranked_genes.ctrl,
+                                showCategories = show_categories))
+    dev.off()
+    
+    # Dotplot to visualise enriched pathways
+    pdf(file = file.path(output.dir, "Cytoneg_REACTOME_dotplot.pdf"),
+        width = height_img, height = height_img)
+    print(fig.pathway.dotplot(pathway_res = reactome.ctrl,
+                              showCategories = show_dotplot_categories, 
+                              method = 'REACTOME'))
+    dev.off()
+  }
+}
+```
+
+# References
+```{r}
+sessionInfo()
+```
+
+

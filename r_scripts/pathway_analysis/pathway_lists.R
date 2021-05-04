@@ -1,12 +1,12 @@
-
+#! /usr/bin/Rscript
 library('hash')
 
-#' Pathways which shall be visualized in the paper
+#' Pathways which shall be shown in the paper
 #' 
 #' @return hash dictionary containing pathways for each DGE Analysis
 pathwaysofinterest <- function() 
 {
-  pa_publication = hash()
+  pa_publication = hash::hash()
   # Single cell enriched Pathways
   pa_publication['sc_IFNG_pa'] <- c(
     'G alpha (i) signalling events', 'Signaling by Interleukins', 
