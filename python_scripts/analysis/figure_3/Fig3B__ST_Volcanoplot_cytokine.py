@@ -172,10 +172,11 @@ def plot_violins(adata, group, groupby, output_folder, log=False):
     else:
         color_gene = "purple"
 
-    fig, axs = plt.subplots(figsize=figure_size)
+    kwargs = {"saturation": 1}
+    fig, axs = plt.subplots(figsize=figure_size, dpi=1200)
     sc.pl.violin(adata, "_".join([group, 'group']), use_raw=False, layer='counts',
                  groupby=groupby, palette=[color_gene, "grey"], xlabel=" ", inner='box', split=False,
-                 stripplot=False, jitter=False, size=2, cut=0, show=False, ax=axs, bw=.1)
+                 stripplot=False, jitter=False, size=2, cut=0, show=False, ax=axs, bw=.1, **kwargs)
     if np.amax(adata.obs["_".join([group, 'group'])]) <= 10:
         axs.set_yticks(np.arange(0, np.amax(adata.obs["_".join([group, 'group'])]) + 1, 1))
     axs.tick_params(axis="y", labelsize=xy_ticks)
@@ -258,14 +259,14 @@ def set_axislimits(cytokine):
 
     """
     if cytokine == 'IFNG':
-        xlim = [-10, 35]
+        xlim = [-15, 35]
         ylim = [0, 50]
     elif cytokine == 'IL13':
-        xlim = [-10, 30]
-        ylim = [0, 20]
+        xlim = [-15, 30]
+        ylim = [0, 12.5]
     elif cytokine == 'IL17A':
-        xlim = [-10, 30]
-        ylim = [0, 45]
+        xlim = [-15, 30]
+        ylim = [0, 42]
     else:
         xlim = None
         ylim = None
@@ -364,7 +365,11 @@ def volcano_plot(df, df_keys, cytokine, label_genes, title, save_folder, adjust=
     ax.tick_params(labelsize=xy_ticks)
     # remove upper and right border
     ax.spines["top"].set_visible(False)
+    ax.spines["left"].set_visible(True)
     ax.spines["right"].set_visible(False)
+
+    # # set y-axis to the right
+    # ax.yaxis.set_ticks_position("right")
 
     # Add annotations: Driver and Responder genes
     texts = []
@@ -394,7 +399,7 @@ def plotly_interactive_volcano(df, df_keys, save_folder, key, x_lab, y_lab, log2
     df : pandas.Dataframe
         DGE Analysis results
     df_keys : 'list' ['str']
-        containing dataframe keys from inbetweener, up- and down-regulated genes
+        containing data frame keys from inbetween, up- and down-regulated genes
     save_folder : str
         path to save folder
     key : str
@@ -572,8 +577,8 @@ def main(dataset_type, save_folder, df_keys, log, dge_results_folder):
                 allgenes_df = allgenes_df.drop(['Unnamed: 0'], axis=1)
 
                 # Check if column names and row names are unique
-                print("Unique Genes Stratified Sampling:", allgenes_df['gene_symbol'].is_unique)
-                print("Unique Genes Stratified Sampling:", allgenes_df.columns.is_unique)
+                print("Unique Genes:", allgenes_df['gene_symbol'].is_unique)
+                print("Unique Columns:", allgenes_df.columns.is_unique)
                 # remove duplicated rows
                 allgenes_df = allgenes_df.loc[~allgenes_df['gene_symbol'].duplicated(), :]
 
