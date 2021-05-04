@@ -162,7 +162,7 @@ def main(save_folder, bulk_rnaseq, metadata):
 if __name__ == '__main__':
     today = date.today()
     # create saving folder
-    output_path = os.path.join("..", "..", "..", "output", "Figure_1_Bulk_RNAseq", str(today))
+    output_path = os.path.join("..", "..", "..", "output", "Figure_1K", str(today))
     os.makedirs(output_path, exist_ok=True)
 
     # input path
