@@ -59,6 +59,32 @@ def add_metadata(adata):
     return adata, tissue_cell_labels, disease_labels, lesion_labels
 
 
+def add_tissue_obs(adata):
+    """Add tissue layers as observable to adata
+
+    Parameters
+    ----------
+    adata : annData
+
+    Returns
+    -------
+
+    """
+    # 1 Select tissue types of interest
+    tissue_types = ['upper EPIDERMIS', 'middle EPIDERMIS', 'basal EPIDERMIS',
+                    'DERdepth1', 'DERdepth2', 'DERdepth3', 'DERdepth4', 'DERdepth5', 'DERdepth6', 'DERdepth7',
+                    'INTERFACE']
+
+    adata.obs['tissue_type'] = 'Unknown'
+    adata.obs['tissue_type'] = adata.obs['tissue_type'].astype('<U64')
+    for tissue in tissue_types:
+        m_tissue = adata.obs[tissue] == 1
+        adata.obs['tissue_type'][m_tissue] = tissue
+
+    adata.obs['tissue_type'] = adata.obs['tissue_type'].astype('category')
+    return adata
+
+
 def convert_variable_to_observable(adata, gene_names, task='cell_gene', label='celltype', condition=None):
     """Add observable column to annData by gene(s) of interest
 
