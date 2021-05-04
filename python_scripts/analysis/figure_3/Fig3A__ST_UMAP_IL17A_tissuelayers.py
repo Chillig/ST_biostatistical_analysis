@@ -37,6 +37,20 @@ img_key = 'hires'
 
 
 def plot_tissueregions_cyto(adata, obs_name, title, save_folder, gene_colors=None):
+    """Plot UMAP embedded tissue regions with IL17A on top
+
+    Parameters
+    ----------
+    adata : annData
+    obs_name : str
+    title : str
+    save_folder : str
+    gene_colors: None, list
+
+    Returns
+    -------
+
+    """
     if not gene_colors:
         gene_colors = []
         unique_genes = np.unique(adata.obs[obs_name])
@@ -110,7 +124,7 @@ def get_celltypes_data(adata, genes):
 
 
 def get_tissueregions(adata, tissue_label):
-    """
+    """Merge Epidermis layers into EPIDERMIS and Dermis layers into DERMIS
 
     :param adata:
     :param tissue_label:
