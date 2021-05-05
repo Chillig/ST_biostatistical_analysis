@@ -1,6 +1,6 @@
 # Few specific cytokine transcripts drive inflammatory skin diseases by initiating amplification cascades in localized epidermal cluster
-Schäbitz A*, Hillig C*, Farnoud A, Jargosch M, Scala E, Pilz C, Bhalla N, Mubarak M, Thomas J, Stahle M, Biedermann T, 
-Schmidt-Weber CB, Theis F, Garzorz-Stark N, Eyerich K*, Menden M*, Eyerich S* <br>
+Schäbitz A*, Hillig C*, Farnoud A, Jargosch M, Scala E, Pilz AC, Bhalla N, Mubarak M, Thomas J, Stahle M, Biedermann T, 
+Schmidt-Weber CB, Theis FJ, Garzorz-Stark N, Eyerich K*, Menden MP*, Eyerich S* <br>
 
 You can find the preprint version of the manuscript here: <br>
 [add URL](https://..??)
@@ -68,16 +68,18 @@ invisible(lapply(bioclibs, require, character.only = TRUE))
 
 
 ## Tutorial
-The results generated in this study have been created from un-preprocessed and pre-processed data. <br>
-In a first step, the quality of all 64 samples has been checked and 56 samples passed the Quality Control (QC). 
-These 56 samples were then used for the analysis.  
-In a second step the data was filtered for low expressed genes and putative batch effects were identified.
-
+The results generated in this study have been created from raw count matrices and pre-processed data. <br>
+An example with a subset of our data on how to run the pre-processing pipeline and our analysis can be found as a 
+[Add URL - google colab notebook]() or [Add URL - R markdown]().
 
 
 ### Preprocessing
 Before the samples are analysed, they have been preprocessed by applying the standard procedures 
 such as quality control (QC), filtering, normalisation and batch correction. 
+In a first step, the quality of all 64 ST samples has been checked and 56 samples passed the QC. 
+These 56 samples were then used for the analysis.  
+In a second step the data was filtered for bad qualitiy spots and low expressed genes and putative batch effects were 
+identified.
 You can find the scripts here: [Source code - Preprocessing](https://github.com/Chillig/ST_biostatistical_analysis/tree/main/python_scripts/pre_processing) <br>
 The preprocessing is initiated by running [main_preprocessing.py](https://github.com/Chillig/ST_biostatistical_analysis/tree/main/python_scripts/pre_processing/main_preprocessing.py):
 ```{python}
@@ -91,12 +93,15 @@ This gives you the possibility to check later which parameters and thresholds yo
 During the preprocessing phase, the script will ask you which thresholds for the QC and how many 
 Principal Components (PCs) to use.<br>
 #### Overview of used Threshold and algorithms
-Applied thresholds: <br>
 QC: <br>
+1. UMI-counts <br>
 1. <br>
-2. <br>
-3. <br>
-PCs: 8 n_pcs ST and 7 n_pcs for singel cell data<br>
+1. <br>
+Dimension reduction and visualisation:
+1. PCs: 
+   1. 8 n_pcs for spatial transcriptomics 
+   1. 7 n_pcs for singel cell data
+1. Neighborhood graph embedding: n = 15 <br>
 Batch correction algorithm: [ADD URL - scanorama]()
 
 
@@ -108,8 +113,8 @@ Figures generated with the source code can be recreated by running
 ```
 List parameters: <br>
 1. p-value cut-off: 0.05 <br>
-2. log2FC cut: 1.0<br>
-3. adjusted p-value: 0.05<br>
+2. log2FC cut: 1.0 <br>
+3. adjusted p-value: 0.05 <br>
 
 ### DGE analysis
 In order to determine characteristic genes associated with cytokine-expressing leukocytes, 
