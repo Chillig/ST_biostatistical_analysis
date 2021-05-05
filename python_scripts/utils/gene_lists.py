@@ -20,7 +20,6 @@ def leukocyte_markers():
     return marker
 
 
-
 def highlight_genes():
     """Driver and responder genes for the cytokines IL-17A, IFN-g, and IL-13
 
