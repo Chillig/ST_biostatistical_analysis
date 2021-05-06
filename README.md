@@ -128,10 +128,11 @@ this type of analysis. A Vignette can be found here
 [Vignette - Pathway Enrichment Analysis](https://github.com/Chillig/ST_biostatistical_analysis/blob/main/r_scripts/pathway_analysis/Vignette__Pathway_Enrichment_Analysis.Rmd).
 
 ### Correlation between cytokines and their signature responder genes
+We investigated the functional relevance of the few cytokine transcripts in lesional ncISD skin by looking at the 
+correlation between cytokine-positive spots and their responder signatures in the epidermis. 
+To do so we applied a density-based clustering customised for ST data and calculated the spatially weighted Pearson 
+correlation between the UMI-counts of cytokines and the responder counts. A tutorial can be found here [Add URL]().
 
-#### Conditional density clustering
-
-#### Spatially weighted correlation 
 
 ## References
 
