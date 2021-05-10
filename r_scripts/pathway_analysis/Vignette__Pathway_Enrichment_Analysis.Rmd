@@ -29,13 +29,13 @@ getwd()
 environment()
 
 # Source R-scripts
-source('./init.R')
-source('./load_data.R')
-source('./utils.R')
+source(file.path("..", "..", "r_scripts", "pathway_analysis", 'init.R'))
+source(file.path("..", "..", "r_scripts", "pathway_analysis", 'load_data.R'))
+source(file.path("..", "..", "r_scripts", "pathway_analysis",'utils.R'))
 # R-script to import immune Pathways which shall be highlighted in the publication
-source('./pathway_lists.R', local=environment())
+source(file.path("..", "..", "r_scripts", "pathway_analysis", 'pathway_lists.R'))
 # R-script to plot the Pathway enrichment result
-source("./plot_pathways.R", , local=environment())
+source(file.path("..", "..", "r_scripts", "pathway_analysis", "plot_pathways.R"))
 ```
 
 Define input directory.
@@ -43,7 +43,7 @@ Define input directory.
 ## Input 
 # Input directory 
 # TODO change to relative path
-input.folder = "/Users/christina.hillig/PycharmProjects/ST_Immune_publication/Publication_analysis/input/pathway_analysis"
+input.folder = file.path("..", "..", "input", "pathway_analysis")
 # Date
 date = "2021-02-01"
 # Data set 
