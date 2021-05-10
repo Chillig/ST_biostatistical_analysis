@@ -107,3 +107,21 @@ This analysis can be run by:
 ```{python}
 /path/to/conda_dir/py37_sc_rpy2_diffxpy/bin/python /path/to/Publication_analysis/python_scripts/spatial_correlation/main.py
 ```
+
+
+## License
+Reproduce the analysis for the manuscript "Low numbers of cytokine transcripts drive inflammatory skin diseases by 
+initiating amplification cascades in localized epidermal clusters" Copyright (C) 2021 Christina Hillig, Ali Farnoud and Michael Menden.
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
