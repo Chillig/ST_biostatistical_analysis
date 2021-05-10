@@ -28,9 +28,9 @@ def main(save_folder, adata):
 if __name__ == '__main__':
     today = date.today()
     # replace os.environ['PYTHONPATH'].split(os.pathsep)[0] with sys.path[2] -> can be run then in terminal
-    path = os.environ['PYTHONPATH'].split(os.pathsep)[0]
+    path = os.path.join("..", "..")
     # create saving folder in current project path
-    savepath = os.path.join(path, "output", "Spatial_weighted_correlation", str(today))
+    savepath = os.path.join(path, "output", "Fig4C_Spatial_weighted_correlation", str(today))
     os.makedirs(savepath, exist_ok=True)
 
     # Load Raw anndata --> used for publication figure 4
