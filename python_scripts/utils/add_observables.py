@@ -85,6 +85,19 @@ def add_tissue_obs(adata):
     return adata
 
 
+def add_disease_healthy_obs(adata):
+    # 1 Select tissue types of interest
+    diagnosis = ['PSO', 'AE', 'LICHEN', 'PRP']
+
+    adata.obs['healthy_disease'] = 'NON LESIONAL'
+    adata.obs['healthy_disease'] = adata.obs['healthy_disease'].astype('<U32')
+    for disease in diagnosis:
+        m_disease = (adata.obs[disease] == 1) & (adata.obs['NON LESIONAL'] == 0)
+        adata.obs['healthy_disease'][m_disease] = disease
+
+    return adata
+
+
 def convert_variable_to_observable(adata, gene_names, task='cell_gene', label='celltype', condition=None):
     """Add observable column to annData by gene(s) of interest
 
