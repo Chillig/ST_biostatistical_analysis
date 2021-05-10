@@ -235,9 +235,9 @@ def plot_compare_inex_respondercounts(adata, df_includedcounts, df_excludedcount
         col_names = "_".join([cyto, 'responder'])
 
         # Add non-responder and non-cytokine count distribution
-        m_cytoresp = (adata.obs["_".join([cyto, 'Responders_counts'])].values > 0) & \
-                     (adata.obs["_".join([cyto, 'counts'])].values > 0)
-        counts = adata.obs['n_counts'][~m_cytoresp]
+        # m_cytoresp = (adata.obs["_".join([cyto, 'Responders_counts'])].values > 0) & \
+        #              (adata.obs["_".join([cyto, 'counts'])].values > 0)
+        # counts = adata.obs['n_counts'][~m_cytoresp]
 
         # Apply test to check wether the responders are enriched in the cyto+ spots
         print(corr_stats.apply_wilcoxontest(df_includedcounts[col_names].values, df_excludedcounts[col_names].values))
@@ -251,10 +251,12 @@ def plot_compare_inex_respondercounts(adata, df_includedcounts, df_excludedcount
 
         df_includedcounts = df_includedcounts.rename(columns={col_names: included_colname})
         df_excludedcounts = df_excludedcounts.rename(columns={col_names: excluded_colname})
-        df_otherscounts = pd.DataFrame(counts.values, columns=['Others'])
+        # df_otherscounts = pd.DataFrame(counts.values, columns=['Others'])
 
+        # df_merged = pd.concat([df_includedcounts[included_colname],
+        #                        df_excludedcounts[excluded_colname], df_otherscounts['Others']], axis=1)
         df_merged = pd.concat([df_includedcounts[included_colname],
-                               df_excludedcounts[excluded_colname], df_otherscounts['Others']], axis=1)
+                               df_excludedcounts[excluded_colname]], axis=1)
         df_melted = pd.melt(df_merged)
 
         fig, ax = plt.subplots(figsize=fig_size)
