@@ -3,7 +3,7 @@ Schäbitz A*, Hillig C*, Farnoud A, Jargosch M, Scala E, Pilz AC, Bhalla N, Muba
 Biedermann T, Schmidt-Weber CB, Theis F, Garzorz-Stark N, Eyerich K*, Menden MP*, Eyerich S*§ <br>
 
 You can find the preprint version of the manuscript here: <br>
-[add URL](https://..??)
+[to be added soon](https://..??)
 
 
 ## Abstract
@@ -32,8 +32,8 @@ Further, the developed *conditional density clustering algorithm* can be found i
 python_scripts/spatial_correlation. <br> 
 All preprocessing steps and analysis are run in python. Solely the differential gene expression (DGE) analysis and 
 pathway enrichment analysis are run in R. <br> 
-A processed example data is provided in [Add URL](https://..??) and by running the pipeline the generated results will 
-be saved in the output folder. <br>
+A processed example data is provided in [to be added soon](https://..??) and by running the pipeline the generated 
+results will be saved in the output folder. <br>
 You can clone the repository by typing in the terminal the command: 
 ```{bash}
 git clone https://github.com/Chillig/ST_biostatistical_analysis.git
@@ -64,7 +64,7 @@ invisible(lapply(bioclibs, require, character.only = TRUE))
 ## Tutorial
 The results generated in this study have been created from raw count matrices and pre-processed data. <br>
 An example with a subset of our data on how to run the pre-processing pipeline and our analysis can be found as a 
-[Add URL - google colab notebook]() or [Add URL - R markdown]().
+*google colab to be added soon* or *R markdown to be added soon*.
 
 
 ### Preprocessing
@@ -102,11 +102,8 @@ correlation between cytokine-positive spots and their responder signatures in th
 To do so we applied a density-based clustering customised for ST data and calculated the spatially weighted Pearson 
 correlation between the UMI-counts of cytokines and the responder counts. 
 [Source code - spatial weighted correlation](https://github.com/Chillig/ST_biostatistical_analysis/tree/main/python_scripts/spatial_correlation) 
-and a [Add URL - tutorial]() is provided.
+is provided.
 This analysis can be run by:
 ```{python}
 /path/to/conda_dir/py37_sc_rpy2_diffxpy/bin/python /path/to/Publication_analysis/python_scripts/spatial_correlation/main.py
 ```
-
-## References
-
