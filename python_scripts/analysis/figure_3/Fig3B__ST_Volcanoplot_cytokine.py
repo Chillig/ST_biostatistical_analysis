@@ -173,7 +173,7 @@ def plot_violins(adata, group, groupby, output_folder, log=False):
         color_gene = "purple"
 
     kwargs = {"saturation": 1}
-    fig, axs = plt.subplots(figsize=figure_size, dpi=1200)
+    fig, axs = plt.subplots(figsize=figure_size, dpi=300)
     sc.pl.violin(adata, "_".join([group, 'group']), use_raw=False, layer='counts',
                  groupby=groupby, palette=[color_gene, "grey"], xlabel=" ", inner='box', split=False,
                  stripplot=False, jitter=False, size=2, cut=0, show=False, ax=axs, bw=.1, **kwargs)
@@ -190,7 +190,7 @@ def plot_violins(adata, group, groupby, output_folder, log=False):
 
     plt.tight_layout()
     fig.savefig(os.path.join(output_folder, "_".join([groupby, "_", group, 'Violinplot', '.png'])),
-                format='png', dpi=1200)
+                format='png', dpi=300)
     plt.close()
 
 
@@ -386,6 +386,9 @@ def volcano_plot(df, df_keys, cytokine, label_genes, title, save_folder, adjust=
                 size=text_fontsize, color='k', zorder=5)
     else:
         ax.text(xlim[1] - 5, -np.log10(threshold) + 0.2, '5% FDR', size=text_fontsize, color='k', zorder=5)
+
+    # remove legend box
+    ax.legend(frameon=False)
 
     fig.savefig(os.path.join(save_folder, "".join([title, file_format])))
     plt.close()
