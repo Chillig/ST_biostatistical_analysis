@@ -6,8 +6,9 @@
     Date last modified: May/02/2021
     Python Version: 3.7
 """
-from python_scripts.pre_processing import batch_correction, cell_cycle_storing, pc_determination, scaling_and_regression, \
-    calculate_visualizations, quality_control, normalization, highly_variable_genes, init_variables, doublet_detection
+from python_scripts.pre_processing import batch_correction, cell_cycle_storing, pc_determination, \
+    scaling_and_regression, calculate_visualizations, quality_control, normalization, highly_variable_genes, \
+    init_variables, doublet_detection
 from python_scripts.utils import loading_matrices, helper_tools as ht, sc_loading_matrices
 from python_scripts.pre_processing.plot_functions import plots_preprocessing
 import python_scripts.pre_processing.plot_functions.plot_imagespots as im_pp_plot
@@ -297,10 +298,15 @@ def main(configs, adata, save_folder):
     """
 
     print("\n-------- Overview of data sets --------")
-    # 1.1 Add meta data like which samples belong to which donor (since 04.10.2020)
-    adata, tissue_cell_labels, disease_labels, lesion_labels = add_metadata(adata)
-    # 1.2 Remove spots having no tissue/cell labels (since 06.10.2020)
-    adata = adata[np.where(adata.obs[tissue_cell_labels].to_numpy().any(axis=1))[0]]
+    if configs['data']['data_type'] == 'Spatial Transcriptomics':
+        # 1.1 Add meta data like which samples belong to which donor (since 04.10.2020)
+        adata, tissue_cell_labels, disease_labels, lesion_labels = add_metadata(adata)
+        # 1.2 Remove spots having no tissue/cell labels (since 06.10.2020)
+        adata = adata[np.where(adata.obs[tissue_cell_labels].to_numpy().any(axis=1))[0]]
+
+        dataset_type = "st"
+    else:
+        dataset_type = "sc"
 
     # print info about sample 1
     sample_name = adata.obs['sample'].values[1]
@@ -311,8 +317,9 @@ def main(configs, adata, save_folder):
     print("Observables contained in data sets sorted by barcodes: ", adata.obs_keys())
     print("Variables contained in data sets sorted by gene names: ", adata.var_keys())
 
-    # plot spots on top of images (only for the first sample)
-    plot_images(configs=configs, adata=adata, save_folder=save_folder)
+    if configs['data']['data_type'] == 'Spatial Transcriptomics':
+        # plot spots on top of images (only for the first sample)
+        plot_images(configs=configs, adata=adata, save_folder=save_folder)
 
     # 2. Pre-processing and visualization
     # apply the following steps 2.1 - 2.6 individually on each adata object
@@ -340,7 +347,7 @@ def main(configs, adata, save_folder):
         cutted_adata = doublet_detection.scrublet_algorithm(cutted_adata, save_folder=save_folder)
 
     # save QC adata object
-    sc.write('{}_QC.h5'.format(configs["data"]['output_path']), cutted_adata)
+    sc.write('{}_{}_QC.h5'.format(dataset_type, configs["data"]['output_path']), cutted_adata)
 
     # 2.2 Normalization
     print("\n         Normalization\n")
@@ -421,7 +428,8 @@ def main(configs, adata, save_folder):
     else:
         norm_pp_adata = norm_adata.copy()
 
-    sc.write('{}_QC_BC.h5'.format(configs["data"]['output_path']), norm_pp_adata)
+    sc.write('{}_{}_QC_BC.h5'.format(dataset_type, configs["data"]['output_path']), norm_pp_adata)
+
     plots_preprocessing.plot_visualization_results(
         adata=norm_pp_adata, save_folder=save_folder, batch_key="batch_corrected",
         raw=configs.getboolean("preprocessing", "read_raw_matrix"))
@@ -436,15 +444,12 @@ def main(configs, adata, save_folder):
 
     if max_umi_genes == 0:
         # save pre-processed annData object
-        filter_name = 'minumi_{}_maxumi_{}_mg_{}_msc_{}_mt_{}_minumig{}'.format(min_counts, max_counts, min_genes,
-                                                                                min_shared_counts, mt_cut,
-                                                                                min_umi_genes)
+        filter_name = '{}_minumi_{}_maxumi_{}_mg_{}_msc_{}_mt_{}_minumig{}'.format(
+            dataset_type, min_counts, max_counts, min_genes, min_shared_counts, mt_cut, min_umi_genes)
     else:
         # save pre-processed annData object
-        filter_name = 'minumi_{}_maxumi_{}_mg_{}_msc_{}_mt_{}_minumig{}_manumig{}'.format(min_counts, max_counts,
-                                                                                          min_genes, min_shared_counts,
-                                                                                          mt_cut, min_umi_genes,
-                                                                                          max_umi_genes)
+        filter_name = '{}_minumi_{}_maxumi_{}_mg_{}_msc_{}_mt_{}_minumig{}_manumig{}'.format(
+            dataset_type, min_counts, max_counts, min_genes, min_shared_counts, mt_cut, min_umi_genes, max_umi_genes)
 
     adata_filename = '{}_{}_pp.h5'.format(configs["data"]['output_path'], filter_name)
     sc.write(adata_filename, norm_pp_adata)
