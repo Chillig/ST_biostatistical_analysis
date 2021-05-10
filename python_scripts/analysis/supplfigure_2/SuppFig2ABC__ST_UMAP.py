@@ -133,7 +133,7 @@ def get_celltypes_data(adata, genes):
              np.where(adata.var.index[np.newaxis, :] == np.array(genes)[:, np.newaxis])[1]
         counts_cyto = adata.layers["counts"][:, varindex_cyto_genes]
     else:
-        varindex_cyto_genes = np.where(adata.var.index == genes)[1]
+        varindex_cyto_genes = np.where(adata.var.index == genes)[0]
         counts_cyto = adata.layers["counts"][:, varindex_cyto_genes][:, 0]
     # create mask
     m_cyto = counts_cyto > 0
@@ -193,9 +193,12 @@ def main(save_folder, spatial_adata):
     # 4. Read out only leukocytes spots by 'CD2', 'CD3D', 'CD3E', 'CD3G', 'CD247' and 'PTPRC' surface markers
     adata_leukocytes = get_celltypes_data(spatial_adata, genes=leukocyte_markers)
 
+    # 5. add observable healthy_disease
+    spatial_adata = add_observables.add_disease_healthy_obs(spatial_adata)
+
     # keys: 'patient', 'biopsy_type', 'disease', 'tissue_type'
     # Suppl Figure 2A
-    visualise_clusters(adata=spatial_adata, save_folder=save_folder, key='healthy_disease', title="Biopsy_types")
+    visualise_clusters(adata=spatial_adata, save_folder=save_folder, key='healthy_disease', title="Diagnoses")
     # Suppl. Figure 2C
     visualise_clusters(adata=adata_leukocytes, save_folder=save_folder, key='tissue_type',
                        title="Leukocytes_tissuelayers")
