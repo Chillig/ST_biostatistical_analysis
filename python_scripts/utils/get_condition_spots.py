@@ -119,7 +119,7 @@ def get_spots_per_condition(adata, observable, cell_label, save_folder, key, pap
                 df_condition[".".join(
                     [sample, sample_barcodes[index], observable, n_clusters]).replace(" ", "_")] = spot
 
-                # save to metaData todo add cell or spot label with cell_label
+                # save to metaData
                 df_temp = pd.DataFrame({"sample_id": [sample],  # CaptureArea on slide
                                         "barcode": [sample_barcodes[index]],
                                         "condition": [n_clusters],
