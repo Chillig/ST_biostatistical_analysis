@@ -84,45 +84,45 @@ def load_sample_config_file(filename, file_type):
     """
 
     if file_type is "csv":
-        configs = pd.read_csv(filename + ".csv", sep=";")
+        configs = pd.read_csv(filename, sep=";")
 
         # No need to save configs in different variables; it is just for visualization and easier to read out later
-        file_path = configs['file_path']  # 0
-        library_path = configs['output_type_spaceranger']  # 1
-        sample_strings = configs['sample_strings']  # 2
-        sample_id_strings = configs['sample_id_strings'].astype(str)  # 3
+        file_path = configs['file_path'].values  # 0
+        library_path = configs['output_type_spaceranger'].values  # 1
+        sample_strings = configs['sample_strings'].values  # 2
+        sample_id_strings = configs['sample_id_strings'].astype(str).values  # 3
 
         # output matrix
-        output_type_matrix = configs['output_type_matrix']  # 4
-        raw_feature_bc_matrix_folder = configs['raw_feature_bc_matrix_folder']  # 5
-        filtered_feature_bc_matrix_folder = configs['filtered_feature_bc_matrix_folder']  # 6
+        output_type_matrix = configs['output_type_matrix'].values  # 4
+        raw_feature_bc_matrix_folder = configs['raw_feature_bc_matrix_folder'].values  # 5
+        filtered_feature_bc_matrix_folder = configs['filtered_feature_bc_matrix_folder'].values  # 6
 
-        barcode_file_end = configs['barcode_file_end']  # 7
-        features_file_end = configs['features_file_end']  # 8
-        matrix_file_end = configs['matrix_file_end']  # 9
-        raw_hdf5_file_end = configs['raw_hdf5_file_end']  # 10
-        filtered_hdf5_file_end = configs['filtered_hdf5_file_end']  # 11
+        barcode_file_end = configs['barcode_file_end'].values  # 7
+        features_file_end = configs['features_file_end'].values  # 8
+        matrix_file_end = configs['matrix_file_end'].values  # 9
+        raw_hdf5_file_end = configs['raw_hdf5_file_end'].values  # 10
+        filtered_hdf5_file_end = configs['filtered_hdf5_file_end'].values  # 11
 
         # spatial information
-        output_type_spatial = configs['output_type_spatial']  # 12
+        output_type_spatial = configs['output_type_spatial'].values  # 12
 
-        tissue_pos_list_file_end = configs['tissue_pos_list_file_end']  # 13
-        scale_factors_file_end = configs['scale_factors_file_end']  # 14
-        aligned_fiducials_file_end = configs['aligned_fiducials_file_end']  # 15
-        detected_tissue_file_end = configs['detected_tissue_file_end']  # 16
-        tissue_hires_file_end = configs['tissue_hires_file_end']  # 17
-        tissue_low_res_file_end = configs['tissue_low_res_file_end']  # 18
+        tissue_pos_list_file_end = configs['tissue_pos_list_file_end'].values  # 13
+        scale_factors_file_end = configs['scale_factors_file_end'].values  # 14
+        aligned_fiducials_file_end = configs['aligned_fiducials_file_end'].values  # 15
+        detected_tissue_file_end = configs['detected_tissue_file_end'].values  # 16
+        tissue_hires_file_end = configs['tissue_hires_file_end'].values  # 17
+        tissue_low_res_file_end = configs['tissue_low_res_file_end'].values  # 18
 
         # annotation files
-        annotation_path = configs["annotation_path"]  # 19
-        excel_sheet = configs['excel_sheet']  # 20
+        annotation_path = configs["annotation_path"].values  # 19
+        excel_sheet = configs['excel_sheet'].values  # 20
 
-        # lesional_folder = configs['lesional_folder']  # 21
-        # non_lesional_folder = configs['non-lesional_folder']  # 22
+        # lesional_folder = configs['lesional_folder'].values  # 21
+        # non_lesional_folder = configs['non-lesional_folder'].values  # 22
 
         # velocyto (loom files)
-        velocyto_path = configs['velocity_path']  # 23
-        loom_file = configs['loom_file_end']  # 24
+        velocyto_path = configs['velocity_path'].values  # 23
+        loom_file = configs['loom_file_end'].values  # 24
     else:
         with open(filename) as json_file:
             configs = json.load(json_file)
