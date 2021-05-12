@@ -36,13 +36,14 @@ def load_dataset(configs):
 
     """
     if configs['data']['data_type'] == 'Spatial Transcriptomics':
+        print("\nCapture area in Visium slide contains a grid of 4,992 capture spots")
         raw_adata, filtered_adata, configs_path, list_sample_ids = loading_matrices.main(
             filename=configs['input_files']['rawdata_paths'],
             read_raw_matrix=configs.getboolean('preprocessing', 'read_raw_matrix'),
             spatial_concat=configs.getboolean('preprocessing', 'sample_concat'))
     else:
         raw_adata, filtered_adata, configs_path = sc_loading_matrices.main(
-            configs['input_files']['rawdata_paths'],
+            filename=configs['input_files']['rawdata_paths'],
             read_raw_matrix=configs.getboolean('preprocessing', 'read_raw_matrix'))
         list_sample_ids = filtered_adata.obs['sample'].values
 
@@ -333,7 +334,7 @@ def main(configs, adata, save_folder):
     # 2.1 QC (Quality control) of data - calculate QC covariates
     # 2.1.1 Cell QC
     # TODO Determine counts_threshold via Mean absolute deviation (MAD); find outliers :)
-    adata_qc = sample_qc(adata=adata, save_folder=save_folder, counts_threshold=60000, lower_filter_counts=400,
+    adata_qc = sample_qc(adata=adata, save_folder=save_folder, counts_threshold=60000, lower_filter_counts=2000,
                          upper_filter_counts=2500, upper_filter_genes=2000, log_scale=False,
                          raw=configs.getboolean("preprocessing", "read_raw_matrix"), sample_name=sample_name)
 
@@ -342,12 +343,14 @@ def main(configs, adata, save_folder):
         apply_qc_filter(adata=adata_qc,
                         apply_mt_threshold=configs.getboolean("preprocessing", 'apply_mt_threshold'))
 
-    if configs['preprocessing']['filter_doublets']:
-        # 2.1.3 Filter out multiplets
-        cutted_adata = doublet_detection.scrublet_algorithm(cutted_adata, save_folder=save_folder)
+    if configs.getboolean('preprocessing', 'filter_doublsets'):
+        # 2.1.3 Filter out multiplets --
+        cutted_adata = doublet_detection.scrublet_algorithm(
+            cutted_adata, sample_name=sample_name, save_folder=save_folder)
 
     # save QC adata object
-    sc.write('{}_{}_QC.h5'.format(dataset_type, configs["data"]['output_path']), cutted_adata)
+    adata_filename = '{}_{}_QC.h5'.format(dataset_type, configs["data"]['output_path'])
+    sc.write(os.path.join(configs["data"]['output_path'], adata_filename), cutted_adata)
 
     # 2.2 Normalization
     print("\n         Normalization\n")
@@ -428,7 +431,8 @@ def main(configs, adata, save_folder):
     else:
         norm_pp_adata = norm_adata.copy()
 
-    sc.write('{}_{}_QC_BC.h5'.format(dataset_type, configs["data"]['output_path']), norm_pp_adata)
+    adata_filename = '{}_{}_QC_BC.h5'.format(dataset_type, configs["data"]['output_path'])
+    sc.write(os.path.join(configs["data"]['output_path'], adata_filename), norm_pp_adata)
 
     plots_preprocessing.plot_visualization_results(
         adata=norm_pp_adata, save_folder=save_folder, batch_key="batch_corrected",
@@ -451,21 +455,24 @@ def main(configs, adata, save_folder):
         filter_name = '{}_minumi_{}_maxumi_{}_mg_{}_msc_{}_mt_{}_minumig{}_manumig{}'.format(
             dataset_type, min_counts, max_counts, min_genes, min_shared_counts, mt_cut, min_umi_genes, max_umi_genes)
 
-    adata_filename = '{}_{}_pp.h5'.format(configs["data"]['output_path'], filter_name)
-    sc.write(adata_filename, norm_pp_adata)
+    adata_filename = '{}_pp.h5'.format(filter_name)
+    sc.write(os.path.join(configs["data"]['output_path'], adata_filename), norm_pp_adata)
 
     return norm_pp_adata, adata_filename
 
 
 if __name__ == '__main__':
     output_path = os.path.join("..", "..", "output", str(date.today()))
+    os.makedirs(output_path, exist_ok=True)
     adata_savepath = init_variables.init_vars()
     configs_file = ht.load_config(config_path=adata_savepath)
 
-    print("\nCapture area in Visium slide contains a grid of 4,992 capture spots")
     # 1. Load data
     print("#   --  >Load data and information<  --   #")
     _, unpp_filtered_adata, _, _ = load_dataset(configs=configs_file)
+    # save adata
+    unppadata_filename = '{}_unpp.h5'.format(configs_file['data']['data_type'])
+    sc.write(os.path.join(adata_savepath, unppadata_filename), unpp_filtered_adata)
 
     print("-------- Finished: Read out values --------")
     pp_adata, filename_adata = main(configs=configs_file, adata=unpp_filtered_adata, save_folder=output_path)
