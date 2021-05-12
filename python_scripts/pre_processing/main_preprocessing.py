@@ -343,13 +343,13 @@ def main(configs, adata, save_folder):
         apply_qc_filter(adata=adata_qc,
                         apply_mt_threshold=configs.getboolean("preprocessing", 'apply_mt_threshold'))
 
-    if configs.getboolean('preprocessing', 'filter_doublsets'):
+    if configs.getboolean('preprocessing', 'filter_doublets'):
         # 2.1.3 Filter out multiplets --
         cutted_adata = doublet_detection.scrublet_algorithm(
             cutted_adata, sample_name=sample_name, save_folder=save_folder)
 
     # save QC adata object
-    adata_filename = '{}_{}_QC.h5'.format(dataset_type, configs["data"]['output_path'])
+    adata_filename = '{}_QC.h5'.format(dataset_type)
     sc.write(os.path.join(configs["data"]['output_path'], adata_filename), cutted_adata)
 
     # 2.2 Normalization
@@ -431,7 +431,7 @@ def main(configs, adata, save_folder):
     else:
         norm_pp_adata = norm_adata.copy()
 
-    adata_filename = '{}_{}_QC_BC.h5'.format(dataset_type, configs["data"]['output_path'])
+    adata_filename = '{}_QC_BC.h5'.format(dataset_type,)
     sc.write(os.path.join(configs["data"]['output_path'], adata_filename), norm_pp_adata)
 
     plots_preprocessing.plot_visualization_results(
