@@ -68,14 +68,14 @@ def scrublet_algorithm(adata, sample_name, save_folder):
     # plt.savefig(os.path.join(save_folder, 'scanpy_UMAP.png'), bbox_inches='tight')
 
     # plot count matrix
-    scrub.set_embedding('UMAP', scr.get_umap(cp_adata.X, n_neighbors=10, min_dist=0.5))
-    fig_umap, ax_umap = scrub.plot_embedding('UMAP', order_points=True, )  # score='zscore')
-    fig_umap.savefig(os.path.join(save_folder, "_".join([sample_name, 'scrublet_count_matrix.png'])),
-                     bbox_inches='tight')
-
-    scrub.set_embedding('UMAP', scr.get_umap(scrub.manifold_obs_, 10, min_dist=0.5))
-    fig_umap, ax_umap = scrub.plot_embedding('UMAP', order_points=True,)  # score='zscore')
-    fig_umap.savefig(os.path.join(save_folder, "_".join([sample_name, 'scrublet_UMAP_1.png'])), bbox_inches='tight')
+    # scrub.set_embedding('UMAP', scr.get_umap(cp_adata.X, n_neighbors=10, min_dist=0.5))
+    # fig_umap, ax_umap = scrub.plot_embedding('UMAP', order_points=True, )  # score='zscore')
+    # fig_umap.savefig(os.path.join(save_folder, "_".join([sample_name, 'scrublet_count_matrix.png'])),
+    #                  bbox_inches='tight')
+    #
+    # scrub.set_embedding('UMAP', scr.get_umap(scrub.manifold_obs_, 10, min_dist=0.5))
+    # fig_umap, ax_umap = scrub.plot_embedding('UMAP', order_points=True,)  # score='zscore')
+    # fig_umap.savefig(os.path.join(save_folder, "_".join([sample_name, 'scrublet_UMAP_1.png'])), bbox_inches='tight')
 
     doublets_barcode = np.asarray(cp_adata.obs[predicted_doublets].index)
     if len(doublets_barcode) > 0:
