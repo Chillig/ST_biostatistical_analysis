@@ -530,8 +530,8 @@ def main(filename, read_raw_matrix=False, spatial_concat=True):
         raw and filtered read out matrices and spatial information and annotation dataset
     """
     # check whether to do a single sample load or if you have more than one sample to load
-    input_path = os.path.join(os.environ['PYTHONPATH'].split(os.pathsep)[0], 'Input', 'config_files', filename)
-    config_paths = ht.load_sample_config_file(filename=input_path, file_type="csv")
+    # input_path = os.path.join(os.environ['PYTHONPATH'].split(os.pathsep)[0], 'Input', 'config_files', filename)
+    config_paths = ht.load_sample_config_file(filename=filename, file_type="csv")
 
     absolute_path = os.path.join(os.sep, config_paths[0][0], config_paths[2][0])
     # matrix_file_end, features_file_end, barcode_file_end
