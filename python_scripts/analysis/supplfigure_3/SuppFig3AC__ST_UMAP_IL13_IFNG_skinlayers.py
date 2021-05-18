@@ -169,7 +169,7 @@ def main(save_folder, spatial_adata):
     plot_tissueregions_cyto(adata=adata_leukocytes, obs_name='cytokine_IFNG', title='Leukocytes_IFNG',
                             save_folder=save_folder)
 
-    # 4. Read out all leukocyte psotive spots
+    # 4. Read out all leukocyte positive spots
     include_cytokine_dp(adata=adata_leukocytes, cytokines=cytokines, save_folder=save_folder,
                         label=spatial_cluster_label, key='ST', paper_figure='3AC_Leukocytes')
 
@@ -181,6 +181,6 @@ if __name__ == '__main__':
     os.makedirs(output_path, exist_ok=True)
 
     # Load data:
-    pp_st_adata = sc.read(os.path.join("..", "..", "..", 'adata_storage", "2020-12-04_Visium_Data_QC_BC_clustered.h5'))
+    pp_st_adata = sc.read(os.path.join("..", "..", "..", 'adata_storage', '2020-12-04_Visium_Data_QC_BC_clustered.h5'))
 
     main(save_folder=output_path, spatial_adata=pp_st_adata)

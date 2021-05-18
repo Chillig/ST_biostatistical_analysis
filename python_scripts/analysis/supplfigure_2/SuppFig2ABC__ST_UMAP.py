@@ -222,6 +222,6 @@ if __name__ == '__main__':
     os.makedirs(output_path, exist_ok=True)
 
     # Load data:
-    pp_st_adata = sc.read(os.path.join("..", "..", "..", 'adata_storage", "2020-12-04_Visium_Data_QC_BC_clustered.h5'))
+    pp_st_adata = sc.read(os.path.join("..", "..", "..", 'adata_storage', '2020-12-04_Visium_Data_QC_BC_clustered.h5'))
 
     main(save_folder=output_path, spatial_adata=pp_st_adata)
