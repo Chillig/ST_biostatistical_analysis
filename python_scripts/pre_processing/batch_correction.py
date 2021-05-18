@@ -27,13 +27,20 @@ Evaluate batch correction using the four assessment metrics: ASW, ARI, LISI, and
 """
 
 
-def _score_uncorrectd_data(adatas, n_comps, save_folder):
+def _score_uncorrectd_data(adatas, n_comps, save_folder, possible_batch_effects, batch_key='library_id'):
     """
 
-    :param adatas: [annData]
-    :param n_comps: [int]
-    :param save_folder: [string]
-    :return:
+    Parameters
+    ----------
+    adatas : annData
+    n_comps : int
+    save_folder : str
+    possible_batch_effects : list, str
+    batch_key : str
+
+    Returns
+    -------
+
     """
     # Score uncorrectd matrix
     pca = pc_determination.pcs_combs(adatas.X, save_folder, raw=False, type_dataset="No_HVG_uncorrected",
@@ -41,17 +48,11 @@ def _score_uncorrectd_data(adatas, n_comps, save_folder):
 
     # Score embedding
     dict_r2var = dict()
-    score_variance(adata=adatas, obs='library_id', pca=pca, r2var=dict_r2var)
-    # Score variance contribution by the location.
-    score_variance(adata=adatas, obs='project', pca=pca, r2var=dict_r2var)
-    # Score variance contributon by cell cycle
-    score_variance(adata=adatas, obs='phase', pca=pca, r2var=dict_r2var)
-    # Score variance contributon by patient
-    score_variance(adata=adatas, obs='patient', pca=pca, r2var=dict_r2var)
-    # Score variance contributon by disease
-    score_variance(adata=adatas, obs='disease', pca=pca, r2var=dict_r2var)
-    # Score variance contributon by biopsy type
-    score_variance(adata=adatas, obs='biopsy_type', pca=pca, r2var=dict_r2var)
+    # Score variance contribution by batch_key
+    score_variance(adata=adatas, obs=batch_key, pca=pca, r2var=dict_r2var)
+    for poss_be in possible_batch_effects:
+        # Score variance contribution by other covariate
+        score_variance(adata=adatas, obs=poss_be, pca=pca, r2var=dict_r2var)
     print(dict_r2var)
 
     # Plot uncorrected matrix
@@ -60,7 +61,8 @@ def _score_uncorrectd_data(adatas, n_comps, save_folder):
     sc.tl.umap(adatas)
 
     # Plot
-    plt_pp_plots.plot_batch_correction(adatas, save_folder, batch_key="unbc_matrix")
+    for covar in possible_batch_effects:
+        plt_pp_plots.plot_batch_correction(adatas, save_folder, batch_key="unbc_matrix", possible_batch_effect=covar)
 
 
 def _split_batches(adata, batch, hvg=None):
@@ -119,7 +121,7 @@ def score_variance(adata, obs, pca, r2var):
     return r2var
 
 
-def scanorama_bc(adatas, n_comps, save_folder):
+def scanorama_bc(adatas, n_comps, save_folder, possible_batch_effects, batch_key='library_id'):
     """Apply Scanorama Batch correction
     Scanorama enables batch-correction and integration of heterogeneous scRNA-seq datasets
 
@@ -128,58 +130,47 @@ def scanorama_bc(adatas, n_comps, save_folder):
     adatas : annData
     n_comps : int
     save_folder : str
+    possible_batch_effects : list, str
+    batch_key : str
 
     Returns
     -------
 
     """
     # 1. Score uncorrectd matrix
-    _score_uncorrectd_data(adatas, n_comps, save_folder)
+    _score_uncorrectd_data(adatas=adatas, n_comps=n_comps, save_folder=save_folder, batch_key=batch_key,
+                           possible_batch_effects=possible_batch_effects)
 
     # 2. Apply scanoroma batch correction method
     # 2.1 Split list into annData objects
-    split = _split_batches(adatas[:, adatas.var['highly_variable']].copy(), batch='library_id')
+    split = _split_batches(adatas[:, adatas.var['highly_variable']].copy(), batch=batch_key)
 
     # 2.2 run scanorama batch correction
     kwargs = {"return_dimred": True}
     emb, corrected = scanorama.correct_scanpy(split, **kwargs)
     # concatenate corrected adatas
     emb = np.concatenate(emb, axis=0)
-    adata_cor = ann.AnnData.concatenate(*corrected, batch_key='library_id',
-                                        batch_categories=adatas.obs['library_id'].cat.categories,).copy()
+    adata_cor = ann.AnnData.concatenate(*corrected, batch_key=batch_key,
+                                        batch_categories=adatas.obs[batch_key].cat.categories,).copy()
     adatas.obsm['X_emb'] = emb
-
-    adata_cor.obs['sample'] = adatas.obs['sample'].values
-    adata_cor.obs['project'] = adatas.obs['project'].values
-    adata_cor.obs['phase'] = adatas.obs['phase'].values
-    adata_cor.obs['patient'] = adatas.obs['patient'].values
-    adata_cor.obs['disease'] = adatas.obs['disease'].values
-    adata_cor.obs['biopsy_type'] = adatas.obs['biopsy_type'].values
 
     # 2.3 Score correct matrix
     # 2.3.2 Determine No. PCs
     pca = pc_determination.pcs_combs(adatas.obsm['X_emb'], save_folder, raw=False, type_dataset="No_HVG_corrected",
                                      use_highly_variable=False, copy=True, return_info=True)
 
-    # Calculate variance after batch correction - might be that the variance increased within a co-variate
+    # 2.4 Calculate variance after batch correction - might be that the variance increased within a covariate
     dict_r2var = dict()
+    adata_cor.obs[batch_key] = adatas.obs[batch_key].values
     # Score variance contribution by batch
-    score_variance(adata=adata_cor, obs='library_id', pca=pca, r2var=dict_r2var)
+    score_variance(adata=adata_cor, obs=batch_key, pca=pca, r2var=dict_r2var)
 
-    # Score variance contribution by project
-    score_variance(adata=adata_cor, obs='project', pca=pca, r2var=dict_r2var)
+    for poss_be in possible_batch_effects:
+        adata_cor.obs[poss_be] = adatas.obs[poss_be].values
 
-    # Score variance contribution by cell cycle
-    score_variance(adata=adata_cor, obs='phase', pca=pca, r2var=dict_r2var)
+        # Score variance contribution by other covariate
+        score_variance(adata=adata_cor, obs=poss_be, pca=pca, r2var=dict_r2var)
 
-    # Score variance contribution by patient
-    score_variance(adata=adata_cor, obs='patient', pca=pca, r2var=dict_r2var)
-
-    # Score variance contribution by diseases (PSO, AE, LICHEN, PRP)
-    score_variance(adata=adata_cor, obs='disease', pca=pca, r2var=dict_r2var)
-
-    # Score variance contribution by biopsy_type (healthy, lesioned)
-    score_variance(adata=adata_cor, obs='biopsy_type', pca=pca, r2var=dict_r2var)
     print(dict_r2var)
 
     # Compute Visualisation of corrected matrix
@@ -192,20 +183,22 @@ def scanorama_bc(adatas, n_comps, save_folder):
     sc.tl.umap(adata_cor)
 
     # Plot
-    plt_pp_plots.plot_batch_correction(adata_cor, save_folder, batch_key="bc_matrix")
+    for poss_be in possible_batch_effects:
+        plt_pp_plots.plot_batch_correction(adata_cor, save_folder, batch_key="bc_matrix", possible_batch_effect=poss_be)
 
     # Compute Visualisation of corrected embedding
     sc.pp.neighbors(adatas, use_rep='X_emb')
     sc.tl.umap(adatas)
 
-    plt_pp_plots.plot_batch_correction(adatas, save_folder, batch_key="bc_embedding")
+    for poss_be in possible_batch_effects:
+        plt_pp_plots.plot_batch_correction(adatas, save_folder, batch_key="bc_embedding", possible_batch_effect=poss_be)
 
     adatas.X = sparse.csr_matrix(adatas.X)
 
     return adatas
 
 
-def apply_batch_correction(normed_scaled_adatas, save_folder, n_comps):
+def apply_batch_correction(normed_scaled_adatas, save_folder, n_comps, possible_batch_effects, batch_key='library_id'):
     """Apply Batch correction using scanorama
 
     Causes of Batch effects:
@@ -221,6 +214,8 @@ def apply_batch_correction(normed_scaled_adatas, save_folder, n_comps):
     normed_scaled_adatas : annData
     save_folder : str
     n_comps : int
+    possible_batch_effects : list, str
+    batch_key : str
 
     Returns
     -------
@@ -229,6 +224,7 @@ def apply_batch_correction(normed_scaled_adatas, save_folder, n_comps):
 
     # 2.3 Batch Correction (Data integration phase)
     print("         Batch Correction")
-    bc_adata = scanorama_bc(adatas=normed_scaled_adatas, n_comps=n_comps, save_folder=save_folder)
+    bc_adata = scanorama_bc(adatas=normed_scaled_adatas, n_comps=n_comps, save_folder=save_folder, batch_key=batch_key,
+                            possible_batch_effects=possible_batch_effects)
 
     return bc_adata
