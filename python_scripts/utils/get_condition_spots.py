@@ -97,7 +97,7 @@ def get_spots_per_condition(adata, observable, cell_label, save_folder, key, pap
             # save to metaData
             # "sample_id", "condition", "label" =(conditon_1 , ..), "batch", "disease", "No_spots"
             project = sample.split("_")[0]
-            """ ATTENTION: This works only if we have unique tissue biopsies per slide !! """
+            """ ATTENTION: This works only if we have one tissue biopsies per slide !! """
             if "SC" in key:
                 disease_columns = np.array(['PSO'])
                 type_lesional = np.array(['LESIONAL'])
@@ -132,5 +132,5 @@ def get_spots_per_condition(adata, observable, cell_label, save_folder, key, pap
                                         "batch": [int(df_batches[project]['batch'][index_batch_sample])]})  # Slide
                 df_metadata = df_metadata.append(df_temp, ignore_index=True)
 
-    df_metadata.to_csv(os.path.join(save_folder, "".join(["metaData", observable, paper_figure, ".csv"])))
-    df_condition.to_csv(os.path.join(save_folder, "".join([observable, paper_figure, ".csv"])))
+    df_metadata.to_csv(os.path.join(save_folder, "metaData_{}_{}.csv".format(observable, paper_figure)))
+    df_condition.to_csv(os.path.join(save_folder, "{}_{}.csv".format(observable, paper_figure)))
