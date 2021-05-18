@@ -613,7 +613,7 @@ def plot_pc_combs(adata, type_dataset, save_folder, raw=False):
     plt.close()
 
 
-def plot_batch_correction(adata, save_folder, batch_key):
+def plot_batch_correction(adata, save_folder, batch_key, possible_batch_effect):
     """Plot batch correction results
 
     Parameters
@@ -622,6 +622,7 @@ def plot_batch_correction(adata, save_folder, batch_key):
     save_folder : str
     batch_key : str
         kind of data matrix used for visualisation
+    possible_batch_effect : str
 
     Returns
     -------
@@ -633,59 +634,9 @@ def plot_batch_correction(adata, save_folder, batch_key):
     fig = plt.figure(facecolor='w', edgecolor='k', figsize=(14, 8))
     sub_1 = fig.add_subplot(1, 1, 1)
     sc.pl.umap(adata, color=['sample'], ax=sub_1, show=False, title="Sample")
-    fig.subplots_adjust(bottom=0.125, left=0.025, top=0.875, right=0.6)
+    fig.subplots_adjust(bottom=0.125, left=0.025, top=0.875, right=0.850)
     plt.tight_layout()
-    plt.savefig(os.path.join(save_folder, "scanorama_{}_library_id.png".format(batch_key)))
-    plt.close()
-
-    plot_scatter_contour(adata, batch_key, 'project', save_folder, show_points=True)
-    fig = plt.figure(facecolor='w', edgecolor='k', figsize=fig_size)
-    sub_2 = fig.add_subplot(1, 1, 1)
-    sc.pl.umap(adata, color=['project'], ax=sub_2, show=False, title="Projects")
-    fig.subplots_adjust(bottom=0.125, left=0.10, top=0.875, right=0.850)
-    plt.tight_layout()
-    plt.savefig(os.path.join(save_folder, "scanorama_{}_project.png".format(batch_key)))
-    plt.close()
-
-    plot_scatter_contour(adata, batch_key, 'phase', save_folder, show_points=True)
-    fig = plt.figure(facecolor='w', edgecolor='k', figsize=fig_size)
-    sub_3 = fig.add_subplot(1, 1, 1)
-    sc.pl.umap(adata, color=['phase'], ax=sub_3, show=False, title="Phase")
-    fig.subplots_adjust(bottom=0.125, left=0.10, top=0.875, right=0.850)
-    plt.tight_layout()
-    plt.savefig(os.path.join(save_folder, "scanorama_{}_phase.png".format(batch_key)))
-    plt.close()
-
-    plot_scatter_contour(adata, batch_key, 'patient', save_folder, show_points=True)
-    fig = plt.figure(facecolor='w', edgecolor='k', figsize=fig_size)
-    sub_4 = fig.add_subplot(1, 1, 1)
-    sc.pl.umap(adata, color=['patient'], ax=sub_4, show=False, title="Patient")
-    fig.subplots_adjust(bottom=0.125, left=0.10, top=0.875, right=0.850)
-    plt.tight_layout()
-    plt.savefig(os.path.join(save_folder, "scanorama_{}_patient.png".format(batch_key)))
-    plt.close()
-
-    plot_scatter_contour(adata, batch_key, 'disease', save_folder, show_points=True)
-    fig = plt.figure(facecolor='w', edgecolor='k', figsize=fig_size)
-    sub_5 = fig.add_subplot(1, 1, 1)
-    sc.pl.umap(adata, color=['disease'], ax=sub_5, show=False, title="Disease")
-    fig.subplots_adjust(bottom=0.125, left=0.10, top=0.875, right=0.850)
-    plt.tight_layout()
-    plt.savefig(os.path.join(save_folder, "scanorama_{}_disease.png".format(batch_key)))
-    plt.close()
-
-    plot_scatter_contour(adata, batch_key, 'biopsy_type', save_folder, show_points=True)
-    fig = plt.figure(facecolor='w', edgecolor='k', figsize=fig_size)
-    sub_5 = fig.add_subplot(1, 1, 1)
-    sc.pl.umap(adata, color=['biopsy_type'], ax=sub_5, show=False, title="Biopsy Type")
-    fig.subplots_adjust(bottom=0.125, left=0.10, top=0.875, right=0.850)
-    plt.tight_layout()
-    plt.savefig(os.path.join(save_folder, "scanorama_{}_biopsy_type.png".format(batch_key)))
-    plt.close()
-
-    plt.figure(facecolor='w', edgecolor='k', figsize=(15, 10))
-    sc.pl.umap(adata, color=['library_id', 'project', 'phase'], show=False)
-    plt.savefig(os.path.join(save_folder, "scanorama_{}.png".format(batch_key)))
+    plt.savefig(os.path.join(save_folder, "scanorama_{}_{}.png".format(batch_key, possible_batch_effect)))
     plt.close()
 
 
