@@ -360,6 +360,9 @@ def main(configs, adata, save_folder):
                                                                                  "exclude_highly_expressed"),
                                      raw=configs_file.getboolean("preprocessing", "read_raw_matrix"),
                                      adata_path_filenames=configs["data"]['output_path'])
+    # save QC and normed adata object
+    adata_filename = '{}_QC_normed.h5'.format(dataset_type)
+    sc.write(os.path.join(configs["data"]['output_path'], adata_filename), norm_adata)
     # TODO plot normalised count data distribution
 
     # -------------------------------------------------- Optional ---------------------------------------------------- #
@@ -410,7 +413,9 @@ def main(configs, adata, save_folder):
     # Such differences may contribute to the batch effect."
     if configs.getboolean("preprocessing", "sample_concat"):
         print("\n         Batch Correction\n")
-        norm_bc_adata = batch_correction.apply_batch_correction(norm_adata, save_folder=save_folder, n_comps=n_comps)
+        norm_bc_adata = batch_correction.apply_batch_correction(
+            norm_adata, save_folder=save_folder, n_comps=n_comps, batch_key='sample',
+            possible_batch_effects=['project', 'phase', 'patient', 'disease', 'biopsy_type'])
 
         # 2.5.1 Run find highly variable genes again on integrated dataset
         # HVG: highly expressed in some cells and lowly expressed in others
@@ -431,7 +436,7 @@ def main(configs, adata, save_folder):
     else:
         norm_pp_adata = norm_adata.copy()
 
-    adata_filename = '{}_QC_BC.h5'.format(dataset_type,)
+    adata_filename = '{}_QC_normed_BC.h5'.format(dataset_type,)
     sc.write(os.path.join(configs["data"]['output_path'], adata_filename), norm_pp_adata)
 
     plots_preprocessing.plot_visualization_results(
@@ -448,11 +453,11 @@ def main(configs, adata, save_folder):
 
     if max_umi_genes == 0:
         # save pre-processed annData object
-        filter_name = '{}_minumi_{}_maxumi_{}_mg_{}_msc_{}_mt_{}_minumig{}'.format(
+        filter_name = '{}_minumi_{}_maxumi_{}_mg_{}_msc_{}_mt_{}_minumig_{}'.format(
             dataset_type, min_counts, max_counts, min_genes, min_shared_counts, mt_cut, min_umi_genes)
     else:
         # save pre-processed annData object
-        filter_name = '{}_minumi_{}_maxumi_{}_mg_{}_msc_{}_mt_{}_minumig{}_manumig{}'.format(
+        filter_name = '{}_minumi_{}_maxumi_{}_mg_{}_msc_{}_mt_{}_minumig{}_manumig_{}'.format(
             dataset_type, min_counts, max_counts, min_genes, min_shared_counts, mt_cut, min_umi_genes, max_umi_genes)
 
     adata_filename = '{}_pp.h5'.format(filter_name)
