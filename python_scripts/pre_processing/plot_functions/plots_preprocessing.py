@@ -52,35 +52,6 @@ def _plot_umap(amatrix, ax=None, color='sample', use_raw=False):
     return img_ax
 
 
-def plot_sparse_matrix(matrix, title_matrix=None):
-    """
-    :param matrix:
-    :param title_matrix:
-    :return:
-    """
-    # set zero values to nan
-    matrix_nan = np.copy(matrix)
-    matrix_nan = matrix_nan.astype(float)
-    bool_mask_zero = matrix_nan == 0
-    matrix_nan[bool_mask_zero] = np.nan
-
-    fig, ax = plt.subplots(figsize=fig_size, nrows=1, ncols=1)
-    ax.set_title(title_matrix)
-    im = ax.imshow(matrix_nan, cmap=cm.get_cmap("viridis"), vmin=np.nanmin(matrix_nan.flatten()),
-                   vmax=np.nanmax(matrix_nan.flatten()), norm=LogNorm())
-    # ax.spy(matrix, cmap=cm.get_cmap('viridis'))
-    # create an axes on the right side of ax. The width of cax will be 5%
-    # of ax and the padding between cax and ax will be fixed at 0.05 inch.
-    divider = make_axes_locatable(ax)
-    cax = divider.append_axes("right", size="5%", pad=0.05)
-    fig.colorbar(im, cax=cax)
-    ax.set_xticks([])
-    ax.set_yticks([])
-
-    plt.show()
-    plt.close()
-
-
 def plot_qc_metrics(amatrix, save_folder, sample_name, counts_threshold=10000, raw=False):
     """Sample quality plots
 
@@ -728,67 +699,4 @@ def plot_scatter_contour(adata, batch_key, observable, save_folder, show_points=
         plt.show()
     else:
         plt.savefig(os.path.join(save_folder, "_".join([observable, "UMAP_{}_counterplot.png".format(batch_key)])))
-    plt.close()
-
-
-def scatter_feature_contour(spectra, labels, feature1, feature2, path=None, show_points=False):
-    """For the RFC, this produces a scatterplot of all spectra and where they fall on the feature importances
-    Author: Matthias Meyer-Bender
-
-    Parameters
-    ----------
-    spectra : numpy.array
-        list of spectra
-    labels : str
-        list of labels
-    feature1 : str
-        most important feature
-    feature2 : str
-        second most important feature
-    path : None, str
-        path where the plot will be saved to
-    show_points : bool
-
-    Returns
-    -------
-
-    """
-
-    # Matthias Meyer-Bender
-    # for each spectrum, we now extract the treatment and the coordinates at the region of interest
-    coordinates = []
-
-    # 3D coordinates (Cytokine, adata.obsm['X_umap'] = (UMAP1, UMAP2))
-    for i in range(spectra.shape[0]):
-        row = [labels[i], spectra[i][feature1], spectra[i][feature2]]
-        coordinates.append(row)
-
-    df = pd.DataFrame(coordinates,
-                      columns=['Treatment', "Feature 1: {}".format(feature1), "Feature 2: {}".format(feature2)])
-    df = df.sort_values(by=['Treatment'])
-
-    plt.figure()
-    # colors = ['royalblue', 'darkblue', 'lightgrey', 'darkgrey', 'red', 'darkred', 'yellow', 'limegreen', 'darkgreen']
-    colors = ['Blues', 'Blues', 'Greys', 'Greys', 'Reds', 'Reds', 'Wistia_r', 'Greens', 'Greens']
-
-    x = "Feature 1: {}".format(feature1)
-    y = "Feature 2: {}".format(feature2)
-    print(sorted(np.unique(labels)))
-    for label, color in zip(sorted(np.unique(labels)), colors):
-        temp_df = df.loc[df.Treatment == label]
-        sns.kdeplot(temp_df[x], temp_df[y], shade=True, shade_lowest=False, alpha=0.3, cmap=color)
-
-    if show_points:
-        colors = ['royalblue', 'darkblue', 'lightgrey', 'darkgrey', 'red',
-                  'darkred', 'yellow', 'limegreen', 'darkgreen']
-        sns.scatterplot(x="Feature 1: {}".format(feature1), y="Feature 2: {}".format(feature2), hue="Treatment",
-                        data=df, palette=colors)
-
-    # if you want a title, reactivate this
-    # plt.title(f"Correlation between the two most important features")
-    plt.tight_layout()
-    if path is None:
-        plt.show()
-    else:
-        plt.savefig(path)
     plt.close()
