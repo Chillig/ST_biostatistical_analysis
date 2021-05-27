@@ -45,7 +45,7 @@ python_conda_env.yml. Before doing so, you will have to manually set the prefix 
 file to your directory. Now, you can run the following commands in the terminal:
 ```{bash}
 # The following command will create an env with the name py37_sc_rpy2_diffxpy
-conda env create -f python_conda_env.yml
+conda env create -f https://raw.githubusercontent.com/Chillig/ST_biostatistical_analysis/main/envs/python_conda_env.yml
 # Activate the conda env with
 conda activate py37_sc_rpy2_diffxpy
 ```
