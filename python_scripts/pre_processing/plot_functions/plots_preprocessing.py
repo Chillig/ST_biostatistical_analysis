@@ -600,11 +600,11 @@ def plot_batch_correction(adata, save_folder, batch_key, possible_batch_effect):
 
     """
 
-    plot_scatter_contour(adata=adata, batch_key=batch_key, observable='sample', save_folder=save_folder,
+    plot_scatter_contour(adata=adata, batch_key=batch_key, observable=possible_batch_effect, save_folder=save_folder,
                          show_points=True)
     fig = plt.figure(facecolor='w', edgecolor='k', figsize=(14, 8))
     sub_1 = fig.add_subplot(1, 1, 1)
-    sc.pl.umap(adata, color=['sample'], ax=sub_1, show=False, title="Sample")
+    sc.pl.umap(adata, color=possible_batch_effect, ax=sub_1, show=False, title="Sample")
     fig.subplots_adjust(bottom=0.125, left=0.025, top=0.875, right=0.850)
     plt.tight_layout()
     plt.savefig(os.path.join(save_folder, "scanorama_{}_{}.png".format(batch_key, possible_batch_effect)))
