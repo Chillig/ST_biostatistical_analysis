@@ -419,7 +419,7 @@ def get_tissue_annot(adata):
 
 def assign_donor_spot(adata, no_samples_per_patient=4):
     """
-    Only usable if no of samples per patient is equal across whole dataset
+    Only usable if Number of samples per patient is equal across whole dataset
 
     :param adata:
     :param no_samples_per_patient:
