@@ -698,5 +698,5 @@ def plot_scatter_contour(adata, batch_key, observable, save_folder, show_points=
     if save_folder is None:
         plt.show()
     else:
-        plt.savefig(os.path.join(save_folder, "_".join([observable, "UMAP_{}_counterplot.png".format(batch_key)])))
+        plt.savefig(os.path.join(save_folder, "_".join([observable, "UMAP_{}_contourplot.png".format(batch_key)])))
     plt.close()
