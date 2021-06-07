@@ -139,7 +139,7 @@ def plot_clusters_counts(sup_adata, cyto, save_folder, obs_label, obs_counts, im
             cbar_ax.tick_params(labelsize=xy_ticks)
 
             # Legend: outside of axis 1.45
-            leg = ax.legend(bbox_to_anchor=(1.45, 0.6), ncol=1, fontsize=legend_fontsize)
+            leg = ax.legend(bbox_to_anchor=(1.6, 0.6), ncol=1, fontsize=legend_fontsize)
             leg.get_frame().set_linewidth(0.0)
 
             plt.tight_layout()
