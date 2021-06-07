@@ -160,7 +160,7 @@ dependencies:
   - libblas=3.8.0=17_openblas
   - libcblas=3.8.0=17_openblas
   - libcurl=7.68.0=h709d2b2_0
-  - libcxx=10.0.0=0
+  - libcxx
   - libedit=3.1.20181209=hb402a30_0
   - libffi=3.2.1=h4a8c4bd_1007
   - libgfortran=3.0.1=0
@@ -540,4 +540,3 @@ dependencies:
     - umap-learn==0.4.0
     - upsetplot==0.4.0
     - wcwidth==0.1.9
-prefix: /Users/christina.hillig/anaconda3/envs/py37_sc_rpy2_diffxpy
