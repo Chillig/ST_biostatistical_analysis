@@ -249,32 +249,34 @@ def add_metadata(adata):
     # get labels
     tissue_cell_labels, disease_labels, lesion_labels = ht.get_tissue_annot(adata)
     # get batches assigned to each patient (currently we have 2 or 4 samples per patient)
-    df_batches = ht.map_sample_batch_list(adata=adata,
-                                          num_samples_patient=[4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 2, 2, 2, 2])
+    df_patients = ht.map_sample_batch_list(
+        adata=adata, num_samples_patient=[4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 2, 2, 2, 2])
+
     # assign donor to each spot
-    donors = []
-    for project in df_batches:
-        for ind, s_c in enumerate(df_batches[project]['sample']):
-            no_spots = adata[adata.obs['sample'] == s_c].shape[0]
-            donors.extend(np.ones(no_spots) * df_batches[project]['batch'][ind])
+    adata.obs['patient'] = 0
+    for project in df_patients:
+        for ind, s_c in enumerate(df_patients[project]['sample']):
+            m_spots = adata.obs['sample'] == s_c
+            adata.obs['patient'][m_spots] = df_patients[project]['batch'][ind]
     # need information about how often samples were found
-    adata.obs['patient'] = donors
     adata.obs['patient'] = adata.obs['patient'].astype('int').astype('category')
 
     # assign Diagnostics
-    spot_disease = []
+    adata.obs['disease'] = 'Unknown'
+    adata.obs['disease'] = adata.obs['disease'].astype('<U16')
     for spot_label in disease_labels:
-        spots = adata[adata.obs[spot_label] == 1]
-        spot_disease.extend([spot_label] * spots.shape[0])
-    adata.obs['disease'] = spot_disease
+        m_spots = adata.obs[spot_label] == 1
+        adata.obs['disease'][m_spots] = spot_label
     adata.obs['disease'] = adata.obs['disease'].astype('string').astype('category')
 
     # assign Biopsy type
-    spot_biopsy = []
+    # np.all(np.where((adata.obs['biopsy_type'] == "NON LESIONAL"))[0] == np.where((adata.obs['LESONAL'] == 0))[0])
+    # assign biopsy type
+    adata.obs['biopsy_type'] = 'Unknown'
+    adata.obs['biopsy_type'] = adata.obs['biopsy_type'].astype('<U16')
     for spot_label in lesion_labels:
-        spots = adata[adata.obs[spot_label] == 1]
-        spot_biopsy.extend([spot_label] * spots.shape[0])
-    adata.obs['biopsy_type'] = spot_biopsy
+        m_spots = adata.obs[spot_label] == 1
+        adata.obs['biopsy_type'][m_spots] = spot_label
     adata.obs['biopsy_type'] = adata.obs['biopsy_type'].astype('string').astype('category')
 
     return adata, tissue_cell_labels, disease_labels, lesion_labels
@@ -457,7 +459,7 @@ def main(configs, adata, save_folder):
             dataset_type, min_counts, max_counts, min_genes, min_shared_counts, mt_cut, min_umi_genes)
     else:
         # save pre-processed annData object
-        filter_name = '{}_minumi_{}_maxumi_{}_mg_{}_msc_{}_mt_{}_minumig{}_manumig_{}'.format(
+        filter_name = '{}_minumi_{}_maxumi_{}_mg_{}_msc_{}_mt_{}_minumig{}_maxumig_{}'.format(
             dataset_type, min_counts, max_counts, min_genes, min_shared_counts, mt_cut, min_umi_genes, max_umi_genes)
 
     adata_filename = '{}_pp.h5'.format(filter_name)
