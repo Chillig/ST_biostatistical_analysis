@@ -427,6 +427,7 @@ def main(configs, adata, save_folder):
         # Actually already calculated in Batch correction functions..
         # 2.5.2 Determine No. PCs
         pc_determination.pcs_combs(norm_pp_adata, save_folder, type_dataset="batch_corrected",
+                                   use_highly_variable=True, copy=False, return_info=False,
                                    raw=configs.getboolean("preprocessing", "read_raw_matrix"))
 
         # 2.5.3 Visualisation
