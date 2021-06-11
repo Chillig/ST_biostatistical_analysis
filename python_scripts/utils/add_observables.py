@@ -29,31 +29,31 @@ def add_metadata(adata):
     # last four biopsies of last donor are from two different time points
     df_patients = ht.map_sample_batch_list(adata=adata,
                                            num_samples_patient=[4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 2, 2, 4])
+
     # assign donor to each spot
-    donors = []
+    adata.obs['patient'] = 0
     for project in df_patients:
         for ind, s_c in enumerate(df_patients[project]['sample']):
-            no_spots = adata[adata.obs['sample'] == s_c].shape[0]
-            donors.extend(np.ones(no_spots) * df_patients[project]['batch'][ind])
+            m_spots = adata.obs['sample'] == s_c
+            adata.obs['patient'][m_spots] = df_patients[project]['batch'][ind]
     # need information about how often samples were found
-    adata.obs['patient'] = donors
     adata.obs['patient'] = adata.obs['patient'].astype('int').astype('category')
 
     # assign Diagnostics
     tissue_cell_labels, disease_labels, lesion_labels = ht.get_tissue_annot(adata)
-    spot_disease = []
+    adata.obs['disease'] = 'Unknown'
+    adata.obs['disease'] = adata.obs['disease'].astype('<U16')
     for spot_label in disease_labels:
-        spots = adata[adata.obs[spot_label] == 1]
-        spot_disease.extend([spot_label] * spots.shape[0])
-    adata.obs['disease'] = spot_disease
+        m_spots = adata.obs[spot_label] == 1
+        adata.obs['disease'][m_spots] = spot_label
     adata.obs['disease'] = adata.obs['disease'].astype('string').astype('category')
 
-    # assign Diagnostics
-    spot_biopsy = []
+    # assign biopsy type
+    adata.obs['biopsy_type'] = 'Unknown'
+    adata.obs['biopsy_type'] = adata.obs['biopsy_type'].astype('<U16')
     for spot_label in lesion_labels:
-        spots = adata[adata.obs[spot_label] == 1]
-        spot_biopsy.extend([spot_label] * spots.shape[0])
-    adata.obs['biopsy_type'] = spot_biopsy
+        m_spots = adata.obs[spot_label] == 1
+        adata.obs['biopsy_type'][m_spots] = spot_label
     adata.obs['biopsy_type'] = adata.obs['biopsy_type'].astype('string').astype('category')
 
     return adata, tissue_cell_labels, disease_labels, lesion_labels
