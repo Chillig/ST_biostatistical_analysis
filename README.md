@@ -3,7 +3,7 @@ Schäbitz A*, Hillig C*, Farnoud A, Jargosch M, Scala E, Pilz AC, Bhalla N, Muba
 Biedermann T, Schmidt-Weber CB, Theis F, Garzorz-Stark N, Eyerich K*, Menden MP*, Eyerich S*§ <br>
 
 You can find the preprint version of the manuscript here: <br>
-[to be added soon](https://..??)
+[Low numbers of cytokine transcripts drive inflammatory skin diseases by initiating amplification cascades in localized epidermal clusters](https://www.biorxiv.org/content/10.1101/2021.06.10.447894v1)
 
 
 ## Abstract
