@@ -65,10 +65,14 @@ def get_bulk_cytoresp_counts(adata, genes_dict, tissue_types=None):
         df_corr['disease'][ind] = np.unique(ad.obs['disease'].values)[0]
         for cytokine_gene in genes_dict:
             # 1. Get counts
-            if "counts" in adata.layers.keys():
-                counts_gene = ad.layers['counts'][:, np.where(ad.var.index == cytokine_gene)[0]]
+            if 'responder' in cytokine_gene:
+                temp_cytokine_gene = cytokine_gene.split('_')[0]
             else:
-                counts_gene = ad.X[:, np.where(ad.var.index == cytokine_gene)[0]]
+                temp_cytokine_gene = cytokine_gene
+            if "counts" in adata.layers.keys():
+                counts_gene = ad.layers['counts'][:, np.where(ad.var.index == temp_cytokine_gene)[0]]
+            else:
+                counts_gene = ad.X[:, np.where(ad.var.index == temp_cytokine_gene)[0]]
 
             # sum counts of cytokine found in sample xy and add to dataframe
             counts_cyto_summed = np.asarray(counts_gene[:, 0], dtype=int).sum(axis=0)
@@ -111,7 +115,7 @@ def correlation_plot(df_counts_cytoresps, genes_dict, save_folder):
     for cyto in genes_dict.keys():
         for cyto_reps in genes_dict.keys():
             resp_name = "_".join([cyto_reps, 'responder'])
-            temp_df = df_counts_cytoresps[[cyto, resp_name, 'disease', 'marker']]
+            temp_df = df_counts_cytoresps[[cyto, resp_name, 'disease']]
 
             # stats: hypothesis here will be that the counts of a cytokine is correlated to the counts of its responders
             sig_r = pingouin.corr(x=temp_df[resp_name], y=temp_df[cyto], method='pearson')
@@ -173,7 +177,7 @@ def main(save_folder, adata):
         adata = adata[np.where(adata.obs[tissue_cell_labels].to_numpy().any(axis=1))[0]]
 
     # 1. Get cytokines and responders
-    _, cytokine_responders = gene_lists.get_permuted_respondergenes()
+    _, cytokine_responders = gene_lists.get_permuted_respondergenes_log2fc1_5()
 
     # 2. Subset adata to tissue_types of interest: upper EPIDERMIS', 'middle EPIDERMIS', 'basal EPIDERMIS'
     if tissue_types:
