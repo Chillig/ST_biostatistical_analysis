@@ -9,6 +9,15 @@ from tqdm import tqdm
 import gzip
 
 
+def _read_tsv_files(file):
+    if file.endswith('.gz'):
+        file = gzip.open(file)
+
+    df_file = pd.read_csv(file, header=None, sep='\t')
+
+    return df_file
+
+
 def _scanpy_load_annotate_tsv_mtx_files(path_filtered_files, filenames, file_matrix_h5,
                                         path_raw_files=None, read_raw_matrix=False):
     """
@@ -39,8 +48,8 @@ def _scanpy_load_annotate_tsv_mtx_files(path_filtered_files, filenames, file_mat
         # store count matrix in X key of annData
         raw_adata.X = raw_adata.X.toarray()
 
-        raw_file_barcodes = pd.read_csv(gzip.open(raw_barcodes_file), header=None, sep='\t')
-        raw_file_features = pd.read_csv(gzip.open(raw_features_file), header=None, sep='\t')
+        raw_file_barcodes = _read_tsv_files(file=raw_barcodes_file)
+        raw_file_features = _read_tsv_files(file=raw_features_file)
 
         # # Annotate data
         raw_file_barcodes.rename(columns={0: 'barcode'}, inplace=True)
@@ -59,7 +68,7 @@ def _scanpy_load_annotate_tsv_mtx_files(path_filtered_files, filenames, file_mat
         raw_adata.var = raw_file_features
         raw_adata.var_names_make_unique()
     else:
-        # workaround that something can be returend
+        # workaround that something can be returned
         raw_adata = []
 
     # 2. Load FILTERED data
@@ -67,8 +76,8 @@ def _scanpy_load_annotate_tsv_mtx_files(path_filtered_files, filenames, file_mat
     filtered_adata = filtered_adata.transpose()
     filtered_adata.X = filtered_adata.X.toarray()
 
-    filtered_file_barcodes = pd.read_csv(gzip.open(filtered_barcodes_file), header=None, sep='\t')
-    filtered_file_features = pd.read_csv(gzip.open(filtered_features_file), header=None, sep='\t')
+    filtered_file_barcodes = _read_tsv_files(file=filtered_barcodes_file)
+    filtered_file_features = _read_tsv_files(file=filtered_features_file)
 
     # # Annotate data
     filtered_file_barcodes.rename(columns={0: 'barcode'}, inplace=True)
@@ -179,6 +188,10 @@ def main(filename, read_raw_matrix=False):
         for c_sample in tqdm(range(len(config_paths[0][1:])), desc='Loading samples'):
             print("         ... reading out ...")
             c_sample += 1
+            # matrix_file_end, features_file_end, barcode_file_end
+            feature_bc_matrix_string = \
+                np.array([config_paths[9][c_sample], config_paths[8][c_sample], config_paths[7][c_sample]])
+
             # path to h5 and matrices
             path_matrix = os.path.join(os.sep, config_paths[0][c_sample], config_paths[1][c_sample],
                                        config_paths[2][c_sample], config_paths[3][c_sample], config_paths[4][c_sample])
@@ -240,7 +253,12 @@ def main(filename, read_raw_matrix=False):
 
         # # Loop to load all data sets
         for c_sample in tqdm(range(len(config_paths[0][1:])), desc='Loading samples'):
-            c_sample += 1
+            c_sample += 1  # +1 becaue we already loaded the first sample
+
+            # matrix_file_end, features_file_end, barcode_file_end
+            feature_bc_matrix_string = \
+                np.array([config_paths[9][c_sample], config_paths[8][c_sample], config_paths[7][c_sample]])
+
             # path to h5 and matrices
             path_matrix = os.path.join(os.sep, config_paths[0][c_sample], config_paths[1][c_sample],
                                        config_paths[2][c_sample], config_paths[3][c_sample],
