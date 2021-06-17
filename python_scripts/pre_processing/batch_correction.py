@@ -224,7 +224,15 @@ def apply_batch_correction(normed_scaled_adatas, save_folder, n_comps, possible_
 
     # 2.3 Batch Correction (Data integration phase)
     print("         Batch Correction")
-    bc_adata = scanorama_bc(adatas=normed_scaled_adatas, n_comps=n_comps, save_folder=save_folder, batch_key=batch_key,
-                            possible_batch_effects=possible_batch_effects)
+    # check if possible batch effects are among obs_keys
+    intersect_batcheffects_keys = np.intersect1d(normed_scaled_adatas.obs_keys(), possible_batch_effects)
+    # Scanorama
+    try:
+        bc_adata = scanorama_bc(adatas=normed_scaled_adatas, n_comps=n_comps, save_folder=save_folder, batch_key=batch_key,
+                                possible_batch_effects=intersect_batcheffects_keys)
+    except KeyError:
+        print("Requested batch effect variable not in adata object")
+    except ValueError:
+        print("Empty batch effect list")
 
     return bc_adata
