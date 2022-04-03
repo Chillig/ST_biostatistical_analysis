@@ -5,6 +5,16 @@
     Date created: November/03/2020
     Date last modified: April/30/2021
     Python Version: 3.7
+
+    Steps:
+    1. Get cytokines and genes to of interest to highlight
+    2. Load adata object to get gene counts
+    3. For-loop:
+        3.1 Load DEG files
+        3.2 Switch log2FC signs
+        3.3 Plot interactive and static Volcano plots
+        3.4 Plot Boxplots
+
 """
 
 from python_scripts.utils import add_observables, gene_lists
@@ -34,7 +44,7 @@ xy_ticks = 12
 title_fontsize = 18
 legend_fontsize = 14
 text_fontsize = 12
-file_format = '.pdf'
+file_format = '.png'
 img_key = 'hires'
 
 
@@ -52,7 +62,7 @@ def load_adata(type_dataset, cluster_label):
     adata : annData
 
     """
-    adata_path = "/Users/christina.hillig/PycharmProjects/Cellranger_analysis/Spatial_publication/Input_data"
+    adata_path = "/Users/christina.hillig/PycharmProjects/ST_Immune_publication/Publication_analysis/adata_storage"
     if type_dataset == 'ST':
         adata = sc.read(os.path.join(adata_path, '2020-12-04_Visium_Data_QC_BC_clustered.h5'))
         # remove all spots without a tissue label
@@ -179,8 +189,9 @@ def plot_violins(adata, group, groupby, output_folder, log=False):
                  stripplot=False, jitter=False, size=2, cut=0, show=False, ax=axs, bw=.1, **kwargs)
     if np.amax(adata.obs["_".join([group, 'group'])]) <= 10:
         axs.set_yticks(np.arange(0, np.amax(adata.obs["_".join([group, 'group'])]) + 1, 1))
-    axs.tick_params(axis="y", labelsize=xy_ticks)
-    axs.set_ylabel("Counts", fontsize=xy_fontsize)
+    axs.tick_params(axis="y", labelsize=14)
+    axs.set_ylabel("Counts", fontsize=18)
+    # axs.tick_params("x", fontsize=14)
     if log:
         axs.set_yscale('log')
 
@@ -216,8 +227,10 @@ def get_labels(df, annotations, log2fc='log2fc', pval='pval', log2fc_cut=1.0, th
     if isinstance(annotations, dict):
         driver_group = annotations['Driver_genes']
         responder_group = annotations['Responder_genes']
+        receptor_group = annotations['Receptors']
         merged_genes = driver_group.copy()
         merged_genes.extend(responder_group)
+        merged_genes.extend(receptor_group)
         ind_genes = np.where(df['gene_symbol'][np.newaxis, :] == np.array(merged_genes)[:, np.newaxis])[1]
         label_df = df.iloc[ind_genes]
 
@@ -227,6 +240,8 @@ def get_labels(df, annotations, log2fc='log2fc', pval='pval', log2fc_cut=1.0, th
         label_info['color'] = ['mediumblue'] * len(label_info.index)
         ind_drivers = np.where(label_info['gene_symbol'][np.newaxis, :] == np.array(driver_group)[:, np.newaxis])[1]
         label_info['color'].values[ind_drivers] = ['purple'] * len(ind_drivers)
+        ind_receptors = np.where(label_info['gene_symbol'][np.newaxis, :] == np.array(receptor_group)[:, np.newaxis])[1]
+        label_info['color'].values[ind_receptors] = ['red'] * len(ind_receptors)
     else:
         ind_genes = np.where(df['gene_symbol'][np.newaxis, :] == np.array(annotations)[:, np.newaxis])[1]
         label_df = df.iloc[ind_genes]
@@ -259,13 +274,13 @@ def set_axislimits(cytokine):
 
     """
     if cytokine == 'IFNG':
-        xlim = [-15, 35]
+        xlim = [-35, 15]  # [-15, 35]
         ylim = [0, 50]
     elif cytokine == 'IL13':
-        xlim = [-15, 30]
+        xlim = [-30, 15]  # [-15, 30]
         ylim = [0, 12.5]
     elif cytokine == 'IL17A':
-        xlim = [-15, 30]
+        xlim = [-30, 15]  # [-15, 30]
         ylim = [0, 42]
     else:
         xlim = None
@@ -321,6 +336,13 @@ def volcano_plot(df, df_keys, cytokine, label_genes, title, save_folder, adjust=
     log2fc = df_keys[0]
     pval = df_keys[1]
 
+    if 'pval' in pval:
+        y_labels = r'-log$_{10}$p-values'
+        legend_label = 'p-value'
+    else:
+        y_labels = r'-log$_{10}$FDR-corrected p-value'
+        legend_label = 'FDR'
+
     if adjust is None:
         adjust = True
 
@@ -340,13 +362,16 @@ def volcano_plot(df, df_keys, cytokine, label_genes, title, save_folder, adjust=
     ax.set_axisbelow(True)
     # Plot points
     point_plot(df=df, col_log2fc=log2fc, col_pval=pval, mask=m_sig_log2fc_pval,
-               colour='darkred', label=r"p-value $\leq$ 0.05 and |log$_2$FC| $\geq$ 1", axs=ax, order=3)
+               colour='darkred', label=r"{} $\leq$ 0.05 and |log$_2$FC| $\geq$ 1".format(legend_label), axs=ax, order=3)
     point_plot(df=df, col_log2fc=log2fc, col_pval=pval, mask=m_sig_log2fc,
-               colour='darkblue', label=r"p-value $>$ 0.05 and |log$_2$FC| $>$ 1", axs=ax, order=2, alpha=0.5)
+               colour='darkblue', label=r"{} $>$ 0.05 and |log$_2$FC| $>$ 1".format(legend_label),
+               axs=ax, order=2, alpha=0.5)
     point_plot(df=df, col_log2fc=log2fc, col_pval=pval, mask=m_sig_pval,
-               colour='darkorange', label=r"p-value $<$ 0.05 and |log$_2$FC| $<$ 1", axs=ax, order=2, alpha=0.5)
+               colour='darkorange', label=r"{} $<$ 0.05 and |log$_2$FC| $<$ 1".format(legend_label),
+               axs=ax, order=2, alpha=0.5)
     point_plot(df=df, col_log2fc=log2fc, col_pval=pval, mask=m_inbetween,
-               colour='lightgrey', label=r"p-value $>$ 0.05 and |log$_2$FC| $<$ 1", axs=ax, order=1, alpha=0.5)
+               colour='lightgrey', label=r"{} $>$ 0.05 and |log$_2$FC| $<$ 1".format(legend_label),
+               axs=ax, order=1, alpha=0.5)
 
     # draw legends
     ax.legend(loc='best', fontsize=legend_fontsize)
@@ -358,7 +383,7 @@ def volcano_plot(df, df_keys, cytokine, label_genes, title, save_folder, adjust=
 
     # Axes properties
     ax.set_xlabel(r'log$_2$(FC)', fontsize=xy_fontsize)
-    ax.set_ylabel(r'-log$_{10}$(p-value)', fontsize=xy_fontsize)
+    ax.set_ylabel(y_labels, fontsize=xy_fontsize)
     # # sub region of the original image
     ax.set_xlim(xlim)
     ax.set_ylim(ylim)
@@ -390,7 +415,7 @@ def volcano_plot(df, df_keys, cytokine, label_genes, title, save_folder, adjust=
     # remove legend box
     ax.legend(frameon=False)
 
-    fig.savefig(os.path.join(save_folder, "".join([title, file_format])))
+    fig.savefig(os.path.join(save_folder, "".join([title, file_format])), dpi=300)
     plt.close()
 
 
@@ -421,6 +446,13 @@ def plotly_interactive_volcano(df, df_keys, save_folder, key, x_lab, y_lab, log2
     pval = df_keys[1]
     log2fc = df_keys[0]
 
+    if 'pval' in pval:
+        y_labels = r'-log$_{10}$p-values'
+        legend_label = 'p-value'
+    else:
+        y_labels = r'-log$_{10}$FDR-corrected p-value'
+        legend_label = 'FDR'
+
     # create masks for all scenarios
     m_sig_log2fc, m_sig_log2fc_pval, m_sig_pval, m_inbetween, index_hkg = get_updowninbetween_masks(
         df, pval, log2fc, log2fc_cut=log2fc_cut, pval_cut=pval_cut)
@@ -437,10 +469,12 @@ def plotly_interactive_volcano(df, df_keys, save_folder, key, x_lab, y_lab, log2
                              text=df[df_keys[2]][m_sig_log2fc_pval], name='Significant'))
     fig.add_trace(go.Scatter(x=df[df_keys[0]][m_sig_pval], y=-np.log10(df[df_keys[1]][m_sig_pval]),
                              mode='markers', marker=dict(size=dotsize, color='darkorange'), opacity=0.5,
-                             text=df[df_keys[2]][m_sig_pval], name=r'p-value < 0.05 and |log$_2$FC| < 1'))
+                             text=df[df_keys[2]][m_sig_pval],
+                             name=r'{} < 0.05 and |log$_2$FC| < 1'.format(legend_label)))
     fig.add_trace(go.Scatter(x=df[df_keys[0]][m_sig_log2fc], y=-np.log10(df[df_keys[1]][m_sig_log2fc]),
                              mode='markers', marker=dict(size=dotsize, color='darkblue'), opacity=0.5,
-                             text=df[df_keys[2]][m_sig_log2fc], name=r"p-value > 0.05 and |log$_2$FC| > 1"))
+                             text=df[df_keys[2]][m_sig_log2fc],
+                             name=r"{} > 0.05 and |log$_2$FC| > 1".format(legend_label)))
     fig.add_trace(go.Scatter(x=df[df_keys[0]].iloc[index_hkg], y=-np.log10(df[df_keys[1]].iloc[index_hkg]),
                              marker=dict(size=dotsize, color='darkgreen'), mode='markers',
                              text=df[df_keys[2]].iloc[index_hkg], name='Housekeeping genes'))
@@ -554,7 +588,8 @@ def main(dataset_type, save_folder, df_keys, log, dge_results_folder):
 
     print("# ------ Load data ------ #")
     cytokines, allinone, cytoresps_dict = gene_lists.get_publication_cyto_resps()
-    genes_to_highlight = gene_lists.highlight_genes()
+    # genes_to_highlight = gene_lists.highlight_genes()
+    genes_to_highlight = gene_lists.highlight_genes_receptors()
     # # 1. Load adata
     adata = load_adata(type_dataset=dataset_type, cluster_label=cluster_label)
     # # 2 Read out only T-cell spots by leukocyte markers
@@ -582,7 +617,7 @@ def main(dataset_type, save_folder, df_keys, log, dge_results_folder):
                 # Check if column names and row names are unique
                 print("Unique Genes:", allgenes_df['gene_symbol'].is_unique)
                 print("Unique Columns:", allgenes_df.columns.is_unique)
-                # remove duplicated rows
+                # remove duplicated rows -> there are no duplicated rows ..
                 allgenes_df = allgenes_df.loc[~allgenes_df['gene_symbol'].duplicated(), :]
 
                 # Name of used design function
@@ -593,6 +628,11 @@ def main(dataset_type, save_folder, df_keys, log, dge_results_folder):
                 output_folder = os.path.join(save_folder, design, cyto)
                 os.makedirs(output_folder, exist_ok=True)
 
+                # switch log2fc signs to cyto+ on right side with positive log2FC
+                if allgenes_df.loc[allgenes_df['gene_symbol'] == cyto, 'log2fc'].values < 0:
+                    allgenes_df['log2fc'] = -allgenes_df['log2fc']
+
+                # Save df
                 allgenes_df = _write_dataframe(adata, df=allgenes_df, cytokine=cyto, observable=obs_label_condition,
                                                output_folder=output_folder, method=method)
 
@@ -600,7 +640,7 @@ def main(dataset_type, save_folder, df_keys, log, dge_results_folder):
                 # 3. Volcano plot interactive plot
                 plotly_interactive_volcano(df=allgenes_df, df_keys=df_keys, save_folder=output_folder,
                                            key="".join([method, "_", cyto, "+", "_vs_", cyto, "-"]),
-                                           x_lab=r'log$_2$(FC)', y_lab=r'-log$_{10}$(pvalue)',
+                                           x_lab=r'log$_2$(FC)', y_lab=r'-log$_{10}$(p-adjusted value)',
                                            log2fc_cut=1, pval_cut=0.05)
 
                 volcano_plot(df=allgenes_df, df_keys=df_keys, cytokine=cyto, adjust=True,
@@ -612,8 +652,10 @@ def main(dataset_type, save_folder, df_keys, log, dge_results_folder):
                 if isinstance(genes_labeling, dict):
                     driver_group = genes_to_highlight[cyto]['Driver_genes']
                     responder_group = genes_to_highlight[cyto]['Responder_genes']
+                    receptors_group = genes_to_highlight[cyto]['Receptors']
                     merged_genes = driver_group.copy()
                     merged_genes.extend(responder_group)
+                    merged_genes.extend(receptors_group)
                 else:
                     merged_genes = genes_labeling.copy()
 
@@ -634,8 +676,8 @@ def main(dataset_type, save_folder, df_keys, log, dge_results_folder):
                         goi[gene] = spatial_adata_gene.obs["_".join([gene, 'group'])].values
 
                         # 5. Visualise counts of gene of interest in a violin plot
-                        plot_violins(adata=spatial_adata_gene, group=gene, groupby=obs_label_condition,
-                                     output_folder=output_folder, log=log)
+                        # plot_violins(adata=spatial_adata_gene, group=gene, groupby=obs_label_condition,
+                        #              output_folder=output_folder, log=log)
 
                 # Save counts of genes of interest
                 goi.to_csv(os.path.join(output_folder, "_".join([cyto, "Counts_Highlight_genes.csv"])))
@@ -644,7 +686,7 @@ def main(dataset_type, save_folder, df_keys, log, dge_results_folder):
 if __name__ == '__main__':
     today = date.today()
     dataset = 'ST'
-    columns = ['log2fc', 'pval', 'gene_symbol']
+    columns = ['log2fc', 'pval', 'gene_symbol']  # padj
     log_transform = False
 
     input_folder = os.path.join("..", "..", "..",

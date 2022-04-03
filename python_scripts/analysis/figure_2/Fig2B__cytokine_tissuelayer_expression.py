@@ -391,7 +391,7 @@ if __name__ == '__main__':
     save_path = os.path.join("..", "..", "..", "output", "Figure_2B", str(today))
     os.makedirs(save_path, exist_ok=True)
 
-    # Load QCed but not normalised annData object
+    # Load unpreprocessed but not normalised annData object
     unpp_adata = sc.read(
         os.path.join("..", "..", "..", "adata_storage", "2020-10-06", "st_adata_P15509_P16357_wo_4_7_unpp.h5"))
 

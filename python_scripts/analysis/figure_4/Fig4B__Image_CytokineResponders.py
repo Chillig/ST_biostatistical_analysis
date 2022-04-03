@@ -267,6 +267,7 @@ if __name__ == '__main__':
 
     # 2. Load unpre-processed anndata object
     unpp_st_adata = sc.read(
-        os.path.join("..", "..", "..", "adata_storage", "2020-10-06", "st_adata_P15509_P16357_wo_4_7_unpp.h5"))
+        os.path.join("/Users", "christina.hillig", "Documents", "Projects", "annData_objects", "spatial",
+                     "2021-07-29", "Spatial Transcriptomics_unpp.h5"))
 
     main(save_folder=savepath, adata=unpp_st_adata)

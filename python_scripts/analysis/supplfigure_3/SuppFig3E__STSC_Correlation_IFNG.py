@@ -147,8 +147,8 @@ def get_updowninbetween_masks(df_st, df_sc, log2fc_cut=1., threshold=0.05):
     return sig_13_mask, sig_24_mask, not_sig_mask, cross_mask, index_hkg_st, index_hkg_sc
 
 
-def plotly_interactive_singedppvalues(df_st, df_sc, value, save_folder, key, data_sets, log2fc_cut=1., threshold=0.05,
-                                      zoom=True):
+def plotly_interactive_singedppvalues(
+        df_st, df_sc, value, signature_gene, save_folder, key, data_sets, log2fc_cut=1., threshold=0.05, zoom=True):
     """Plot interactive plot using plotly
 
     Parameters
@@ -158,6 +158,7 @@ def plotly_interactive_singedppvalues(df_st, df_sc, value, save_folder, key, dat
     df_sc : pandas.Dataframe
         Single cell DGE Analysis results
     value : str
+    signature_gene : str
     save_folder : str
         path to save folder
     key : str
@@ -178,7 +179,7 @@ def plotly_interactive_singedppvalues(df_st, df_sc, value, save_folder, key, dat
     sig_13_mask, sig_24_mask, not_sig_mask, cross_mask, index_hkg_st, index_hkg_sc = get_updowninbetween_masks(
         df_st=df_st, df_sc=df_sc, threshold=threshold, log2fc_cut=log2fc_cut)
     # Check masks
-    check_masks(df_st, df_sc, value, sig_13_mask, sig_24_mask, not_sig_mask, cross_mask, cytokine, save_folder)
+    check_masks(df_st, df_sc, value, sig_13_mask, sig_24_mask, not_sig_mask, cross_mask, signature_gene, save_folder)
 
     if 'p' in value:
         xy_labels = r'signed log$_{10}$p-values'
@@ -225,15 +226,18 @@ def plotly_interactive_singedppvalues(df_st, df_sc, value, save_folder, key, dat
         fig.write_html(os.path.join(save_folder, "_".join(["Full", key, "interactive.html"])))
 
 
-def plot_signed_ppvalues(df_st, df_sc, label_genes, save_folder, value, data_sets, sig_r, threshold=0.05, adjust=False,
-                         zoom=True):
+def plot_signed_ppvalues(df_st, df_sc, signature_gene, label_genes, dge__method, design_func, save_folder, value,
+                         data_sets, sig_r, threshold=0.05, adjust=False, zoom=True):
     """Plot signed and log10 transformed p-values
 
     Parameters
     ----------
     df_st : pandas.Dataframe
     df_sc : pandas.Dataframe
+    signature_gene : str
     label_genes : dict
+    dge__method : str
+    design_func : str
     save_folder : str
     value : str
     data_sets : 'list' ['str']
@@ -251,7 +255,7 @@ def plot_signed_ppvalues(df_st, df_sc, label_genes, save_folder, value, data_set
     sig_13_mask, sig_24_mask, not_sig_mask, cross_mask, _, _ = get_updowninbetween_masks(
         df_st=df_st, df_sc=df_sc, threshold=threshold, log2fc_cut=1)
     # Check masks
-    check_masks(df_st, df_sc, value, sig_13_mask, sig_24_mask, not_sig_mask, cross_mask, cytokine, save_folder)
+    check_masks(df_st, df_sc, value, sig_13_mask, sig_24_mask, not_sig_mask, cross_mask, signature_gene, save_folder)
 
     if 'p' in value:
         xy_labels = r'signed log$_{10}$p-values'
@@ -286,7 +290,8 @@ def plot_signed_ppvalues(df_st, df_sc, label_genes, save_folder, value, data_set
                         edgecolors='k', alpha=1, linewidth=0.2, label=r"p-value <= 0.05 and |log$_2$FC| >= 1")
 
     # Add driver and responder gene annotations
-    color_genes = get_colors_genes(df_st=df_st, df_sc=df_sc, label_genes=label_genes, value=value)
+    color_genes = get_colors_genes(
+        df_st=df_st, df_sc=df_sc, label_genes=label_genes, value=value, signature_gene=signature_gene)
     texts = []
     for ind_label, (x, y) in enumerate(zip(color_genes['x'], color_genes['y'])):
         texts.append(ax.text(x, y, color_genes['gene_symbol'].values[ind_label], size=text_fontsize,
@@ -298,7 +303,7 @@ def plot_signed_ppvalues(df_st, df_sc, label_genes, save_folder, value, data_set
 
     # Add Threshold
     log10_cut = -np.log10(threshold)
-    if cytokine == 'IL17A':
+    if signature_gene == 'IL17A':
         # Full: 83; Zoomed: 39
         if zoom:
             ax.text(33, log10_cut + 0.2, "5% FDR", size=8, color='k', zorder=3)
@@ -352,16 +357,16 @@ def plot_signed_ppvalues(df_st, df_sc, label_genes, save_folder, value, data_set
     plt.tight_layout()
 
     if zoom:
-        fig.savefig(os.path.join(save_folder, "_".join(["_".join(['Zoomed', cytokine, value, "plot"]),
-                                                        dge_method, design_function, '.pdf'])))
+        fig.savefig(os.path.join(save_folder, "_".join(["_".join(['Zoomed', signature_gene, value, "plot"]),
+                                                        dge__method, design_func, '.pdf'])))
     else:
-        fig.savefig(os.path.join(save_folder, "_".join(["_".join(['Full', cytokine, value, "plot"]),
-                                                        dge_method, design_function, '.pdf'])))
+        fig.savefig(os.path.join(save_folder, "_".join(["_".join(['Full', signature_gene, value, "plot"]),
+                                                        dge__method, design_func, '.pdf'])))
 
     plt.close()
 
 
-def get_colors_genes(df_st, df_sc, label_genes, value):
+def get_colors_genes(df_st, df_sc, label_genes, value, signature_gene):
     """Get colors for driver and responder genes
 
     This function creates a data frame for driver and responder genes containing the signed p-values as x and y
@@ -377,6 +382,7 @@ def get_colors_genes(df_st, df_sc, label_genes, value):
         contains the gene symbols for driver and responder genes
     value : str
         Column name of value in df
+    signature_gene : str
 
     Returns
     -------
@@ -412,7 +418,7 @@ def get_colors_genes(df_st, df_sc, label_genes, value):
 
     # Add color for cytokines
     ind_cytos = np.where(label_info['gene_symbol'][np.newaxis, :] == np.array(cytokines)[:, np.newaxis])[1]
-    if cytokine == 'IL17A':
+    if signature_gene == 'IL17A':
         label_info['color'].values[ind_cytos] = ['#ff7f00'] * len(ind_cytos)
     else:
         label_info['color'].values[ind_cytos] = ['#377eb8'] * len(ind_cytos)
@@ -539,7 +545,8 @@ def data_preparation(path_st_data, path_sc_data):
     return df_st_data, df_sc_data
 
 
-def main(path_st_data, path_sc_data, save_folder, log2fc_cut=1.0, pval_cut=0.05, zoom=True):
+def main(path_st_data, path_sc_data, signature_gene, dge__method, design_func, save_folder,
+         log2fc_cut=1.0, pval_cut=0.05, zoom=True):
     """Plot signed log10-transformed p-values of ST vs. scRNA-seq DGE Analysis results
 
     Parameters
@@ -548,6 +555,10 @@ def main(path_st_data, path_sc_data, save_folder, log2fc_cut=1.0, pval_cut=0.05,
         path to DGE Analysis result of the Spatial transcriptomics data set
     path_sc_data : str
         path to DGE Analysis result of the Single-cell transcriptomics data set
+    signature_gene : str
+        eg cytokine gene symbol
+    dge__method : str
+    design_func : str
     save_folder : str
         path to result storing folder
     log2fc_cut : float
@@ -577,14 +588,16 @@ def main(path_st_data, path_sc_data, save_folder, log2fc_cut=1.0, pval_cut=0.05,
     sig_corr = get_correlation(df_st=df_st, df_sc=df_sc, pval_cut=pval_cut, log2fc_cut=log2fc_cut, method='spearman')
 
     print("3. Plot signed pp-value plot")
-    plot_signed_ppvalues(df_st=df_st, df_sc=df_sc, label_genes=genes[cytokine], save_folder=save_folder,
+    plot_signed_ppvalues(df_st=df_st, df_sc=df_sc, label_genes=genes[signature_gene], save_folder=save_folder,
                          value='signed_pval', data_sets=['ST dataset', 'scRNA-seq dataset'], threshold=pval_cut,
-                         adjust=True, sig_r=sig_corr, zoom=zoom)
+                         adjust=True, sig_r=sig_corr, zoom=zoom, signature_gene=signature_gene, dge__method=dge__method,
+                         design_func=design_func)
 
     # Interactive signed p-value plot
     plotly_interactive_singedppvalues(
-        df_st=df_st, df_sc=df_sc, value='signed_pval', save_folder=save_folder, key=cytokine,
-        data_sets=['ST dataset', 'scRNA-seq dataset'], log2fc_cut=log2fc_cut, threshold=pval_cut, zoom=zoom)
+        df_st=df_st, df_sc=df_sc, value='signed_pval', save_folder=save_folder, key=signature_gene,
+        signature_gene=signature_gene, data_sets=['ST dataset', 'scRNA-seq dataset'],
+        log2fc_cut=log2fc_cut, threshold=pval_cut, zoom=zoom)
 
 
 if __name__ == '__main__':
@@ -621,5 +634,6 @@ if __name__ == '__main__':
                              os.path.sep, comparisons, os.path.sep, "single_cell_", comparisons,
                              "_glmGamPoi_DGE_all_genes.csv"]))
 
-    main(path_st_data=st_path, path_sc_data=sc_path, save_folder=savepath,
-         log2fc_cut=log2fc_threshold, pval_cut=pval_threshold, zoom=zoom_in)
+    main(path_st_data=st_path, path_sc_data=sc_path, save_folder=savepath, signature_gene=cytokine,
+         log2fc_cut=log2fc_threshold, pval_cut=pval_threshold, zoom=zoom_in, dge__method=dge_method,
+         design_func=design_function)

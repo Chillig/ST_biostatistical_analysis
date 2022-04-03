@@ -109,34 +109,6 @@ def annotate_cluster(adata, cluster_algorithm, resolution):
     return adata
 
 
-def add_tissue_obs(adata):
-    # 1 Select tissue types of interest
-    tissue_types = ['upper EPIDERMIS', 'middle EPIDERMIS', 'basal EPIDERMIS',
-                    'DERdepth1', 'DERdepth2', 'DERdepth3', 'DERdepth4', 'DERdepth5', 'DERdepth6', 'DERdepth7',
-                    'INTERFACE']
-
-    adata.obs['tissue_type'] = 'Unknown'
-    adata.obs['tissue_type'] = adata.obs['tissue_type'].astype('<U16')
-    for tissue in tissue_types:
-        m_tissue = adata.obs[tissue] == 1
-        adata.obs['tissue_type'][m_tissue] = tissue
-
-    return adata
-
-
-def add_disease_healthy_obs(adata):
-    # 1 Select tissue types of interest
-    diagnosis = ['PSO', 'AE', 'LICHEN', 'PRP']
-
-    adata.obs['healthy_disease'] = 'NON LESIONAL'
-    adata.obs['healthy_disease'] = adata.obs['healthy_disease'].astype('<U16')
-    for disease in diagnosis:
-        m_disease = (adata.obs[disease] == 1) & (adata.obs['NON LESIONAL'] == 0)
-        adata.obs['healthy_disease'][m_disease] = disease
-
-    return adata
-
-
 def main(save_folder, pp_adata, cluster_algorithm):
     """
     1. scRNAseq data set
@@ -159,7 +131,7 @@ def main(save_folder, pp_adata, cluster_algorithm):
     # 3. Apply cluster algorithm
     pp_adata, key = apply_clusteralgo(adata=pp_adata, algorithm=cluster_algorithm, resolution=0.1)
 
-    # 4. Annotate clusters with expert opinion - before the best resolution r=0.1 was identified
+    # 4. Annotate clusters with expert opinion - prior step, the best resolution r=0.1 was identified
     pp_adata = annotate_cluster(adata=pp_adata, cluster_algorithm=cluster_algorithm, resolution=0.1)
 
     # 5. Plot UMAP scRNAseq data

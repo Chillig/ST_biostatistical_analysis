@@ -95,13 +95,17 @@ def check_masks(df_st, df_sc, value, sig_13_mask, sig_24_mask, not_sig_mask, cro
     plt.close()
 
 
-def get_updowninbetween_masks(df_st, df_sc, log2fc_cut=1., threshold=0.05):
+def get_updowninbetween_masks(df_st, df_sc, significance_level, value, log2fc_cut=1., threshold=0.05):
     """Create masks for all scenarios (inside and outside of cross)
 
     Parameters
     ----------
     df_st : pandas.Dataframe
     df_sc : pandas.Dataframe
+    significance_level: str
+    pval or padj
+    value : str
+        name of p-value or FDR value to plot
     log2fc_cut : float
     threshold : float
 
@@ -111,30 +115,30 @@ def get_updowninbetween_masks(df_st, df_sc, log2fc_cut=1., threshold=0.05):
     """
 
     # 1. Significant p <= 0.05 (alpha darkorange)
-    m_outsidecross_st = df_st['pval'].values <= threshold
-    m_outsidecross_sc = df_sc['pval'].values <= threshold
+    m_outsidecross_st = df_st[significance_level].values <= threshold
+    m_outsidecross_sc = df_sc[significance_level].values <= threshold
     # -> all 4 quadrants: I, II, III, IV outside cross p < 0.05
     outsidecross_mask = np.logical_and(m_outsidecross_st, m_outsidecross_sc)
 
     # 2. Not Significant p > 0.05 (alpha grey)
-    m_notpval_st = df_st['pval'].values > threshold
-    m_notpval_sc = df_sc['pval'].values > threshold
+    m_notpval_st = df_st[significance_level].values > threshold
+    m_notpval_sc = df_sc[significance_level].values > threshold
     # -> all 4 quadrants in cross p > 0.05
     cross_mask = np.logical_or(m_notpval_st, m_notpval_sc)
 
     # 3. Significant p <= 0.05 log2fc >= 1 (darkred; balk circle)
-    m_sig3_st = (df_st['signed_pval'].values <= np.log10(threshold)) & (abs(df_st['log2fc'].values) >= log2fc_cut)
-    m_sig3_sc = (df_sc['signed_pval'].values <= np.log10(threshold)) & (abs(df_sc['log2fc'].values) >= log2fc_cut)
-    m_sig1_st = (df_st['signed_pval'].values >= -np.log10(threshold)) & (abs(df_st['log2fc'].values) >= log2fc_cut)
-    m_sig1_sc = (df_sc['signed_pval'].values >= -np.log10(threshold)) & (abs(df_sc['log2fc'].values) >= log2fc_cut)
+    m_sig3_st = (df_st[value].values <= np.log10(threshold)) & (abs(df_st['log2fc'].values) >= log2fc_cut)
+    m_sig3_sc = (df_sc[value].values <= np.log10(threshold)) & (abs(df_sc['log2fc'].values) >= log2fc_cut)
+    m_sig1_st = (df_st[value].values >= -np.log10(threshold)) & (abs(df_st['log2fc'].values) >= log2fc_cut)
+    m_sig1_sc = (df_sc[value].values >= -np.log10(threshold)) & (abs(df_sc['log2fc'].values) >= log2fc_cut)
     # -> quadrants I and III outside of cross
     sig_13_mask = (m_sig3_st & m_sig3_sc) | (m_sig1_st & m_sig1_sc)
 
     # 4. Complementary Significant (alpha darkred)
-    m_sig2_st = (df_st['signed_pval'].values >= -np.log10(threshold)) & (abs(df_st['log2fc'].values) >= log2fc_cut)
-    m_sig2_sc = (df_sc['signed_pval'].values <= np.log10(threshold)) & (abs(df_sc['log2fc'].values) >= log2fc_cut)
-    m_sig4_st = (df_st['signed_pval'].values <= np.log10(threshold)) & (abs(df_st['log2fc'].values) >= log2fc_cut)
-    m_sig4_sc = (df_sc['signed_pval'].values >= -np.log10(threshold)) & (abs(df_sc['log2fc'].values) >= log2fc_cut)
+    m_sig2_st = (df_st[value].values >= -np.log10(threshold)) & (abs(df_st['log2fc'].values) >= log2fc_cut)
+    m_sig2_sc = (df_sc[value].values <= np.log10(threshold)) & (abs(df_sc['log2fc'].values) >= log2fc_cut)
+    m_sig4_st = (df_st[value].values <= np.log10(threshold)) & (abs(df_st['log2fc'].values) >= log2fc_cut)
+    m_sig4_sc = (df_sc[value].values >= -np.log10(threshold)) & (abs(df_sc['log2fc'].values) >= log2fc_cut)
     # -> quadrants II and IV outside of cross
     sig_24_mask = (m_sig2_st & m_sig2_sc) | (m_sig4_st & m_sig4_sc)
 
@@ -147,8 +151,8 @@ def get_updowninbetween_masks(df_st, df_sc, log2fc_cut=1., threshold=0.05):
     return sig_13_mask, sig_24_mask, not_sig_mask, cross_mask, index_hkg_st, index_hkg_sc
 
 
-def plotly_interactive_singedppvalues(df_st, df_sc, value, save_folder, key, data_sets, log2fc_cut=1., threshold=0.05,
-                                      zoom=True):
+def plotly_interactive_singedppvalues(df_st, df_sc, significance_level, value, save_folder, key, data_sets,
+                                      log2fc_cut=1., threshold=0.05, zoom=True):
     """Plot interactive plot using plotly
 
     Parameters
@@ -157,6 +161,8 @@ def plotly_interactive_singedppvalues(df_st, df_sc, value, save_folder, key, dat
         Spatial DGE Analysis results
     df_sc : pandas.Dataframe
         Single cell DGE Analysis results
+    significance_level : str
+        pval or padj
     value : str
     save_folder : str
         path to save folder
@@ -176,14 +182,17 @@ def plotly_interactive_singedppvalues(df_st, df_sc, value, save_folder, key, dat
     """
     # create masks for all scenarios
     sig_13_mask, sig_24_mask, not_sig_mask, cross_mask, index_hkg_st, index_hkg_sc = get_updowninbetween_masks(
-        df_st=df_st, df_sc=df_sc, threshold=threshold, log2fc_cut=log2fc_cut)
+        df_st=df_st, df_sc=df_sc, threshold=threshold, log2fc_cut=log2fc_cut,
+        value=value, significance_level=significance_level)
     # Check masks
     check_masks(df_st, df_sc, value, sig_13_mask, sig_24_mask, not_sig_mask, cross_mask, cytokine, save_folder)
 
     if 'p' in value:
         xy_labels = r'signed log$_{10}$p-values'
+        legend_label = 'p-value'
     else:
-        xy_labels = r'signed log$_{10}$q-values'
+        xy_labels = r'signed log$_{10}$FDR-corrected p-value'
+        legend_label = 'FDR'
 
     # plot
     fig = go.Figure()
@@ -191,19 +200,19 @@ def plotly_interactive_singedppvalues(df_st, df_sc, value, save_folder, key, dat
     fig.add_trace(go.Scatter(x=df_st[value][cross_mask], y=df_sc[value][cross_mask],
                              mode='markers', marker=dict(size=dotsize, color='lightgrey', opacity=1),
                              text=df_st['gene_symbol'][cross_mask],  # hover text goes here
-                             name=r"p-value > 0.05"))
+                             name=r"{} > 0.05".format(legend_label)))
 
     # not significant and log2fc < threshold
     fig.add_trace(go.Scatter(x=df_st[value][not_sig_mask], y=df_sc[value][not_sig_mask],
                              mode='markers', marker=dict(size=dotsize, color='darkorange', opacity=0.8),
                              text=df_st['gene_symbol'][not_sig_mask],  # hover text goes here
-                             name=r"p-value < 0.05 and |log$_2$FC| < 1"))
+                             name=r"{} < 0.05 and |log$_2$FC| < 1".format(legend_label)))
 
     # plot significant genes
     fig.add_trace(go.Scatter(x=df_st[value][sig_13_mask], y=df_sc[value][sig_13_mask],
                              mode='markers', marker=dict(size=dotsize, color='darkred', opacity=1),
                              text=df_st['gene_symbol'][sig_13_mask],
-                             name=r'p-value <= 0.05 and |log$_2$FC| >= 1'))
+                             name=r'{} <= 0.05 and |log$_2$FC| >= 1'.format(legend_label)))
 
     fig.add_trace(go.Scatter(x=df_st[value][sig_24_mask], y=df_sc[value][sig_24_mask],
                              mode='markers', marker=dict(size=dotsize, color='darkred', opacity=0.5),
@@ -214,7 +223,7 @@ def plotly_interactive_singedppvalues(df_st, df_sc, value, save_folder, key, dat
                              marker=dict(size=dotsize, color='darkgreen'), mode='markers',
                              text=df_st['gene_symbol'].iloc[index_hkg_st], name='Housekeeping genes'))
 
-    fig.update_layout(title="Signed_log10(P-values) " + key, xaxis_title="{} \n {}".format(xy_labels, data_sets[0]),
+    fig.update_layout(title=xy_labels.upper() + " " + key, xaxis_title="{} \n {}".format(xy_labels, data_sets[0]),
                       yaxis_title="{} \n {}".format(xy_labels, data_sets[1]),
                       font=dict(family="Courier New, monospace", size=18, color="#7f7f7f"))
 
@@ -225,14 +234,15 @@ def plotly_interactive_singedppvalues(df_st, df_sc, value, save_folder, key, dat
         fig.write_html(os.path.join(save_folder, "_".join(["Full", key, "interactive.html"])))
 
 
-def plot_signed_ppvalues(df_st, df_sc, label_genes, save_folder, value, data_sets, sig_r, threshold=0.05, adjust=False,
-                         zoom=True):
+def plot_signed_ppvalues(df_st, df_sc, significance_level, label_genes, save_folder, value, data_sets, sig_r,
+                         threshold=0.05, adjust=False, zoom=True):
     """Plot signed and log10 transformed p-values
 
     Parameters
     ----------
     df_st : pandas.Dataframe
     df_sc : pandas.Dataframe
+    significance_level : str
     label_genes : dict
     save_folder : str
     value : str
@@ -249,14 +259,16 @@ def plot_signed_ppvalues(df_st, df_sc, label_genes, save_folder, value, data_set
 
     # Get masks
     sig_13_mask, sig_24_mask, not_sig_mask, cross_mask, _, _ = get_updowninbetween_masks(
-        df_st=df_st, df_sc=df_sc, threshold=threshold, log2fc_cut=1)
+        df_st=df_st, df_sc=df_sc, threshold=threshold, log2fc_cut=1, value=value, significance_level=significance_level)
     # Check masks
     check_masks(df_st, df_sc, value, sig_13_mask, sig_24_mask, not_sig_mask, cross_mask, cytokine, save_folder)
 
     if 'p' in value:
         xy_labels = r'signed log$_{10}$p-values'
+        legend_label = 'p-value'
     else:
-        xy_labels = r'signed log$_{10}$q-values'
+        xy_labels = r'signed log$_{10}$FDR-corrected p-value'
+        legend_label = 'FDR'
 
     fig, ax = plt.subplots(figsize=fig_size)
     # mark cross in signed p-value plot
@@ -272,18 +284,20 @@ def plot_signed_ppvalues(df_st, df_sc, label_genes, save_folder, value, data_set
     # plot data points
     # not significant: pval > 0.05
     ax_notsig = ax.scatter(df_st[value][cross_mask], df_sc[value][cross_mask], c='lightgrey', s=dotsize, zorder=2,
-                           alpha=0.5, edgecolors='lightgrey', linewidth=0.2, label=r"p-value > 0.05")
+                           alpha=0.5, edgecolors='lightgrey', linewidth=0.2, label=r"{} > 0.05".format(legend_label))
     # not significant and log2fc < threshold
     ax_notsig_noteffectsize = ax.scatter(df_st[value][not_sig_mask], df_sc[value][not_sig_mask], c='darkorange',
                                          s=dotsize, alpha=0.5, edgecolors='darkorange', linewidth=0.2, zorder=2,
-                                         label=r"p-value < 0.05 and |log$_2$FC| < 1")
+                                         label=r"{} < 0.05 and |log$_2$FC| < 1".format(legend_label))
 
     # Add alpha to those which are complementary regulated
     ax.scatter(df_st[value][sig_24_mask], df_sc[value][sig_24_mask], c='darkred', s=dotsize, zorder=2,
-               edgecolors='k', alpha=0.8, linewidth=0.2, label=r"p-value <= 0.05 and |log$_2$FC| >= 1")
+               edgecolors='k', alpha=0.8, linewidth=0.2,
+               label=r"{} <= 0.05 and |log$_2$FC| >= 1".format(legend_label))
     # Plot commonly significant genes: p-value < 0.05 and |log$_2$FC| > 1
     ax_sig = ax.scatter(df_st[value][sig_13_mask], df_sc[value][sig_13_mask], c='darkred', s=dotsize, zorder=2,
-                        edgecolors='k', alpha=1, linewidth=0.2, label=r"p-value <= 0.05 and |log$_2$FC| >= 1")
+                        edgecolors='k', alpha=1, linewidth=0.2,
+                        label=r"{} <= 0.05 and |log$_2$FC| >= 1".format(legend_label))
 
     # Add driver and responder gene annotations
     color_genes = get_colors_genes(df_st=df_st, df_sc=df_sc, label_genes=label_genes, value=value)
@@ -301,8 +315,8 @@ def plot_signed_ppvalues(df_st, df_sc, label_genes, save_folder, value, data_set
     if cytokine == 'IL17A':
         # Full: 83; Zoomed: 39
         if zoom:
-            ax.text(33, log10_cut + 0.2, "5% FDR", size=8, color='k', zorder=3)
-            ax.text(log10_cut + 0.2, np.amin(df_sc[value].values), "5% FDR", size=8, color='k', zorder=3)
+            ax.text(33, log10_cut + 0.3, "5% FDR", size=10, color='k', zorder=3)
+            ax.text(log10_cut, np.amin(df_sc[value].values), "5% FDR", size=10, color='k', zorder=3)
             ax.set_ylim([-15, 50])
             ax.set_xlim([-28, 38])
             # Add correlation and correlation p-value
@@ -321,7 +335,7 @@ def plot_signed_ppvalues(df_st, df_sc, label_genes, save_folder, value, data_set
         if zoom:
             ax.set_ylim([-18, 25])
             ax.set_xlim([-18, 48])
-            ax.text(43, log10_cut + 0.2, "5% FDR", size=8, color='k', zorder=3)
+            ax.text(43, log10_cut + 0.1, "5% FDR", size=8, color='k', zorder=3)
             ax.text(log10_cut + 0.2, np.amin(df_sc[value].values), "5% FDR", size=8, color='k', zorder=3)
         else:
             ax.text(np.amax(df_st[value].values) - 4, log10_cut + 0.5, "5% FDR", size=8, color='k', zorder=3)
@@ -337,8 +351,9 @@ def plot_signed_ppvalues(df_st, df_sc, label_genes, save_folder, value, data_set
     driver_rect = Rectangle((0, 0), 1, 1, fc="w", fill=True, edgecolor='w', linewidth=0)
     resp_rect = Rectangle((0, 0), 1, 1, fc="w", fill=False, edgecolor='w', linewidth=0)
     leg = ax.legend([ax_sig, ax_notsig_noteffectsize, ax_notsig, driver_rect, resp_rect],
-                    (r"p-value $\leq$ 0.05 and |log$_2$FC| $\geq$ 1", r"p-value $<$ 0.05 and |log$_2$FC| $<$ 1",
-                     "p-value $>$ 0.05", "Driver genes", "Responder genes"))
+                    (r"{} $\leq$ 0.05 and |log$_2$FC| $\geq$ 1".format(legend_label),
+                     r"{} $<$ 0.05 and |log$_2$FC| $<$ 1".format(legend_label),
+                     "{} $>$ 0.05".format(legend_label), "Leukocyte genes", "{} responder genes".format(cytokine)))
     leg_color = ['k', 'k', 'k', 'purple', 'mediumblue']
     for ind, text in enumerate(leg.get_texts()):
         plt.setp(text, color=leg_color[ind])
@@ -420,7 +435,7 @@ def get_colors_genes(df_st, df_sc, label_genes, value):
     return label_info
 
 
-def get_correlation(df_st, df_sc, pval_cut=0.05, log2fc_cut=1., method='pearson'):
+def get_correlation(df_st, df_sc, significance_level, value, pval_cut=0.05, log2fc_cut=1., method='pearson'):
     """Calculate Pearson Correlation
 
     Parameters
@@ -429,6 +444,10 @@ def get_correlation(df_st, df_sc, pval_cut=0.05, log2fc_cut=1., method='pearson'
         Data frame containing the results of the dge analysis
     df_sc : pandas.Dataframe
         Data frame containing the results of the dge analysis
+    significance_level : str
+        pval or padj
+    value : str
+        name of signed value
     pval_cut : float
         p-value cut parameter
     log2fc_cut : float
@@ -441,12 +460,12 @@ def get_correlation(df_st, df_sc, pval_cut=0.05, log2fc_cut=1., method='pearson'
 
     """
     # 1. get up-regulated genes in cyto+ group in both data sets
-    m_sig_st = (df_st['pval'].values <= pval_cut) & (abs(df_st['log2fc'].values) >= log2fc_cut)
-    m_sig_sc = (df_sc['pval'].values <= pval_cut) & (abs(df_sc['log2fc'].values) >= log2fc_cut)
+    m_sig_st = (df_st[significance_level].values <= pval_cut) & (abs(df_st['log2fc'].values) >= log2fc_cut)
+    m_sig_sc = (df_sc[significance_level].values <= pval_cut) & (abs(df_sc['log2fc'].values) >= log2fc_cut)
     mask_siggenes = np.logical_and(m_sig_st, m_sig_sc)
 
     # 2. Calculate Pearson Correlation and p-value
-    sig_r = pingouin.corr(x=df_st['signed_pval'][mask_siggenes], y=df_sc['signed_pval'][mask_siggenes],
+    sig_r = pingouin.corr(x=df_st[value][mask_siggenes], y=df_sc[value][mask_siggenes],
                           method=method)
     print(sig_r['p-val'].values[0])
     print(sig_r['r'])
@@ -561,29 +580,34 @@ def main(path_st_data, path_sc_data, save_folder, log2fc_cut=1.0, pval_cut=0.05,
     print("1. Get common genes between ST and SC DGE Analysis results")
     df_st, df_sc = data_preparation(path_st_data=path_st_data, path_sc_data=path_sc_data)
 
-    # Get signed log10(p-values)
-    df_st['signed_pval'] = np.sign(df_st['log2fc']) * np.log10(df_st['pval'])
-    df_sc['signed_pval'] = np.sign(df_sc['log2fc']) * np.log10(df_sc['pval'])
-    print("2. Get driver and responder genes")
-    genes = gene_lists.highlight_genes()
-
     # Drop cytokine since it has the highest p-value and was the selection criteria
     if zoom:
         df_st = df_st.drop([0])
         df_sc = df_sc.drop([0])
 
+    # Switch signs - new since 26.09.2021
+    # df_st['log2fc'] = -df_st['log2fc']
+    # df_sc['log2fc'] = -df_sc['log2fc']
+
+    # Get signed log10(p-values)
+    df_st['signed_FDR'] = np.sign(df_st['log2fc']) * np.log10(df_st['padj'])
+    df_sc['signed_FDR'] = np.sign(df_sc['log2fc']) * np.log10(df_sc['padj'])
+    print("2. Get driver and responder genes")
+    genes = gene_lists.highlight_genes()
+
     # Enrichment test of significant value + their Correlation
     # -> use Spearman Correlation because its not so sensitive towards outliers
-    sig_corr = get_correlation(df_st=df_st, df_sc=df_sc, pval_cut=pval_cut, log2fc_cut=log2fc_cut, method='spearman')
+    sig_corr = get_correlation(df_st=df_st, df_sc=df_sc, significance_level='padj', value='signed_FDR',
+                               pval_cut=pval_cut, log2fc_cut=log2fc_cut, method='spearman')
 
     print("3. Plot signed pp-value plot")
     plot_signed_ppvalues(df_st=df_st, df_sc=df_sc, label_genes=genes[cytokine], save_folder=save_folder,
-                         value='signed_pval', data_sets=['ST dataset', 'scRNA-seq dataset'], threshold=pval_cut,
-                         adjust=True, sig_r=sig_corr, zoom=zoom)
+                         significance_level='padj', value='signed_FDR', data_sets=['ST dataset', 'scRNA-seq dataset'],
+                         threshold=pval_cut, adjust=True, sig_r=sig_corr, zoom=zoom)
 
     # Interactive signed p-value plot
     plotly_interactive_singedppvalues(
-        df_st=df_st, df_sc=df_sc, value='signed_pval', save_folder=save_folder, key=cytokine,
+        df_st=df_st, df_sc=df_sc, value='signed_FDR', save_folder=save_folder, key=cytokine, significance_level='padj',
         data_sets=['ST dataset', 'scRNA-seq dataset'], log2fc_cut=log2fc_cut, threshold=pval_cut, zoom=zoom)
 
 

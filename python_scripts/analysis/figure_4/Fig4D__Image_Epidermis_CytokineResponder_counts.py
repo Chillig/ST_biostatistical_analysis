@@ -6,7 +6,7 @@
     Date last modified: 4/29/2021
     Python Version: 3.7
 """
-from python_scripts.utils import gene_lists, add_observables as ctools
+from python_scripts.utils import gene_lists, add_observables as ctools, rename_observables
 
 import scanpy as sc
 import numpy as np
@@ -259,8 +259,7 @@ def main(save_folder, adata):
     merged = bool_col.sum(axis=1)
     adata = adata[merged == 1]
     # Rename tissue region 'INTERFACE' to basal EPIDERMIS because some spots got both labels
-    m_interface = adata.obs['tissue_type'] == 'INTERFACE'
-    adata.obs['tissue_type'][m_interface] = 'basal EPIDERMIS'
+    rename_observables.interface_to_epidermis(adata=adata, tissue_layers='tissue_type')
 
     """Paper Figure 4D: Highlight cytokine and responder genes containing spots and UMI-counts in the EPIDERMIS """
     convert_categories_cytokines_responders_others(adata, cyto_responder_genes=cytokine_responders,

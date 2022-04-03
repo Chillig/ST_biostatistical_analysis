@@ -91,6 +91,34 @@ def plot_annotated_cells(adata, color, paper_figure, save_folder,
     plt.savefig(os.path.join(save_folder, "_".join([key, title, file_format])))
     plt.close()
 
+    adata.uns['cluster_labels_colors'][0] = sc.pl.palettes.default_20[6]
+    fig = plt.figure(facecolor='w', edgecolor='k', figsize=(6, 6))
+    fig.subplots_adjust(bottom=0.025, left=0.025, top=0.975, right=0.975)
+    ax = fig.add_subplot(1, 1, 1)
+    # Show clusters
+    sc.pl.umap(adata=adata, color='cluster_labels', ax=ax, wspace=0.4, size=size_others, frameon=True,
+               show=False, title=" ", alpha=0.5, legend_loc='on data',
+               palette=list(adata.uns['cluster_labels_colors']))
+    # Highlight gene
+    sc.pl.umap(cyto_adata, color=color, ax=ax, wspace=0.4, size=size_color, frameon=True,
+               show=False, title=" ", palette=palette)
+
+    # add text of No. cells per cell type
+    # add_text(adata=adata, obsname=color, ax=ax, xpos=0.7, max_ypos=ypos)
+    # ax.set_title(paper_figure, loc="left", fontsize=title_fontsize)
+
+    # DOnt show top and right frame lines
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+
+    # ax.set_ylabel("UMAP2", fontsize=xy_fontsize)
+    # ax.set_xlabel("UMAP2", fontsize=xy_fontsize)
+
+    fig.tight_layout()
+
+    plt.savefig(os.path.join(save_folder, "_".join([title, 'on_data', file_format])))
+    plt.close()
+
 
 def include_cytokine_dp(adata, cytokines, label, save_folder, key, paper_figure):
     """
@@ -107,9 +135,12 @@ def include_cytokine_dp(adata, cytokines, label, save_folder, key, paper_figure)
 
     for cyto in cytokines:
         if "_".join(['cytokine', cyto]) in adata.obs_keys():
-            get_condition_spots.get_spots_per_condition(
-                adata=adata, observable="_".join(["cytokine", cyto]), save_folder=save_folder, key=key,
+            get_condition_spots.get_spots_per_condition_multiple(
+                adata=adata, observable="_".join(["cytokine", cyto]), save_folder=save_folder,
                 paper_figure=paper_figure, cell_label=label)
+            # get_condition_spots.get_spots_per_condition(
+            #     adata=adata, observable="_".join(["cytokine", cyto]), save_folder=save_folder, key=key,
+            #     paper_figure=paper_figure, cell_label=label)
 
 
 def get_celltypes_data(adata, genes):

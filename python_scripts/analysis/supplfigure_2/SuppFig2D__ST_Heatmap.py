@@ -200,10 +200,7 @@ def main(save_folder, spatial_adata):
     # Suppl Figure 2A
     visualise_clusters(adata=spatial_adata, save_folder=save_folder, key='healthy_disease', title="Diagnoses")
     # Suppl. Figure 2C
-    visualise_clusters(adata=adata_leukocytes, save_folder=save_folder, key='tissue_layer',
-                       title="Leukocytes_tissuelayers")
-    # Suppl. Figure 2D
-    visualise_clusters(adata=adata_leukocytes, save_folder=save_folder, key='spot_type',
+    visualise_clusters(adata=adata_leukocytes, save_folder=save_folder, key='tissue_type',
                        title="Leukocytes_tissuelayers")
 
     # 5. Read out spots which either have IL17A, IL13 or INFG genes
@@ -212,16 +209,36 @@ def main(save_folder, spatial_adata):
     # 6. Merge layers of epidermis and save it as epidermis and merge dermis depths and save it as dermis
     adata_leukocytes = get_tissueregions(adata=adata_leukocytes, tissue_label=spatial_cluster_label)
 
-    # Suppl. Figure 2B
-    plot_tissueregions_cyto(adata=adata_leukocytes, obs_name=obs_name, title='Leukocytes_Cytokines',
-                            save_folder=save_folder, gene_colors=["#ff7f00", "#e41a1c", 'darkgoldenrod', 'purple',
-                                                                  "#377eb8", 'deeppink'])
+    # 7. Read out spots which express either IL17A, IL13 and/or IFNG
+    adata_cytos = adata_leukocytes[adata_leukocytes.obs['cytokines_others'] != 'Others', :].copy()
+    # 8. Generate heatmap of signature and other cytokines
+    # adata_cytos = add_observables.convert_variable_to_observable(
+    #     adata=adata_cytos, gene_names=gene_lists.interesting_cytokines(), task='annotate_cells',
+    #     label='coexpressed_cytos', condition=[np.all, np.all, np.all, np.all, np.all, np.all, np.all, np.all, np.all])
+
+    # get intersection genes
+    coexpressed_cytos = list(set(adata_cytos.var_names) & set(gene_lists.interesting_cytokines().values()))
+
+    # Matrixplot shows the mean expression of a gene in a group by category as a heatmap
+    # Scale data to unit variance and zero mean == zscores : sc.pp.scale(adata_cytos)
+    sc.pl.matrixplot(adata_cytos, coexpressed_cytos, groupby='cytokines_others',  layer='counts',
+                     dendrogram=True, figsize=(10, 6))
+    plt.savefig(os.path.join(save_folder, 'Matrixplot_meanexpression.png'))
+    plt.close()
+    # Heatmpas do not collaps cells; each cell is shown in a row
+    sc.pl.heatmap(adata_cytos, coexpressed_cytos, groupby='cytokines_others', layer='counts',
+                  figsize=(10, 6), dendrogram=True)
+    plt.savefig(os.path.join(save_folder, 'Heatmap_rawcounts.png'))
+    plt.close()
+
+    # ax = sc.pl.tracksplot(adata_cytos, coexpressed_cytos, groupby='cytokines_others', layer='counts', figsize=(12, 6))
+    # sc.pl.rank_genes_groups_heatmap(adata_cytos, n_genes=3, standard_scale='var', groups='cytokines_others')
 
 
 if __name__ == '__main__':
     today = date.today()
     # create saving folder
-    output_path = os.path.join("..", "..", "..", "output", "SupplFigure_2ABC", str(today))
+    output_path = os.path.join("..", "..", "..", "output", "SupplFigure_2D", str(today))
     os.makedirs(output_path, exist_ok=True)
 
     # Load data:

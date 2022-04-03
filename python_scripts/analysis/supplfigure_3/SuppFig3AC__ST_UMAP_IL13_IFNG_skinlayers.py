@@ -80,9 +80,12 @@ def include_cytokine_dp(adata, cytokines, label, save_folder, key, paper_figure)
     """
     for cyto in cytokines:
         if "_".join(['cytokine', cyto]) in adata.obs_keys():
-            get_condition_spots.get_spots_per_condition(
-                adata=adata, observable="_".join(["cytokine", cyto]), save_folder=save_folder, key=key,
-                paper_figure=paper_figure, cell_label=label)
+            get_condition_spots.get_spots_per_condition_multiple(
+                adata=adata, observable="_".join(["cytokine", cyto]), cell_label=label, save_folder=save_folder,
+                paper_figure=paper_figure)
+            # get_condition_spots.get_spots_per_condition(
+            #     adata=adata, observable="_".join(["cytokine", cyto]), save_folder=save_folder, key=key,
+            #     paper_figure=paper_figure, cell_label=label)
 
 
 def get_celltypes_data(adata, genes):
@@ -163,7 +166,7 @@ def main(save_folder, spatial_adata):
     # 2.2 Merge layers of epidermis and save it as epidermis and merge dermis depths and save it as dermis
     adata_leukocytes = get_tissueregions(adata=adata_leukocytes, tissue_label=spatial_cluster_label)
 
-    # 3. Highlicht tissues epidermis and dermis + cytokines and for each single cytokine
+    # 3. Highlight tissues epidermis and dermis + cytokines and for each single cytokine
     plot_tissueregions_cyto(adata=adata_leukocytes, obs_name='cytokine_IL13', title='Leukocytes_IL13',
                             save_folder=save_folder)
     plot_tissueregions_cyto(adata=adata_leukocytes, obs_name='cytokine_IFNG', title='Leukocytes_IFNG',

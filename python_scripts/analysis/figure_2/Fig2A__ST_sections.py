@@ -73,7 +73,7 @@ def plot_cytokinecounts(sup_adata, cyto, save_folder, obs_label, obs_counts, img
         color_dict[cyto] = "#377eb8"  # blue PSO
 
     diseases = ["PSO", "AE", "LICHEN", "PRP"]
-    biopsy_type = ["LESONAL", "NON LESIONAL"]
+    biopsy_type = ["LESIONAL", "NON LESIONAL"]
 
     # samples = np.unique(sup_adata[cyto].obs['sample'])
     samples, crops_img = get_cropped_sampleimg(img_key=img_key)
@@ -190,7 +190,8 @@ def convert_categories_cytokines_responders_others(adata, cyto_responder_genes, 
         adata.obs[obs_clusters] = adata.obs[obs_label].astype('category')
         adata.obs[obs_label] = adata.obs[obs_label].astype('category')
 
-        # plot_cytokinecounts(adata, cyto, save_folder, obs_label=obs_label, obs_counts=obs_counts, img_key=img_key)
+        # comment todo
+        plot_cytokinecounts(adata, cyto, save_folder, obs_label=obs_label, obs_counts=obs_counts, img_key=img_key)
 
         # Get max. UMI-counts per tissue section
         samples = np.unique(adata.obs['sample'].values)
@@ -204,11 +205,11 @@ def convert_categories_cytokines_responders_others(adata, cyto_responder_genes, 
         print("Mean. UMI-counts in tissue section for {}: ".format(cyto), np.mean(max_umicounts))
 
         if cyto == 'IL17A':
-            diagnose = 'PSO'
+            diagnose = 'Pso'
         elif cyto == 'IL13':
-            diagnose = 'AE'
+            diagnose = 'AD'
         elif cyto == 'IFNG':
-            diagnose = 'LICHEN'
+            diagnose = 'LP'
         umicounts = []
         for sample in samples:
             sample_adata = adata[np.all([adata.obs['sample'] == sample,
@@ -216,8 +217,8 @@ def convert_categories_cytokines_responders_others(adata, cyto_responder_genes, 
             m_cyto_counts = sample_adata.obs["_".join([cyto, 'clusters'])] == cyto
             umicounts.append(sample_adata.obs["_".join([cyto, 'counts'])][m_cyto_counts].sum())
 
-        print("Max. UMI-counts in disease for {}: ".format(cyto), np.amax(umicounts))
-        print("Mean. UMI-counts in disease for {}: ".format(cyto), np.mean(umicounts))
+        print("Max. UMI-counts in disease for {}: ".format(diagnose), np.amax(umicounts))
+        print("Mean. UMI-counts in disease for {}: ".format(diagnose), np.mean(umicounts))
 
     return adata
 

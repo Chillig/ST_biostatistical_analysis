@@ -111,7 +111,8 @@ def correlation_plot(df_counts_cytoresps, genes_dict, save_folder):
     for cyto in genes_dict.keys():
         for cyto_reps in genes_dict.keys():
             resp_name = "_".join([cyto_reps, 'responder'])
-            temp_df = df_counts_cytoresps[[cyto, resp_name, 'disease', 'marker']]
+            # temp_df = df_counts_cytoresps[[cyto, resp_name, 'disease', 'marker']]
+            temp_df = df_counts_cytoresps[[cyto, resp_name, 'disease']]
 
             # stats: hypothesis here will be that the counts of a cytokine is correlated to the counts of its responders
             sig_r = pingouin.corr(x=temp_df[resp_name], y=temp_df[cyto], method='pearson')
