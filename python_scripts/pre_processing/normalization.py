@@ -3,6 +3,9 @@ from python_scripts.utils import helper_tools as ht
 
 import scanpy as sc
 import numpy as np
+import pandas as pd
+import os
+import glob
 
 import rpy2.robjects.packages as rpackages
 # import rpy2.rinterface_lib as rinfacelib
@@ -14,7 +17,7 @@ numpy2ri.activate()
 pandas2ri.activate()
 
 
-def first_est_sizefactors(adata, save_folder, counts_per_cell_after=1e6, n_comps=15, resolution=0.5, raw=False):
+def first_est_sizefactors(adata, save_folder, configs, counts_per_cell_after=1e6, n_comps=15, resolution=0.5, raw=False):
     """Estimate size factors for normalisation of the data
 
     Normalization method implemented in scran package performs best.
@@ -25,6 +28,7 @@ def first_est_sizefactors(adata, save_folder, counts_per_cell_after=1e6, n_comps
     ----------
     adata : annData
     save_folder : str
+    configs :
     counts_per_cell_after : int
         Number of UMI-counts after normalisation in each cell or spot
         value is used as a general scaling of the data set
@@ -40,38 +44,47 @@ def first_est_sizefactors(adata, save_folder, counts_per_cell_after=1e6, n_comps
     adata : annData
 
     """
-    # import R libraries:
-    scranlib = rpackages.importr('scran')
-
-    adata_pp = adata.copy()
-
-    # Use annotations from pathologist instead of clusters
-    obs_keys = list(adata.obs_keys())
-    # get all manual annotations by extracting all keys with upper case characters
-    annotations = [char for char in obs_keys if any(c.isupper() for c in char)]
-
-    # check if manual annotations in data set
-    if len(annotations) > 0:
-        # save manual annotations in one array as groups
-        adata_pp = ht.store_categories_as_clusters(adata_pp, annotations)
-    else:
-        sc.pp.normalize_per_cell(adata_pp, counts_per_cell_after=counts_per_cell_after)
-        sc.pp.log1p(adata_pp)
-        sc.pp.pca(adata_pp, n_comps=n_comps)
-        sc.pp.neighbors(adata_pp)
-        sc.tl.louvain(adata_pp, key_added='groups', resolution=resolution)
-
-    # Preprocess variables for scran normalization
-    input_groups = adata_pp.obs['groups']
-    data_mat = adata.X.T
-
     # estimateSizeFactors: This calculates the relative library depth of each sample or group (cell types)?
-    size_factors = scranlib.computeSumFactors(data_mat, clusters=input_groups)
+    files = glob.glob(os.path.join(
+        configs["data"]['output_path'],
+        '*sizefactors*{}*{}*.csv'.format('_'.join(configs['data']['sequencing_samples']), adata.shape[0])))
+    if len(files) > 0:
+        # Now read in sizefactors from file
+        size_factors = pd.read_csv(files[0], index_col=0)
+        # Visualize the estimated size factors
+        adata.obs['size_factors'] = size_factors['sizeFactor'].values
+    else:
+        # Does work but takes ~ 2 weeks for Visium data -> outsource and is now run on cluster
+        # import R libraries:
+        scranlib = rpackages.importr('scran')
 
-    del adata_pp
+        adata_pp = adata.copy()
 
-    # Visualize the estimated size factors
-    adata.obs['size_factors'] = size_factors
+        # Use annotations from pathologist instead of clusters
+        obs_keys = list(adata.obs_keys())
+        # get all manual annotations by extracting all keys with upper case characters
+        annotations = [char for char in obs_keys if any(c.isupper() for c in char)]
+
+        # check if manual annotations in data set
+        if len(annotations) > 0:
+            # save manual annotations in one array as groups
+            adata_pp = ht.store_categories_as_clusters(adata_pp, annotations)
+        else:
+            sc.pp.normalize_per_cell(adata_pp, counts_per_cell_after=counts_per_cell_after)
+            sc.pp.log1p(adata_pp)
+            sc.pp.pca(adata_pp, n_comps=n_comps)
+            sc.pp.neighbors(adata_pp)
+            sc.tl.louvain(adata_pp, key_added='groups', resolution=resolution)
+
+        # Preprocess variables for scran normalization
+        input_groups = adata_pp.obs['groups']
+        data_mat = adata.X.T
+
+        size_factors = scranlib.computeSumFactors(data_mat, clusters=input_groups)
+        del adata_pp
+
+        # Visualize the estimated size factors
+        adata.obs['size_factors'] = size_factors
 
     plots_preprocessing.plot_sc_scatter(adata=adata, save_folder=save_folder,
                                         obs=["size_factors", "n_counts", "n_genes"],
@@ -83,10 +96,13 @@ def first_est_sizefactors(adata, save_folder, counts_per_cell_after=1e6, n_comps
                                      title="Distribution of size factors",
                                      ax_xlabel="size factor", ax_ylabel="counts", raw=raw)
 
+    plots_preprocessing.plot_normedcounts_dist(adata=adata, save_folder=save_folder)
+    plots_preprocessing.plot_normed_counts_dist_obs(adata=adata, save_folder=save_folder, raw=False)
+
     return adata
 
 
-def normalize_by_sizefactor(adata, adata_path_filenames):
+def normalize_by_sizefactor(adata, configs):
     """Normalising the count matrix using sizefactors
     The basic preprocessing includes assuming all size factors are equal
     (library size normalization to counts per million - CPM) and log-transforming the count data
@@ -94,7 +110,7 @@ def normalize_by_sizefactor(adata, adata_path_filenames):
     Parameters
     ----------
     adata : annData
-    adata_path_filenames : str
+    configs : ConfigParser
 
     Returns
     -------
@@ -124,12 +140,12 @@ def normalize_by_sizefactor(adata, adata_path_filenames):
     adata.raw = adata
 
     # save adata object
-    sc.write('{}_QC_sizefactors.h5'.format(adata_path_filenames), adata=adata)
+    # sc.write('{}_QC_sizefactors.h5'.format(configs["data"]['output_path']), adata=adata)
 
     return adata
 
 
-def normalize_by_scanpy(adata, adata_path_filenames, exclude_highly_expressed=True, raw=False):
+def normalize_by_scanpy(adata, configs):
     """
     Normalize counts per spot (cell for scRNA-seq) with scanpy function sc.pp.normalize_total().
     If target sum is 1e6 than CPM normalisation is applied
@@ -138,9 +154,7 @@ def normalize_by_scanpy(adata, adata_path_filenames, exclude_highly_expressed=Tr
     Parameters
     ----------
     adata : annData
-    adata_path_filenames : str
-    exclude_highly_expressed : bool
-    raw : bool
+    configs : ConfigParser
 
     Returns
     -------
@@ -155,8 +169,9 @@ def normalize_by_scanpy(adata, adata_path_filenames, exclude_highly_expressed=Tr
     adata.layers["counts"] = adata.X.copy()
 
     # return dictionary if inplace is False otherwise updates adata
-    x_norm = sc.pp.normalize_total(adata, inplace=False, exclude_highly_expressed=exclude_highly_expressed,
-                                   target_sum=1e6)['X']
+    x_norm = sc.pp.normalize_total(
+        adata, inplace=False, exclude_highly_expressed=configs.getboolean("preprocessing", "exclude_highly_expressed"),
+        target_sum=1e6)['X']
     adata.X = x_norm
 
     # log-transforms and updates adata
@@ -168,10 +183,10 @@ def normalize_by_scanpy(adata, adata_path_filenames, exclude_highly_expressed=Tr
     # Store the full data set in 'raw' as log-normalised data for statistical testing
     adata.raw = adata
 
-    # save adata object
-    if raw:
-        sc.write('{}_raw_QC_sizefactors.h5'.format(adata_path_filenames), adata=adata)
-    else:
-        sc.write('{}_QC_sizefactors.h5'.format(adata_path_filenames), adata=adata)
+    # # save adata object
+    # if configs_file.getboolean("preprocessing", "read_raw_matrix"):
+    #     sc.write('{}_raw_QC_sizefactors.h5'.format(configs["data"]['output_path']), adata=adata)
+    # else:
+    #     sc.write('{}_QC_sizefactors.h5'.format(configs["data"]['output_path']), adata=adata)
 
     return adata

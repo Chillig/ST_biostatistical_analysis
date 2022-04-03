@@ -9,14 +9,17 @@
 from python_scripts.pre_processing import batch_correction, cell_cycle_storing, pc_determination, \
     scaling_and_regression, calculate_visualizations, quality_control, normalization, highly_variable_genes, \
     init_variables, doublet_detection
-from python_scripts.utils import loading_matrices, helper_tools as ht, sc_loading_matrices
+from python_scripts.utils import loading_matrices, helper_tools as ht, sc_loading_matrices, add_observables
 from python_scripts.pre_processing.plot_functions import plots_preprocessing
 import python_scripts.pre_processing.plot_functions.plot_imagespots as im_pp_plot
 
 import scanpy as sc
 import numpy as np
+import pandas as pd
 import os
 from datetime import date
+import configparser
+import glob
 
 
 def load_dataset(configs):
@@ -24,7 +27,7 @@ def load_dataset(configs):
 
     Parameters
     ----------
-    configs : configparser
+    configs : ConfigParser
         config file
 
     Returns
@@ -83,40 +86,6 @@ def plot_images(configs, adata, save_folder):
     im_pp_plot.plot_greyspots_image(configs=configs, adata=adata, save_folder=save_folder, label="")
 
 
-def sample_qc(adata, save_folder, sample_name, counts_threshold=60000, lower_filter_counts=400,
-              upper_filter_counts=2500, upper_filter_genes=2000, log_scale=False, raw=False):
-    """Check the quality of each sample and apply standard thresholds only for visualisation
-
-    Parameters
-    ----------
-    adata : annData
-    save_folder : str
-        path to results folder
-    sample_name : str
-        name of sample or whole dataset
-    counts_threshold : int
-        threshold for UMI-counts
-    lower_filter_counts : int
-    upper_filter_counts : int
-    upper_filter_genes : int
-    log_scale : bool
-        if plots should be shown in log-scale
-    raw : bool
-        if to load raw matrix from 10x Genomics
-
-    Returns
-    -------
-
-    """
-    adata_qc = quality_control.qc_ncounts_ngenes(
-        adata, save_folder=save_folder, sample_name=sample_name,
-        counts_threshold=counts_threshold, lower_filter_counts=lower_filter_counts,
-        upper_filter_counts=upper_filter_counts, upper_filter_genes=upper_filter_genes,
-        log_scale=log_scale, raw=raw)
-
-    return adata_qc
-
-
 def apply_qc_filter(adata, apply_mt_threshold):
     """Threshold determination of MT-fraction, UMI counts and genes per spot and per gene in all spots
 
@@ -130,37 +99,9 @@ def apply_qc_filter(adata, apply_mt_threshold):
     -------
 
     """
-    # Filter genes
-    try:
-        min_genes = int(input("Please provide the minimal No. genes threshold: "))
-    except ValueError:
-        print("Minimal No. genes threshold is now set to 30")
-        min_genes = int(30)
-    try:
-        min_shared_counts = int(input("Please provide the minimal No. spots a gene has to be expressed; default 20: "))
-    except ValueError:
-        print("Minimal No. spots is now set to 20")
-        min_shared_counts = int(20)
-    try:
-        min_umi_genes = int(input("Please provide the minimal No. UMI counts for a gene to pass filtering: "))
-    except ValueError:
-        print("Minimal No. UMI counts threshold is now set to 10")
-        min_umi_genes = int(10)
-
-    # Filter spots
-    # min_counts=20, max_counts=60000, min_genes=20, min_cells=20)
-    try:
-        min_counts = int(input("Please provide the minimal count threshold: "))
-    except ValueError:
-        print("Minimal No. UMI counts threshold is now set to 5000")
-        min_counts = int(5000)
-    try:
-        max_counts = int(input("Please provide the maximal count threshold: "))
-    except ValueError:
-        print("Minimal No. UMI counts threshold is now set to 35000")
-        max_counts = int(35000)
     # ------------------------------------------------------------------------------------------------------------ #
     if apply_mt_threshold:
+        print("Filter MT-fraction")
         """ATTENTION: Regressing out biological covariates is generally done to isolate particular processes in 
                         the data in which you are interested in, while losing global structure in the data.
         MT gene expression is also a biological covariate (as well as a technical indicator of cell stress) """
@@ -175,16 +116,49 @@ def apply_qc_filter(adata, apply_mt_threshold):
         mt_threshold = float(1.0)
     # ------------------------------------------------------------------------------------------------------------ #
 
+    # Filter genes
+    print("Filter genes")
+    try:
+        min_genes = int(input("Please provide the minimal No. genes threshold; default 30: "))
+    except ValueError:
+        print("Minimal No. genes threshold is now set to 30")
+        min_genes = int(30)
+    try:
+        min_shared_counts = int(input("Please provide the minimal No. spots a gene has to be expressed; default 20: "))
+    except ValueError:
+        print("Minimal No. spots is now set to 20")
+        min_shared_counts = int(20)
+    try:
+        min_umi_genes = int(
+            input("Please provide the minimal No. UMI counts for a gene to pass filtering; default 1: "))
+    except ValueError:
+        print("Minimal No. UMI counts threshold is now set to 1")
+        min_umi_genes = int(1)
+
+    # Filter spots
+    print("Filter cells")
+    # min_counts=20, max_counts=60000, min_genes=20, min_cells=20)
+    try:
+        min_counts = int(input("Please provide the minimal count threshold; default 500: "))
+    except ValueError:
+        print("Minimal No. UMI counts threshold is now set to 500")
+        min_counts = int(500)
+    try:
+        max_counts = int(input("Please provide the maximal count threshold; default 35000: "))
+    except ValueError:
+        print("Maximal No. UMI counts threshold is now set to 35000")
+        max_counts = int(35000)
+
     gene_count_threshold = input("Apply max UMI-threshold for a gene to pass filtering (y/n)?: ")
     if gene_count_threshold == 'y':
         # TODO investigate if it makes sense to filter for max UMI counts...
         #  (eg outliers should be removed by normalisation)
         try:
-            max_umi_genes = int(input("Please provide the maximal No. UMI counts for a gene to pass filtering: "))
+            max_umi_genes = int(
+                input("Please provide the maximal No. UMI counts for a gene to pass filtering; default 5000: "))
         except ValueError:
             print("Maximal No. UMI counts threshold is now set to 5000")
             max_umi_genes = int(5000)
-
         cutted_adata = quality_control.qc_filter(adata,
                                                  min_counts_spots=min_counts, max_counts_spots=max_counts,
                                                  min_genes=min_genes,
@@ -205,31 +179,26 @@ def apply_qc_filter(adata, apply_mt_threshold):
         cutted_adata, min_genes, min_shared_counts, mt_threshold, min_counts, max_counts, min_umi_genes, max_umi_genes
 
 
-def apply_normalisation(adata, save_folder, adata_path_filenames, norm_type="scanpy", exclude_highly_expressed=True,
-                        raw=False):
+def apply_normalisation(adata, save_folder, configs):
     """Normalize the raw counts to account for differences in sequencing depth per cell for each sample
 
     Parameters
     ----------
     adata : annData
     save_folder : str
-    adata_path_filenames : str
-    norm_type : str
-    exclude_highly_expressed : bool
-    raw : bool
+    configs : ConfigParser
 
     Returns
     -------
 
     """
-    if norm_type == "scran":
+    if configs['preprocessing']['normalisation_function'] == "scran":
         # Perform a clustering for scran normalization in clusters but takes much longer compared to scanpy norm method
-        adata = normalization.first_est_sizefactors(adata=adata, save_folder=save_folder, raw=raw)
+        adata = normalization.first_est_sizefactors(adata=adata, save_folder=save_folder, configs=configs)
         # # Normalize data by sizefactor
-        norm_adata = normalization.normalize_by_sizefactor(adata=adata, adata_path_filenames=adata_path_filenames)
+        norm_adata = normalization.normalize_by_sizefactor(adata=adata, configs=configs)
     else:
-        norm_adata = normalization.normalize_by_scanpy(adata=adata, adata_path_filenames=adata_path_filenames,
-                                                       exclude_highly_expressed=exclude_highly_expressed, raw=raw)
+        norm_adata = normalization.normalize_by_scanpy(adata=adata, configs=configs)
 
     return norm_adata
 
@@ -249,17 +218,18 @@ def add_metadata(adata):
     # get labels
     tissue_cell_labels, disease_labels, lesion_labels = ht.get_tissue_annot(adata)
     # get batches assigned to each patient (currently we have 2 or 4 samples per patient)
-    df_patients = ht.map_sample_batch_list(
-        adata=adata, num_samples_patient=[4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 2, 2, 2, 2])
-
-    # assign donor to each spot
-    adata.obs['patient'] = 0
-    for project in df_patients:
-        for ind, s_c in enumerate(df_patients[project]['sample']):
-            m_spots = adata.obs['sample'] == s_c
-            adata.obs['patient'][m_spots] = df_patients[project]['batch'][ind]
-    # need information about how often samples were found
-    adata.obs['patient'] = adata.obs['patient'].astype('int').astype('category')
+    # TODO
+    # df_patients = ht.map_sample_batch_list(
+    #     adata=adata, num_samples_patient=[4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 2, 2, 2, 2])
+    #
+    # # assign donor to each spot
+    # adata.obs['patient'] = 0
+    # for project in df_patients:
+    #     for ind, s_c in enumerate(df_patients[project]['sample']):
+    #         m_spots = adata.obs['sample'] == s_c
+    #         adata.obs['patient'][m_spots] = df_patients[project]['batch'][ind]
+    # # need information about how often samples were found
+    # adata.obs['patient'] = adata.obs['patient'].astype('int').astype('category')
 
     # assign Diagnostics
     adata.obs['disease'] = 'Unknown'
@@ -288,7 +258,7 @@ def main(configs, adata, save_folder):
 
     Parameters
     ----------
-    configs : configparser
+    configs : ConfigParser
         contains all parameters -> to add: thresholds and cut parameters
     adata : annData
     save_folder : str
@@ -302,70 +272,113 @@ def main(configs, adata, save_folder):
 
     print("\n-------- Overview of data sets --------")
     if configs['data']['data_type'] == 'Spatial Transcriptomics':
-        # 1.1 Add meta data like which samples belong to which donor (since 04.10.2020)
-        adata, tissue_cell_labels, disease_labels, lesion_labels = add_metadata(adata)
-        # 1.2 Remove spots having no tissue/cell labels (since 06.10.2020)
-        adata = adata[np.where(adata.obs[tissue_cell_labels].to_numpy().any(axis=1))[0]]
-
         dataset_type = "st"
     else:
         dataset_type = "sc"
 
     # print info about sample 1
-    sample_name = adata.obs['sample'].values[1]
-    print("\nSample {} ".format(sample_name))
+    print("\nDataset {} ".format(dataset_type))
     print("Shape of filtered data set: ", adata.shape)
     print("Tissue associated No. of spots: ", adata.shape[0])
     print("Tissue associated No. of genes: ", adata.shape[1])
     print("Observables contained in data sets sorted by barcodes: ", adata.obs_keys())
     print("Variables contained in data sets sorted by gene names: ", adata.var_keys())
 
-    if configs['data']['data_type'] == 'Spatial Transcriptomics':
-        # plot spots on top of images (only for the first sample)
-        plot_images(configs=configs, adata=adata, save_folder=save_folder)
+    # if configs['data']['data_type'] == 'Spatial Transcriptomics':
+    #     # plot spots on top of images (only for the first sample)
+    #     plot_images(configs=configs, adata=adata, save_folder=save_folder)
+    # sc.pl.spatial(adata_prp[adata_prp.obs['Sample_CaptureArea'] == 'P21093_21L008977'],
+    #               color='patient', size=1, library_id='P21093_21L008977')
 
     # 2. Pre-processing and visualization
     # apply the following steps 2.1 - 2.6 individually on each adata object
     print("\n-------- Start Pre-processing and Visualization --------")
 
-    # 2.0
+    # 2.0.1
     # show 20thst highest expressed genes (HEG) in data set and per sample
-    determine_heg(adata=adata, save_folder=save_folder)
+    # determine_heg(adata=adata, save_folder=save_folder)
+
+    # 2.0.2
+    if configs.getboolean('preprocessing', 'filter_doublets'):
+        # Check doublets prior to QC
+        adata = doublet_detection.carlos_woublet(adata=adata, save_folder=save_folder, key='pre_QC')
 
     print("\n         Quality Control\n")
     # 2.1 QC (Quality control) of data - calculate QC covariates
+    adata_filename = '{}_QC.h5'.format(dataset_type)
     # 2.1.1 Cell QC
-    # TODO Determine counts_threshold via Mean absolute deviation (MAD); find outliers :)
-    adata_qc = sample_qc(adata=adata, save_folder=save_folder, counts_threshold=60000, lower_filter_counts=2000,
-                         upper_filter_counts=2500, upper_filter_genes=2000, log_scale=False,
-                         raw=configs.getboolean("preprocessing", "read_raw_matrix"), sample_name=sample_name)
+    if not os.path.exists(os.path.join(configs["data"]['output_path'], adata_filename)):
+        # TODO Determine counts_threshold via Mean absolute deviation (MAD); find outliers :)
+        adata_qc = quality_control.qc_ncounts_ngenes(
+            adata=adata, configs=configs, save_folder=save_folder,
+            counts_threshold=80000, lower_filter_counts=2000,
+            upper_filter_counts=2500, upper_filter_genes=700, log_scale=False)
 
-    # 2.1.2 Threshold determination of UMI counts and genes
-    cutted_adata, min_genes, min_shared_counts, mt_threshold, min_counts, max_counts, min_umi_genes, max_umi_genes = \
-        apply_qc_filter(adata=adata_qc,
-                        apply_mt_threshold=configs.getboolean("preprocessing", 'apply_mt_threshold'))
+        # 2.1.2 Threshold determination of UMI counts and genes
+        cutted_adata, min_genes, min_shared_counts, mt_threshold, min_counts, max_counts, \
+        min_umi_genes, max_umi_genes = apply_qc_filter(
+            adata=adata_qc, apply_mt_threshold=configs.getboolean("preprocessing", 'apply_mt_threshold'))
+
+        # add cut-offs to config file
+        config = configparser.ConfigParser()
+        if not config.has_section("Set_parameters"):
+            config.add_section("Set_parameters")
+
+            # add section using append
+            section = 'a'
+        else:
+            # overwrite parameters using wb
+            section = 'wb'
+
+        config.set("Set_parameters", "min_genes", str(min_genes))
+        config.set("Set_parameters", "min_shared_counts", str(min_shared_counts))
+        config.set("Set_parameters", "mt_threshold", str(mt_threshold))
+        config.set("Set_parameters", "min_counts", str(min_counts))
+        config.set("Set_parameters", "max_counts", str(max_counts))
+        config.set("Set_parameters", "min_umi_genes", str(min_umi_genes))
+        if max_umi_genes == 0:
+            max_umi_genes = np.Inf
+        config.set("Set_parameters", "max_umi_genes", str(max_umi_genes))
+
+        # Write parameters to config file
+        configfile_list = glob.glob(os.path.join(adata_savepath, "*.ini"))
+        with open(configfile_list[0], section) as configfile:
+            config.write(configfile)
+
+        # recalculate n_counts and n_genes
+        cutted_adata = quality_control.calculate_ncounts_ngenes(cutted_adata, key='_qc')
+
+        sc.write(os.path.join(configs["data"]['output_path'], adata_filename), cutted_adata)
+
+        cutted_adata.obs['tissue_layer'].to_csv(os.path.join(configs["data"]['output_path'], 'Tissue_layers.csv'))
+        cutted_adata.obs['spot_type'].to_csv(os.path.join(configs["data"]['output_path'], 'Spot_types.csv'))
+    else:
+        del adata
+        cutted_adata = sc.read(os.path.join(configs["data"]['output_path'], adata_filename))
 
     if configs.getboolean('preprocessing', 'filter_doublets'):
-        # 2.1.3 Filter out multiplets --
-        cutted_adata = doublet_detection.scrublet_algorithm(
-            cutted_adata, sample_name=sample_name, save_folder=save_folder)
+        adata_filename = '{}_QC_DD.h5'.format(dataset_type)
+        if not os.path.exists(os.path.join(configs["data"]['output_path'], adata_filename)):
+            # 2.1.3 Filter out multiplets --
+            cutted_adata = doublet_detection.carlos_woublet(adata=cutted_adata, save_folder=save_folder, key='post_QC')
+            # cutted_adata = doublet_detection.scrublet_algorithm(
+            #     cutted_adata, sample_name=sample_name, save_folder=save_folder)
 
-    # save QC adata object
-    adata_filename = '{}_QC.h5'.format(dataset_type)
-    sc.write(os.path.join(configs["data"]['output_path'], adata_filename), cutted_adata)
+            # save QC and adata object
+            sc.write(os.path.join(configs["data"]['output_path'], adata_filename), cutted_adata)
 
     # 2.2 Normalization
     print("\n         Normalization\n")
-    norm_adata = apply_normalisation(adata=cutted_adata, save_folder=save_folder,
-                                     norm_type=configs['preprocessing']['normalisation_function'],
-                                     exclude_highly_expressed=configs.getboolean("preprocessing",
-                                                                                 "exclude_highly_expressed"),
-                                     raw=configs_file.getboolean("preprocessing", "read_raw_matrix"),
-                                     adata_path_filenames=configs["data"]['output_path'])
-    # save QC and normed adata object
+    # TODO apply normalisation on skin layers and include both spot type and skin layers in design
     adata_filename = '{}_QC_normed.h5'.format(dataset_type)
-    sc.write(os.path.join(configs["data"]['output_path'], adata_filename), norm_adata)
-    # TODO plot normalised count data distribution
+    if not os.path.exists(os.path.join(configs["data"]['output_path'], adata_filename)):
+        norm_adata = apply_normalisation(adata=cutted_adata, save_folder=save_folder, configs=configs)
+        # save QC and normed adata object
+        sc.write(os.path.join(configs["data"]['output_path'], adata_filename), norm_adata)
+        # TODO plot normalised count data distribution
+    else:
+        del cutted_adata
+        norm_adata = sc.read(os.path.join(configs["data"]['output_path'], adata_filename))
 
     # -------------------------------------------------- Optional ---------------------------------------------------- #
     # 2.2.1 Scale data
@@ -413,17 +426,21 @@ def main(configs, adata, save_folder):
     # Dr. Maren Buettner:
     # "During the QC step, we observed differences across samples for instance, in the library size per dataset.
     # Such differences may contribute to the batch effect."
-    if configs.getboolean("preprocessing", "sample_concat"):
+    if configs.getboolean("preprocessing", "apply_batch_correction"):
         print("\n         Batch Correction\n")
         norm_bc_adata = batch_correction.apply_batch_correction(
             norm_adata, save_folder=save_folder, n_comps=n_comps, batch_key='sample',
-            possible_batch_effects=['project', 'phase', 'patient', 'disease', 'biopsy_type'])
+            bc_tool=configs["preprocessing"]['batch_correction_tool'],
+            possible_batch_effects=['sample', 'project', 'phase', 'patient', 'disease', 'biopsy_type',
+                                    'capture_area', 'object_slide'])
+        del norm_adata
 
         # 2.5.1 Run find highly variable genes again on integrated dataset
         # HVG: highly expressed in some cells and lowly expressed in others
         norm_pp_adata = highly_variable_genes.find_highly_variable_genes(
             norm_bc_adata, type_dataset="batch_corrected", save_folder=save_folder, num_top_genes=4000,
             raw=configs.getboolean("preprocessing", "read_raw_matrix"))
+        del norm_bc_adata
         # Actually already calculated in Batch correction functions..
         # 2.5.2 Determine No. PCs
         pc_determination.pcs_combs(norm_pp_adata, save_folder, type_dataset="batch_corrected",
@@ -436,11 +453,11 @@ def main(configs, adata, save_folder):
             norm_pp_adata, save_folder=save_folder, raw=configs.getboolean("preprocessing", "read_raw_matrix"),
             n_comps=n_comps, batch_key="batch_corrected")
 
+        adata_filename = '{}_QC_normed_BC.h5'.format(dataset_type, )
+        sc.write(os.path.join(configs["data"]['output_path'], adata_filename), norm_pp_adata)
+
     else:
         norm_pp_adata = norm_adata.copy()
-
-    adata_filename = '{}_QC_normed_BC.h5'.format(dataset_type,)
-    sc.write(os.path.join(configs["data"]['output_path'], adata_filename), norm_pp_adata)
 
     plots_preprocessing.plot_visualization_results(
         adata=norm_pp_adata, save_folder=save_folder, batch_key="batch_corrected",
@@ -451,17 +468,20 @@ def main(configs, adata, save_folder):
     print("Start storing pre-processed AnnData object")
     # 2.7 save pre-processed annData object
     # # transform float e.g. 0.25 -> 0_25
-    mt_cut_splitted = str(mt_threshold).split(".")
+    mt_cut_splitted = str(configs["data"]['mt_threshold']).split(".")
     mt_cut = mt_cut_splitted[0] + str("_") + mt_cut_splitted[1]
 
-    if max_umi_genes == 0:
+    if configs["data"]['max_umi_genes'] == np.inf:
         # save pre-processed annData object
         filter_name = '{}_minumi_{}_maxumi_{}_mg_{}_msc_{}_mt_{}_minumig_{}'.format(
-            dataset_type, min_counts, max_counts, min_genes, min_shared_counts, mt_cut, min_umi_genes)
+            dataset_type, configs["data"]['min_counts'], configs["data"]['max_counts'], configs["data"]['min_genes'],
+            configs["data"]['min_shared_counts'], mt_cut, configs["data"]['min_umi_genes'])
     else:
         # save pre-processed annData object
         filter_name = '{}_minumi_{}_maxumi_{}_mg_{}_msc_{}_mt_{}_minumig{}_maxumig_{}'.format(
-            dataset_type, min_counts, max_counts, min_genes, min_shared_counts, mt_cut, min_umi_genes, max_umi_genes)
+            dataset_type, configs["data"]['min_counts'], configs["data"]['max_counts'], configs["data"]['min_genes'],
+            configs["data"]['min_shared_counts'], mt_cut, configs["data"]['min_umi_genes'],
+            configs["data"]['max_umi_genes'])
 
     adata_filename = '{}_pp.h5'.format(filter_name)
     sc.write(os.path.join(configs["data"]['output_path'], adata_filename), norm_pp_adata)
@@ -470,6 +490,8 @@ def main(configs, adata, save_folder):
 
 
 if __name__ == '__main__':
+    # 1. Visualise MT-fraction on H&E images
+    # 2. Identify spatially variable genes
     output_path = os.path.join("..", "..", "output", str(date.today()))
     os.makedirs(output_path, exist_ok=True)
     adata_savepath = init_variables.init_vars()
@@ -477,10 +499,115 @@ if __name__ == '__main__':
 
     # 1. Load data
     print("#   --  >Load data and information<  --   #")
-    _, unpp_filtered_adata, _, _ = load_dataset(configs=configs_file)
-    # save adata
     unppadata_filename = '{}_unpp.h5'.format(configs_file['data']['data_type'])
-    sc.write(os.path.join(adata_savepath, unppadata_filename), unpp_filtered_adata)
+    if not os.path.isfile(os.path.join(adata_savepath, unppadata_filename)):
+        _, unpp_filtered_adata, _, _ = load_dataset(configs=configs_file)  # 93373 x 20613
+
+        # adjust for renamed column HAIRFOLLICLE to HAIR FOLLICLE
+        m_hairfollicle = ~np.isnan(unpp_filtered_adata.obs['HAIR FOLLICLE'])
+        unpp_filtered_adata.obs['HAIRFOLLICLE'][m_hairfollicle] = unpp_filtered_adata.obs[
+            'HAIR FOLLICLE'][m_hairfollicle]
+
+        # JUNCTION is new name for INTERFACE
+        unpp_filtered_adata.obs.loc[
+            ~np.isnan(unpp_filtered_adata.obs['INTERFACE']), 'JUNCTION'] = unpp_filtered_adata.obs.loc[
+            ~np.isnan(unpp_filtered_adata.obs['INTERFACE']), 'INTERFACE']
+
+        # Add patient info for new samples
+        # 1. Remove all samples with no SAMPLE annotation (0)
+        m_unkown_samples = (unpp_filtered_adata.obs['SAMPLE'] == 0) | (unpp_filtered_adata.obs['SAMPLE'] == '0')
+        unpp_filtered_adata = unpp_filtered_adata[~m_unkown_samples].copy()  # -> removed 9746 spots -> 83627 left
+
+        # 2. Add sample ids to sample names
+        # m_samplenames = ~np.isnan(adata.obs['SAMPLE'])
+        unpp_filtered_adata.obs['SAMPLE'] = unpp_filtered_adata.obs['SAMPLE'].astype(str)
+        m_samplenames = ~pd.to_numeric(unpp_filtered_adata.obs['SAMPLE'], errors='coerce').isna()
+        unpp_filtered_adata.obs.loc[m_samplenames, 'SAMPLE'] = unpp_filtered_adata.obs.loc[
+            m_samplenames, 'SAMPLE'].replace(r'\.0$', '', regex=True)
+
+        unpp_filtered_adata.obs['Sample_CaptureArea'] = unpp_filtered_adata.obs['sample'].copy()
+
+        if unpp_filtered_adata.obs['sample'].str.contains('21L0089').any():
+            unpp_filtered_adata.obs['sample'] = unpp_filtered_adata.obs['sample'].astype(str)
+            # remove 21L008977 from sample names
+            unpp_filtered_adata.obs['sample'] = unpp_filtered_adata.obs['sample'].str.replace('|'.join([r"21L0089\d+"]),
+                                                                                              '', regex=True)
+            # add sample ids to sample names
+            new_samplenames = pd.DataFrame(
+                {'prefix': unpp_filtered_adata.obs.loc[m_samplenames, 'sample'].values,
+                 'vals': unpp_filtered_adata.obs.loc[m_samplenames, 'SAMPLE'].values}).agg(''.join, axis=1)
+            unpp_filtered_adata.obs.loc[m_samplenames, 'sample'] = new_samplenames.values
+            unpp_filtered_adata.obs['sample'] = unpp_filtered_adata.obs['sample'].astype('category')
+
+        # # 1.1 Add meta data like which samples belong to which donor (since 04.10.2020)
+        # add biopsy_type to new samples (all lesional)
+        m_new_lesional = ~(np.isnan(unpp_filtered_adata.obs['LESIONAL']))
+        unpp_filtered_adata.obs.loc[m_new_lesional, 'LESONAL'] = unpp_filtered_adata.obs.loc[m_new_lesional, 'LESIONAL']
+        unpp_filtered_adata.obs['LESIONAL'] = unpp_filtered_adata.obs['LESONAL'].copy()
+        # drop column LESONAL
+        unpp_filtered_adata.obs = unpp_filtered_adata.obs.drop('LESONAL', axis=1)
+        if 'LESONAL' in unpp_filtered_adata.obs.columns:
+            print('Drop did not work ..')
+
+        # add Metadata
+        unpp_filtered_adata, _tissue_cell_labels, _disease_labels, _lesion_labels = add_metadata(unpp_filtered_adata)
+        # rename LESONAL to LESIONAL
+        unpp_filtered_adata.obs = unpp_filtered_adata.obs.replace(
+            to_replace={'biopsy_type': 'LESONAL'}, value={'biopsy_type': 'LESIONAL'}, regex=True)
+        unpp_filtered_adata.obs['biopsy_type'] = unpp_filtered_adata.obs['biopsy_type'].astype('str').astype('category')
+
+        # Save annotations for normalisation in .csv file
+        # Use annotations from pathologist instead of clusters
+        # Correct for tissue layers and large tissue structures:
+        unpp_filtered_adata = add_observables.add_tissuelayers_obs(adata=unpp_filtered_adata)
+        # Add spottype == large tissue structures:
+        # SEBACEOUS GLAND, SWEAT GLAND, MUSCLE, HAIRFOLLICLE, VESSEL,
+        # DERMIS, upper EPIDERMIS, middle and basal EPIDERMIS, JUNCTION
+        unpp_filtered_adata = add_observables.add_spottypes_obs(adata=unpp_filtered_adata)
+        # 1.2 Remove spots having no tissue label: 81331 × 20613  neu: 83627
+        unpp_filtered_adata = unpp_filtered_adata[~(unpp_filtered_adata.obs['tissue_layer'] == 'Unknown')].copy()
+
+        # adjust for renamed column disease to DISEASE
+        # 1. add DISEASE to disease column
+        unpp_filtered_adata.obs['disease'] = unpp_filtered_adata.obs['disease'].astype('str')
+        unpp_filtered_adata.obs['DISEASE'] = unpp_filtered_adata.obs['DISEASE'].astype('str')
+        m_disease = ~(unpp_filtered_adata.obs['DISEASE'] == 'nan')
+        unpp_filtered_adata.obs.loc[m_disease, 'disease'] = unpp_filtered_adata.obs.loc[m_disease, 'DISEASE'].copy()
+        # 2. rename PSO to Pso, LICHEN PLANUS to LP, AE to AD
+        unpp_filtered_adata.obs = unpp_filtered_adata.obs.replace(
+            to_replace={'disease': 'AE'}, value={'disease': 'AD'}, regex=True)
+        unpp_filtered_adata.obs = unpp_filtered_adata.obs.replace(
+            to_replace={'disease': 'LICHEN'}, value={'disease': 'LP'}, regex=True)
+        unpp_filtered_adata.obs = unpp_filtered_adata.obs.replace(
+            to_replace={'disease': 'PSO'}, value={'disease': 'Pso'}, regex=True)
+        unpp_filtered_adata.obs['disease'] = unpp_filtered_adata.obs['disease'].astype('category')
+
+        # Add patient info for nan samples
+        # unpp_filtered_adata.obs['patient'] = unpp_filtered_adata.obs['patient'].astype(int)
+        m_patients = np.isnan(unpp_filtered_adata.obs['patient'])
+        # max_patient_old = unpp_filtered_adata.obs['patient'].max() + 1
+        new_patients_anonym = np.unique(unpp_filtered_adata.obs.loc[m_patients, 'SAMPLE'])
+        unpp_filtered_adata.obs.loc[m_patients, 'patient'] = unpp_filtered_adata.obs.loc[m_patients, 'SAMPLE']
+        # array_new_patients = np.arange(max_patient_old, max_patient_old + len(new_patients_anonym), 1, dtype=int)
+        # 22 new patients: 81331 spots with 20613 genes
+        # unpp_filtered_adata.obs = unpp_filtered_adata.obs.replace({
+        #     'patient': dict(zip(new_patients_anonym, array_new_patients))}, regex=True)
+        unpp_filtered_adata.obs['patient'] = unpp_filtered_adata.obs['patient'].astype(int).astype('category')
+
+        # Add batch == duplicates info same patient but different capture area
+        # old samples replicates: same patient on same object slide
+        # combination from lesional / non-lesional with patient ID
+        # new samples replicates: same patient on multiple capture areas or object slides
+        # combination lesional / non-lesional with patient ID
+        unpp_filtered_adata.obs['replicates'] = 'Unknown_replicate_pairs'
+        unpp_filtered_adata.obs['replicates'] = unpp_filtered_adata.obs[
+            ['patient', 'biopsy_type']].apply(lambda row: '_'.join(row.values.astype(str)), axis=1)
+
+        # save adata
+        sc.write(os.path.join(adata_savepath, unppadata_filename), unpp_filtered_adata)
+        # unpp_filtered_adata.obs.to_excel(os.path.join(adata_savepath, 'MetaData_P15509_P16357_P21093.xlsx'))
+    else:
+        unpp_filtered_adata = sc.read(os.path.join(adata_savepath, unppadata_filename))
 
     print("-------- Finished: Read out values --------")
     pp_adata, filename_adata = main(configs=configs_file, adata=unpp_filtered_adata, save_folder=output_path)

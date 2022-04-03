@@ -25,4 +25,8 @@ def find_highly_variable_genes(adata, type_dataset, num_top_genes, save_folder, 
 
     pp_plt.plot_highly_variable_genes(adata, type_dataset, save_folder, raw=raw)
 
+    # plot UMI-count of Housekeeping gene such as GAPDH to check if distribution follows an equal distribution
+    pp_plt.plot_hkg_dist(adata=adata, save_folder=save_folder)
+    pp_plt.plot_hvg_hkg(adata=adata, save_folder=save_folder, highly_variable_genes=True)
+
     return adata

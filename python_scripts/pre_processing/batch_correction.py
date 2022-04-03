@@ -56,9 +56,14 @@ def _score_uncorrectd_data(adatas, n_comps, save_folder, possible_batch_effects,
     print(dict_r2var)
 
     # Plot uncorrected matrix
-    sc.pp.pca(adatas, n_comps=n_comps, use_highly_variable=False, svd_solver='arpack')
-    sc.pp.neighbors(adatas)
-    sc.tl.umap(adatas)
+    try:
+        sc.pp.pca(adatas, n_comps=n_comps, use_highly_variable=False, svd_solver='arpack')
+        sc.pp.neighbors(adatas)
+        sc.tl.umap(adatas)
+    except AssertionError:
+        sc.pp.pca(adatas, n_comps=n_comps, use_highly_variable=False, svd_solver='arpack')
+        sc.pp.neighbors(adatas)
+        sc.tl.umap(adatas)
 
     # Plot
     for covar in possible_batch_effects:
@@ -198,7 +203,8 @@ def scanorama_bc(adatas, n_comps, save_folder, possible_batch_effects, batch_key
     return adatas
 
 
-def apply_batch_correction(normed_scaled_adatas, save_folder, n_comps, possible_batch_effects, batch_key='library_id'):
+def apply_batch_correction(normed_scaled_adatas, save_folder, n_comps, possible_batch_effects, batch_key='library_id',
+                           bc_tool='scanorama'):
     """Apply Batch correction using scanorama
 
     Causes of Batch effects:
@@ -216,6 +222,7 @@ def apply_batch_correction(normed_scaled_adatas, save_folder, n_comps, possible_
     n_comps : int
     possible_batch_effects : list, str
     batch_key : str
+    bc_tool : str
 
     Returns
     -------
@@ -227,12 +234,20 @@ def apply_batch_correction(normed_scaled_adatas, save_folder, n_comps, possible_
     # check if possible batch effects are among obs_keys
     intersect_batcheffects_keys = np.intersect1d(normed_scaled_adatas.obs_keys(), possible_batch_effects)
     # Scanorama
-    try:
-        bc_adata = scanorama_bc(adatas=normed_scaled_adatas, n_comps=n_comps, save_folder=save_folder, batch_key=batch_key,
-                                possible_batch_effects=intersect_batcheffects_keys)
-    except KeyError:
-        print("Requested batch effect variable not in adata object")
-    except ValueError:
-        print("Empty batch effect list")
+    if bc_tool == 'scanorama':
+        try:
+            normed_scaled_adatas = scanorama_bc(adatas=normed_scaled_adatas, n_comps=n_comps, save_folder=save_folder,
+                                                batch_key=batch_key, possible_batch_effects=intersect_batcheffects_keys)
+        except KeyError:
+            print("Requested batch effect variable not in adata object")
+        except ValueError:
+            print("Empty batch effect list")
+    else:
+        # 1. Score uncorrectd matrix
+        _score_uncorrectd_data(
+            adatas=normed_scaled_adatas, n_comps=n_comps, save_folder=save_folder, batch_key=batch_key,
+            possible_batch_effects=intersect_batcheffects_keys)
+        # 2. Apply BBKNN
+        sc.external.pp.bbknn(normed_scaled_adatas, batch_key=batch_key)
 
-    return bc_adata
+    return normed_scaled_adatas
