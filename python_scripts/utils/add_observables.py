@@ -12,9 +12,10 @@ def add_metadata(adata):
     :return:
     """
 
-    # get batches (object slide = batch)
+    # get batches (object slide = batch) TODO
     df_batches = ht.map_sample_batch_list(adata=adata,
-                                          num_samples_patient=[4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4])
+                                          num_samples_patient=[4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+                                                               4*3, 4, 4, 4, 4])
     # assign batch to each spot
     batches = []
     for project in df_batches:
@@ -26,7 +27,7 @@ def add_metadata(adata):
     adata.obs['batch'] = adata.obs['batch'].astype('int').astype('category')
 
     # get batches assigned to each patient (currently we have 2 to 4 samples per patient)
-    # last four biopsies of last donor are from two different time points
+    # last four biopsies of last donor are from two different time points TODO
     df_patients = ht.map_sample_batch_list(adata=adata,
                                            num_samples_patient=[4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 2, 2, 4])
 
@@ -59,7 +60,7 @@ def add_metadata(adata):
     return adata, tissue_cell_labels, disease_labels, lesion_labels
 
 
-def add_tissue_obs(adata):
+def add_spottypes_obs(adata):
     """Add tissue layers as observable to adata
 
     Parameters
@@ -70,18 +71,52 @@ def add_tissue_obs(adata):
     -------
 
     """
-    # 1 Select tissue types of interest
-    tissue_types = ['upper EPIDERMIS', 'middle EPIDERMIS', 'basal EPIDERMIS',
-                    'DERdepth1', 'DERdepth2', 'DERdepth3', 'DERdepth4', 'DERdepth5', 'DERdepth6', 'DERdepth7',
-                    'INTERFACE']
+    # 1. Select tissue types of interest
+    # Stand: 22.03.2022
+    spot_types = ['DERMIS', 'upper EPIDERMIS', 'middle EPIDERMIS', 'basal EPIDERMIS', 'JUNCTION',
+                  'SEBACEOUS GLAND', 'SWEAT GLAND', 'MUSCLE', 'HAIRFOLLICLE', 'VESSEL']
 
-    adata.obs['tissue_type'] = 'Unknown'
-    adata.obs['tissue_type'] = adata.obs['tissue_type'].astype('<U64')
+    adata.obs['spot_type'] = 'Unknown'
+    adata.obs['spot_type'] = adata.obs['spot_type'].astype('<U64')
+    for tissue in spot_types:
+        m_tissue = adata.obs[tissue] == 1
+        adata.obs['spot_type'][m_tissue] = tissue
+
+    adata.obs['spot_type'] = adata.obs['spot_type'].astype('category')
+    adata.obs['spot_type'] = adata.obs['spot_type'].cat.reorder_categories(
+        ['upper EPIDERMIS', 'middle EPIDERMIS', 'basal EPIDERMIS', 'JUNCTION', 'DERMIS',
+         'MUSCLE', 'VESSEL', 'HAIRFOLLICLE', 'SEBACEOUS GLAND', 'SWEAT GLAND', 'Unknown'])
+
+    return adata
+
+
+def add_tissuelayers_obs(adata):
+    """Add tissue layers as observable to adata
+
+    Parameters
+    ----------
+    adata : annData
+
+    Returns
+    -------
+
+    """
+    # 1. Select tissue types of interest
+    # Stand: 22.03.2022
+    tissue_types = ['DERdepth1', 'DERdepth2', 'DERdepth3', 'DERdepth4', 'DERdepth5', 'DERdepth6', 'DERdepth7',
+                    'upper EPIDERMIS', 'middle EPIDERMIS', 'basal EPIDERMIS', 'JUNCTION']
+
+    adata.obs['tissue_layer'] = 'Unknown'
+    adata.obs['tissue_layer'] = adata.obs['tissue_layer'].astype('<U64')
     for tissue in tissue_types:
         m_tissue = adata.obs[tissue] == 1
-        adata.obs['tissue_type'][m_tissue] = tissue
+        adata.obs['tissue_layer'][m_tissue] = tissue
 
-    adata.obs['tissue_type'] = adata.obs['tissue_type'].astype('category')
+    adata.obs['tissue_layer'] = adata.obs['tissue_layer'].astype('category')
+    adata.obs['tissue_layer'] = adata.obs['tissue_layer'].cat.reorder_categories(
+        ['upper EPIDERMIS', 'middle EPIDERMIS', 'basal EPIDERMIS', 'JUNCTION', 'DERdepth1', 'DERdepth2', 'DERdepth3',
+         'DERdepth4', 'DERdepth5', 'DERdepth6', 'DERdepth7', 'Unknown'])
+
     return adata
 
 
@@ -258,7 +293,12 @@ def _mark_cells_by_markergene(adata, genes_dict, label, condition):
 
     for ind, cell in enumerate(genes_dict.keys()):
         # First check if genes are in data set
-        available_genes = list(set(adata.var.index) & set(genes_dict[cell]))
+        if isinstance(genes_dict[cell], str):
+            available_genes = list(set(adata.var.index) & {genes_dict[cell]})
+        elif len(genes_dict[cell]) == 0:
+            print('Not yet implemented..')  # TODO case 0 gene .. should not happen as you as a user provide the names..
+        else:
+            available_genes = list(set(adata.var.index) & set(genes_dict[cell]))
 
         if len(available_genes) > 0:
             # Get index of genes and other genes; the position of the index = position of genes in available_genes list

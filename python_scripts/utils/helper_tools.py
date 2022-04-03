@@ -121,8 +121,13 @@ def load_sample_config_file(filename, file_type):
         # non_lesional_folder = configs['non-lesional_folder'].values  # 22
 
         # velocyto (loom files)
-        velocyto_path = configs['velocity_path'].values  # 23
-        loom_file = configs['loom_file_end'].values  # 24
+        velocyto_path = configs['velocity_path'].values  # 23 -> 21
+        loom_file = configs['loom_file_end'].values  # 24 -> 22
+
+        # Capture area
+        capture_area = configs['capture_area'].values  # 25 -> 23
+        patient = configs['patient'].values  # 26 -> 24
+
     else:
         with open(filename) as json_file:
             configs = json.load(json_file)
@@ -165,12 +170,16 @@ def load_sample_config_file(filename, file_type):
             velocyto_path = configs['velocity_path']  # 23
             loom_file = configs['loom_file_end']  # 24
 
+            # Capture area
+            capture_area = configs['capture_area'].values  # 25
+            patient = configs['patient'].values  # 26
+
     return \
         file_path, library_path, sample_strings, sample_id_strings, output_type_matrix, \
         raw_feature_bc_matrix_folder, filtered_feature_bc_matrix_folder, barcode_file_end, features_file_end, \
         matrix_file_end, raw_hdf5_file_end, filtered_hdf5_file_end, output_type_spatial, tissue_pos_list_file_end, \
         scale_factors_file_end, aligned_fiducials_file_end, detected_tissue_file_end, tissue_hires_file_end, \
-        tissue_low_res_file_end, annotation_path, excel_sheet, velocyto_path, loom_file
+        tissue_low_res_file_end, annotation_path, excel_sheet, velocyto_path, loom_file, capture_area, patient
 
 
 def save_obsm_with_library_id(adatas):
@@ -392,10 +401,11 @@ def get_tissue_annot(adata):
         annotations.remove("ANNOTATOR")
 
     # split annotations by disease and tissue / cell types
-    elements = ["LESONAL", "NON LESIONAL"]
+    elements = ["LESONAL", "NON LESIONAL", "LESIONAL"]
+    intersection_ele = np.intersect1d(adata.obs.columns, elements)
     try:
         index = []
-        for el in elements:
+        for el in intersection_ele:
             index.append(annotations.index(el))
         target_index = np.amax(index) + 1
         disease_index = np.amin(index)

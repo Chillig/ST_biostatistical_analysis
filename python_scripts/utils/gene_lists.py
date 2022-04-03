@@ -115,7 +115,7 @@ def get_color_signaturegenes():
     signatures["IFNG"] = "#ff7f00"  # orange LICHEN
     signatures["IL13"] = "#e41a1c"  # red AE
     signatures["IL17A"] = "#377eb8"  # blue PSO
-    signatures["HkG"] = '#4daf4a'  # green GAPDH
+    # signatures["HkG"] = '#4daf4a'  # green GAPDH
 
     return signatures
 
@@ -227,3 +227,55 @@ def get_permuted_respondergenes_log2fc1_5():
     cytokines = list(cytoresps_dict.keys())
 
     return cytokines, cytoresps_dict
+
+
+def highlight_genes_receptors():
+    """Driver, responder and receptor genes for the cytokines IL-17A, IFN-g, and IL-13
+
+    Genes which shall be highlighted in Volcano plot and Boxplots for each cytokine
+
+    Returns
+    -------
+
+    """
+
+    highlighting_genes = OrderedDict()
+    highlighting_genes['IL17A'] = OrderedDict()
+    highlighting_genes['IFNG'] = OrderedDict()
+    highlighting_genes['IL13'] = OrderedDict()
+
+    # TODO check with Steffi if we should remove also PPARD
+    highlighting_genes['IL17A']['Driver_genes'] = ["IL17F", 'IL26', 'IL22', 'CCL3', 'CD274', 'PPARD', 'RAB27A']
+    highlighting_genes['IL17A']["Responder_genes"] = ['NOS2', 'IL19', 'CCL20', 'LCN2', 'SPPRR2F', 'SPPRR2D', 'SPPRR2B',
+                                                      'DEFB4A', 'S100A7A', 'IL36G', 'VNN3', 'CXCL8', 'CXCL1']
+    highlighting_genes['IL17A']['Receptors'] = ['IL17RA', 'CD217', 'IL17RB', 'IL17RC', 'IL17RD', 'IL17RE']
+
+    # removed KLRG1, VACM1
+    highlighting_genes['IFNG']['Driver_genes'] = ['GZMB', "FASLG", 'CD70', 'CRTAM', "CXCR6", 'CXCR3']
+    highlighting_genes['IFNG']["Responder_genes"] = ['CXCL13', 'CXCL10', 'CXCL11', 'CXCL9', 'FGF9']
+    highlighting_genes['IFNG']['Receptors'] = ['IFNGR1', 'CD119', 'IFNGR2']
+
+    # removed CXCR4
+    highlighting_genes['IL13']['Driver_genes'] = ['IL2', 'IL10', 'CD48']
+    highlighting_genes['IL13']["Responder_genes"] = ['CCL17', 'CCL19', 'CCL26', 'OSM']
+    highlighting_genes['IL13']['Receptors'] = ['IL4RA', 'CD124']
+
+    return highlighting_genes
+
+
+def coexpressed_cytokines_list():
+    coexpressed_cytokines = ['IL17A', "IL17F", 'IL26', 'IL22', 'CCL3', 'CD274', 'PPARD', 'RAB27A',
+                             'IFNG', 'GZMB', "FASLG", 'CD70', 'CRTAM', "CXCR6", 'CXCR3',
+                             'IL13', 'IL2', 'IL10', 'CD48']
+
+    coexpressed_cytoes_dict = dict(zip(coexpressed_cytokines, coexpressed_cytokines))
+
+    return coexpressed_cytoes_dict
+
+
+def interesting_cytokines():
+    cytokines = ['IL17A', "IL13", 'IL4', 'IL10', 'IL17F', 'IL21', 'IL22', 'TNF', 'IFNG']
+
+    cytokines = dict(zip(cytokines, cytokines))
+
+    return cytokines

@@ -305,7 +305,7 @@ def _scanpy_load_annotate_tsv_mtx_files(path_filtered_files, filenames, path_pos
         raw_barcodes_file = path_raw_files + filenames[2]
 
         # 1. Load RAW data
-        raw_adata = sc.read(raw_matrix_file)
+        raw_adata = sc.read(raw_matrix_file, cache=True)
         raw_adata = raw_adata.transpose()
         # store count matrix in X key of annData
         raw_adata.X = raw_adata.X.toarray()
@@ -347,7 +347,7 @@ def _scanpy_load_annotate_tsv_mtx_files(path_filtered_files, filenames, path_pos
         raw_adata = []
 
     # 2. Load FILTERED data
-    filtered_adata = sc.read(filtered_matrix_file)
+    filtered_adata = sc.read(filtered_matrix_file, cache=True)
     filtered_adata = filtered_adata.transpose()
     filtered_adata.X = filtered_adata.X.toarray()
 
@@ -391,7 +391,7 @@ def _scanpy_load_annotate_tsv_mtx_files(path_filtered_files, filenames, path_pos
 
 
 def _scanpy_load_database(path_filtered_files, filenames, path_h5_filtered_matrix, path_h5_raw_matrix, path_spatial,
-                          annotation_file_path, sample_id, slide_name, velocyto_path,
+                          annotation_file_path, sample_id, slide_name, velocyto_path, object_slide, patient,
                           path_raw_files=None, read_raw_matrix=False):
     """
     source: https://github.com/theislab/single-cell-tutorial/blob/master/latest_notebook/
@@ -409,7 +409,9 @@ def _scanpy_load_database(path_filtered_files, filenames, path_h5_filtered_matri
     :param annotation_file_path: [string]
     :param sample_id: [string]
     :param slide_name: [string]
+    :param patient: [string]
     :param velocyto_path: [string]
+    :param object_slide: [string]
     :param path_spatial: [string]
     :param read_raw_matrix: [bool]
     :return: [annData]
@@ -428,7 +430,7 @@ def _scanpy_load_database(path_filtered_files, filenames, path_h5_filtered_matri
 
         # 1. Load RAW data
         # raw_adata = sc.read_10x_h5(path_h5_matrix, genome=None)
-        raw_adata = sc.read(raw_matrix_file)
+        raw_adata = sc.read(raw_matrix_file, cache=True)
         raw_adata = raw_adata.transpose()
         # store count matrix in X key of annData
         raw_adata.X = raw_adata.X.toarray()
@@ -446,7 +448,11 @@ def _scanpy_load_database(path_filtered_files, filenames, path_h5_filtered_matri
         raw_adata.obs['project'] = [sample_tmp.split("_")[0]] * raw_adata.n_obs
         #   region = sample number and/or capture area in spatial transcriptomics todo get slide number from image names
         # raw_adata.obs['slide'] = [sample_tmp.split("_")[1]] * raw_adata.n_obs
-        raw_adata.obs['slide'] = [slide_name.split(".")[0]] * raw_adata.n_obs
+        raw_adata.obs['capture_area'] = [slide_name.split(".")[0]] * raw_adata.n_obs
+        # Add object slide serial number
+        raw_adata.obs['object_slide'] = [object_slide] * raw_adata.n_obs
+        # add patient
+        raw_adata.obs['patient'] = [patient] * raw_adata.n_obs
         raw_adata.obs_names_make_unique()
 
         # include spatial information
@@ -462,7 +468,7 @@ def _scanpy_load_database(path_filtered_files, filenames, path_h5_filtered_matri
         raw_adata.var_names_make_unique()
 
         # include spliced, unspliced, Chromosome, End, Start, Strand info (.loom files)
-        ldata = scv.read(velocyto_path)
+        ldata = scv.read(velocyto_path, cache=True)
         raw_adata = scv.utils.merge(raw_adata, ldata)
 
         # raw_adata.uns_names_make_unique()
@@ -473,7 +479,9 @@ def _scanpy_load_database(path_filtered_files, filenames, path_h5_filtered_matri
     # 2. Load FILTERED data
     # filtered_adata = sc.read_10x_h5(path_h5_filtered_matrix, genome=None)
 
-    filtered_adata = sc.read(filtered_matrix_file)
+    # if 'P21093_21L008958' in filtered_matrix_file:
+    #     print('stop')
+    filtered_adata = sc.read(filtered_matrix_file, cache=True)
     filtered_adata = filtered_adata.transpose()
     filtered_adata.X = filtered_adata.X.toarray()
 
@@ -490,7 +498,11 @@ def _scanpy_load_database(path_filtered_files, filenames, path_h5_filtered_matri
     filtered_adata.obs['project'] = [sample_tmp.split("_")[0]] * filtered_adata.n_obs
     #   region = sample number and/or capture area in spatial transcriptomics
     # filtered_adata.obs['slide'] = [sample_tmp.split("_")[1]] * filtered_adata.n_obs
-    filtered_adata.obs['slide'] = [slide_name.split(".")[0]] * filtered_adata.n_obs
+    filtered_adata.obs['capture_area'] = [slide_name.split(".")[0]] * filtered_adata.n_obs
+    # Add object slide serial number
+    filtered_adata.obs['object_slide'] = [object_slide] * filtered_adata.n_obs
+    # add patient
+    filtered_adata.obs['patient'] = [patient] * filtered_adata.n_obs
     filtered_adata.obs_names_make_unique()
 
     # include spatial information
@@ -507,7 +519,7 @@ def _scanpy_load_database(path_filtered_files, filenames, path_h5_filtered_matri
     filtered_adata.var_names_make_unique()
 
     # include spliced, unspliced, Chromosome, End, Start, Strand info (.loom files)
-    ldata = scv.read(velocyto_path)
+    ldata = scv.read(velocyto_path, cache=True)
     filtered_adata = scv.utils.merge(filtered_adata, ldata)
 
     return raw_adata, filtered_adata
@@ -589,7 +601,9 @@ def main(filename, read_raw_matrix=False, spatial_concat=True):
             read_raw_matrix=read_raw_matrix,
             sample_id=project + "_" + sample_id,
             slide_name=config_paths[16][0],
-            velocyto_path=velo_path)
+            velocyto_path=velo_path,
+            object_slide=config_paths[23][0],
+            patient = config_paths[24][0])
 
         # initialize list of adatas
         list_filtered_annot_data = [filtered_annot_data]
@@ -618,7 +632,7 @@ def main(filename, read_raw_matrix=False, spatial_concat=True):
                                                 config_paths[19][c_sample], config_paths[20][c_sample])
 
             # path to velocyto information
-            velo_path = os.path.join(os.sep,config_paths[0][c_sample], config_paths[2][c_sample],
+            velo_path = os.path.join(os.sep, config_paths[0][c_sample], config_paths[2][c_sample],
                                      config_paths[21][c_sample],
                                      config_paths[2][c_sample] + "_" + config_paths[3][c_sample],
                                      config_paths[23][c_sample])
@@ -634,7 +648,8 @@ def main(filename, read_raw_matrix=False, spatial_concat=True):
                 read_raw_matrix=read_raw_matrix,
                 sample_id=config_paths[2][c_sample] + "_" + config_paths[3][c_sample],
                 slide_name=config_paths[16][c_sample], filenames=feature_bc_matrix_string,
-                velocyto_path=velo_path)
+                velocyto_path=velo_path, object_slide=config_paths[23][c_sample],
+                patient = config_paths[24][c_sample])
 
             # # Concatenate data sets (also do this if you have more than one donor!)
             if spatial_concat:
@@ -707,7 +722,8 @@ def main(filename, read_raw_matrix=False, spatial_concat=True):
             annotation_file_path=annotation_file_path,
             sample_id=config_paths[2][0] + "_" + sample_id,
             slide_name=config_paths[16][0],
-            velocyto_path=velo_path)
+            velocyto_path=velo_path, object_slide=config_paths[23][0],
+            patient=config_paths[24][0])
 
         # initialize list of adatas
         list_filtered_annot_data = [filtered_annot_data]
@@ -754,7 +770,8 @@ def main(filename, read_raw_matrix=False, spatial_concat=True):
                 annotation_file_path=annotation_file_path,
                 sample_id=config_paths[2][c_sample] + "_" + config_paths[3][c_sample],
                 slide_name=config_paths[16][c_sample],
-                velocyto_path=velo_path)
+                velocyto_path=velo_path, object_slide=config_paths[23][c_sample],
+                patient=config_paths[24][c_sample])
 
             # # Concatenate data sets (also do this if you have more than one donor!)
             if spatial_concat:
