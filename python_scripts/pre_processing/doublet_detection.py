@@ -67,11 +67,11 @@ def scrublet_algorithm(adata, sample_name, save_folder):
     fig.savefig(os.path.join(save_folder, 'obs_sim_doublets.png'), bbox_inches='tight')
 
     # Comparison of scrublet and scanpy plotting and embeddings (the plots should look the same)
-    sc.pp.highly_variable_genes(cp_adata, flavor='cell_ranger', n_top_genes=4000, batch_key='sample')
+    sc.pp.highly_variable_genes(cp_adata, flavor='cell_ranger', n_top_genes=4000, batch_key='specimen')
     sc.pp.pca(cp_adata, n_comps=30, use_highly_variable=True)
     sc.pp.neighbors(cp_adata, n_neighbors=10, metric='euclidean')
     sc.tl.umap(cp_adata, min_dist=0.5,  n_components=2)
-    sc.pl.umap(cp_adata, color='sample')
+    sc.pl.umap(cp_adata, color='specimen')
     plt.savefig(os.path.join(save_folder, 'scanpy_UMAP.png'), bbox_inches='tight')
 
     # plot count matrix
@@ -210,11 +210,11 @@ def carlos_woublet(adata, save_folder, key):
     """
     cp_adata = adata.copy()
     holder = np.zeros((cp_adata.shape[0],))
-    for smp in np.unique(cp_adata.obs['sample']):
-        adata_smp = cp_adata[cp_adata.obs['sample'] == smp]
+    for smp in np.unique(cp_adata.obs['specimen']):
+        adata_smp = cp_adata[cp_adata.obs['specimen'] == smp]
         sc.tl.pca(adata_smp, svd_solver='arpack')
         woublet(adata_smp)
-        holder[cp_adata.obs['sample'] == smp] = adata_smp.obs['doublet_score']
+        holder[cp_adata.obs['specimen'] == smp] = adata_smp.obs['doublet_score']
 
     cp_adata.obs['doublet_score'] = holder
 
