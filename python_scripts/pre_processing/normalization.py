@@ -60,15 +60,12 @@ def first_est_sizefactors(adata, save_folder, configs, counts_per_cell_after=1e6
 
         adata_pp = adata.copy()
 
-        # Use annotations from pathologist instead of clusters
-        obs_keys = list(adata.obs_keys())
-        # get all manual annotations by extracting all keys with upper case characters
-        annotations = [char for char in obs_keys if any(c.isupper() for c in char)]
-
         # check if manual annotations in data set
-        if len(annotations) > 0:
-            # save manual annotations in one array as groups
-            adata_pp = ht.store_categories_as_clusters(adata_pp, annotations)
+        annotations = configs['preprocessing']['normalisation_groups']
+        if annotations:
+            # Use annotations from pathologist instead of clusters
+            # -> save manual annotations in one array as groups
+            adata_pp.obs['groups'] = adata_pp.obs[annotations].copy()
         else:
             sc.pp.normalize_per_cell(adata_pp, counts_per_cell_after=counts_per_cell_after)
             sc.pp.log1p(adata_pp)
