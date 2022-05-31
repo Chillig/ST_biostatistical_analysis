@@ -20,7 +20,7 @@ try:
 except AssertionError:
     sc.logging.print_versions()
 # sc.settings.set_figure_params(dpi=80)
-matplotlib.get_backend()
+# matplotlib.get_backend()
 
 # containment radius
 _1sigma = 0.682 * 100
@@ -33,7 +33,7 @@ fig_size, title_fontsize, subtitle_fontsize, xy_fontsize, xy_ticks, legend_fonts
     hf.plot_properties()
 
 
-def _plot_umap(amatrix, ax=None, color='sample', use_raw=False):
+def _plot_umap(amatrix, ax=None, color='specimen', use_raw=False):
     """Basic UMAP plot
 
     Parameters
@@ -52,15 +52,14 @@ def _plot_umap(amatrix, ax=None, color='sample', use_raw=False):
     return img_ax
 
 
-def plot_qc_metrics(amatrix, save_folder, sample_name, counts_threshold=10000, raw=False):
+def plot_qc_metrics(amatrix, save_folder, project_name, raw=False):
     """Sample quality plots
 
     Parameters
     ----------
     amatrix : annData
     save_folder : str
-    sample_name : str
-    counts_threshold : int
+    project_name : str
     raw : bool
 
     Returns
@@ -69,57 +68,110 @@ def plot_qc_metrics(amatrix, save_folder, sample_name, counts_threshold=10000, r
     """
 
     # Sample quality plots
-    fig, axs = plt.subplots(nrows=1, ncols=1, facecolor='w', edgecolor='k', figsize=(18, 12))
-    fig.subplots_adjust(hspace=1, wspace=0.3)
-    # axs = axs.ravel()
     # 1. UMI counts
-    sc.pl.violin(amatrix, 'n_counts', groupby='sample', size=2, log=True, cut=0, rotation=90, ax=axs, show=False)
-    hf.set_axes_label(x_label='Sample', y_label='UMI counts', axes=axs)
-    fig.suptitle("Sample quality plots", fontsize=16)
-    fig.tight_layout(pad=1, w_pad=1, h_pad=1.0)
-    fig.subplots_adjust(top=0.88)
+    fig, axs = plt.subplots(facecolor='w', edgecolor='k', figsize=(16, 8))
+    sc.pl.violin(amatrix, 'n_counts', groupby='specimen', size=2, log=True, cut=0, rotation=90, show=False, ax=axs)
+    # Hide grid lines
+    axs.grid(False)
+    hf.set_axes_label(x_label='Specimen', y_label='Number of UMI-counts', axes=axs)
+    axs.spines["top"].set_visible(False)
+    axs.spines["right"].set_visible(False)
+    plt.tight_layout()
 
     if raw:
-        plt.savefig(os.path.join(save_folder, "_".join([sample_name, "raw_UMI_counts_Sample_QC.png"])))
+        plt.savefig(os.path.join(save_folder, "_".join([project_name, "raw_UMI_counts_Sample_QC.pdf"])))
     else:
-        plt.savefig(os.path.join(save_folder, "_".join([sample_name, "UMI_counts_Sample_QC.png"])))
+        plt.savefig(os.path.join(save_folder, "_".join([project_name, "UMI_counts_Sample_QC.pdf"])))
+    plt.close()
 
-    fig, axs = plt.subplots(nrows=1, ncols=1, facecolor='w', edgecolor='k', figsize=(18, 12))
-    fig.subplots_adjust(hspace=1, wspace=0.3)
     # 2. MT-fraction
-    sc.pl.violin(amatrix, 'mt_frac', groupby='sample', ax=axs, rotation=90, show=False)
-    hf.set_axes_label(x_label='Sample', y_label='Mitochondrial fraction [%]', axes=axs)
-    fig.suptitle("Sample quality plots", fontsize=16)
-    fig.tight_layout(pad=1, w_pad=1, h_pad=1.0)
-    fig.subplots_adjust(top=0.88)
+    fig, axs = plt.subplots(facecolor='w', edgecolor='k', figsize=(16, 8))
+    sc.pl.violin(amatrix, 'mt_frac', groupby='specimen', rotation=90, show=False, ax=axs)
+    # Hide grid lines
+    axs.grid(False)
+    hf.set_axes_label(x_label='Specimen', y_label='Mitochondrial fraction [%]', axes=axs)
+
+    axs.spines["top"].set_visible(False)
+    axs.spines["right"].set_visible(False)
+    plt.tight_layout()
 
     if raw:
-        plt.savefig(os.path.join(save_folder, "_".join([sample_name, "raw_MT-fraction_Sample_QC.png"])))
+        plt.savefig(os.path.join(save_folder, "_".join([project_name, "raw_MT-fraction_Specimen_QC.pdf"])))
     else:
-        plt.savefig(os.path.join(save_folder, "_".join([sample_name, "MT-fraction_Sample_QC.png"])))
+        plt.savefig(os.path.join(save_folder, "_".join([project_name, "MT-fraction_Specimen_QC.pdf"])))
+    plt.close()
 
-    # Data quality summary plots
-    fig1, axs1 = plt.subplots(nrows=1, ncols=2, facecolor='w', edgecolor='k', figsize=(12, 6))
-    fig1.subplots_adjust(hspace=1, wspace=0.5)
-    axs1 = axs1.ravel()
-    sc.pl.scatter(amatrix, 'n_counts', 'n_genes', color='mt_frac', ax=axs1[0], right_margin=1.5, show=False)
-    hf.set_axes_label(x_label='No. UMI counts', y_label='No. genes', axes=axs1[0])
-    hf.set_title(title='Mitochondrial fraction', axes=axs1[0])
-    sc.pl.scatter(amatrix[amatrix.obs['n_counts'] < counts_threshold], 'n_counts', 'n_genes', color='mt_frac',
-                  ax=axs1[1], right_margin=0.12, show=False)
-    hf.set_axes_label(x_label='No. UMI counts', y_label='No. genes', axes=axs1[1])
-    hf.set_title(sup_title="Data quality summary plots", figure=fig1)
-    hf.set_title(title='Mitochondrial fraction without outliers', axes=axs1[1])
-    fig1.subplots_adjust(top=0.88)
+    # Data quality summary plots todo highlight potential doublets
+    n = amatrix.shape[0]
+    size = 120000 / n
+    if 'scrublet_score' in amatrix.obs_keys():
+        fig1, ax = plt.subplots(facecolor='w', edgecolor='k', figsize=(8, 8))
+        fig1.subplots_adjust(right=0.77)
+        sc.pl.scatter(adata=amatrix[amatrix.obs['scrublet_score'] > 0.65], show=False, ax=ax,
+                      x='n_counts', y='n_genes', color='mt_frac', size=size ** 2, title=" ")
+        ax.grid(False)
+        hf.set_axes_label(x_label='No. UMI counts', y_label='No. genes', axes=ax)
+        ax.set_xlim([0, amatrix.obs['n_counts'].max() + 100])
+        ax.set_ylim([0, amatrix.obs['n_genes'].max() + 100])
+        ax.spines["top"].set_visible(False)
+        ax.spines["right"].set_visible(False)
+
+        # Colorbar label
+        cbar_ax = fig1.axes[-1]
+        cbar_ax.get_yaxis().labelpad = 12
+        cbar_ax.set_ylabel('MT-fraction [%]', rotation=90, fontsize=legend_fontsize)
+        cbar_ax.tick_params(labelsize=xy_ticks)
+
+        if raw:
+            plt.savefig(os.path.join(save_folder, "_".join([project_name, "DD_raw_Data_QC.pdf"])), bbox_inches='tight')
+        else:
+            plt.savefig(os.path.join(save_folder, "_".join([project_name, "DD_Data_QC.pdf"])), bbox_inches='tight')
+        plt.close()
+
+    fig1, ax = plt.subplots(facecolor='w', edgecolor='k', figsize=(8, 8))
+    fig1.subplots_adjust(right=0.77)
+    sc.pl.scatter(amatrix, 'n_counts', 'n_genes', color='mt_frac', show=False, ax=ax, title=" ")
+    if 'scrublet_score' in amatrix.obs_keys():
+        sc.pl.scatter(adata=amatrix[amatrix.obs['scrublet_score'] > 0.65], show=False,
+                      x='n_counts', y='n_genes', color='specimen', size=size + 10, ax=ax, palette=['red'],
+                      legend_loc='none', title=" ")
+    # Hide grid lines
+    ax.grid(False)
+    hf.set_axes_label(x_label='No. UMI counts', y_label='No. genes', axes=ax)
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+
+    # Colorbar label
+    cbar_ax = fig1.axes[-1]
+    cbar_ax.get_yaxis().labelpad = 12
+    cbar_ax.set_ylabel('MT-fraction [%]', rotation=90, fontsize=legend_fontsize)
+    cbar_ax.tick_params(labelsize=xy_ticks)
 
     if raw:
-        plt.savefig(os.path.join(save_folder, "_".join([sample_name, "raw_Data_QC.png"])))
+        plt.savefig(os.path.join(save_folder, "_".join([project_name, "raw_Data_QC.pdf"])), bbox_inches='tight')
     else:
-        plt.savefig(os.path.join(save_folder, "_".join([sample_name, "Data_QC.png"])))
+        plt.savefig(os.path.join(save_folder, "_".join([project_name, "Data_QC.pdf"])), bbox_inches='tight')
+    plt.close()
+
+    fig, axs = plt.subplots(facecolor='w', edgecolor='k', figsize=(16, 8))
+    sc.pl.violin(amatrix, ['pct_counts_mt', 'pct_counts_ribo', 'pct_counts_hb'], jitter=0.2, multi_panel=True, ax=axs)
+    plt.tight_layout()
+    plt.savefig(os.path.join(save_folder, "_".join([project_name, "QC_Percent_MT_Ribo_HB.pdf"])), bbox_inches='tight')
+    plt.close()
+
+    fig, axs = plt.subplots(facecolor='w', edgecolor='k', figsize=(16, 8))
+    sc.pl.violin(amatrix, 'n_genes', groupby='specimen', size=2, log=True, cut=0, rotation=90, show=False, ax=axs)
+    # Hide grid lines
+    axs.grid(False)
+    hf.set_axes_label(x_label='Sample', y_label='Number of genes', axes=axs)
+    axs.spines["top"].set_visible(False)
+    axs.spines["right"].set_visible(False)
+    plt.tight_layout()
+    plt.savefig(os.path.join(save_folder, "_".join([project_name, "QC_ngenes.pdf"])), bbox_inches='tight')
     plt.close()
 
 
-def plot_distribution(amatrix, save_folder, sample_name, lower_filter_counts=400, upper_filter_counts=4000,
+def plot_distribution(amatrix, save_folder, project_name, lower_filter_counts=400, upper_filter_counts=4000,
                       upper_filter_genes=500, log_scale=None, bins=np.ones(6) * 60, raw=False):
     """Plot distribution of counts
         Threshold decision based on the distribution of counts
@@ -129,7 +181,7 @@ def plot_distribution(amatrix, save_folder, sample_name, lower_filter_counts=400
     ----------
     amatrix : annData
     save_folder : str
-    sample_name : str
+    project_name : str
     lower_filter_counts : int
     upper_filter_counts : int
     upper_filter_genes : int
@@ -190,9 +242,9 @@ def plot_distribution(amatrix, save_folder, sample_name, lower_filter_counts=400
     fig.subplots_adjust(top=0.88)
 
     if raw:
-        plt.savefig(os.path.join(save_folder, "_".join([sample_name, "raw_Distribution_counts.png"])))
+        plt.savefig(os.path.join(save_folder, "_".join([project_name, "raw_Distribution_counts{}".format(fileformat)])))
     else:
-        plt.savefig(os.path.join(save_folder, "_".join([sample_name, "Distribution_counts.png"])))
+        plt.savefig(os.path.join(save_folder, "_".join([project_name, "Distribution_counts{}".format(fileformat)])))
 
     # Plots for threshold determination of n_genes
     fig_genes = plt.figure(facecolor='w', edgecolor='k', figsize=(10, 6))
@@ -233,9 +285,9 @@ def plot_distribution(amatrix, save_folder, sample_name, lower_filter_counts=400
     fig_genes.subplots_adjust(top=0.88)
 
     if raw:
-        plt.savefig(os.path.join(save_folder, "_".join([sample_name, "raw_Distribution_genes.png"])))
+        plt.savefig(os.path.join(save_folder, "_".join([project_name, "raw_Distribution_genes{}".format(fileformat)])))
     else:
-        plt.savefig(os.path.join(save_folder, "_".join([sample_name, "Distribution_genes.png"])))
+        plt.savefig(os.path.join(save_folder, "_".join([project_name, "Distribution_genes{}".format(fileformat)])))
     plt.close()
 
 
@@ -310,9 +362,9 @@ def plot_sc_dist(adata, save_folder, bins=None, title=None, ax_xlabel=None, ax_y
         ax.set_ylabel(ax_ylabel)
 
     if raw:
-        plt.savefig(os.path.join(save_folder, "raw_dist_threshold.png"))
+        plt.savefig(os.path.join(save_folder, "raw_dist_threshold{}".format(fileformat)))
     else:
-        plt.savefig(os.path.join(save_folder, "dist_threshold.png"))
+        plt.savefig(os.path.join(save_folder, "dist_threshold{}".format(fileformat)))
     plt.close()
 
 
@@ -359,9 +411,9 @@ def plot_sc_scatter(adata, save_folder, obs, title=None, ax_xlabel=None, ax_ylab
     plt.show()
 
     if raw:
-        plt.savefig(os.path.join(save_folder, "raw_sizefactor.png"))
+        plt.savefig(os.path.join(save_folder, "raw_sizefactor{}".format(fileformat)))
     else:
-        plt.savefig(os.path.join(save_folder, "sizefactor.png"))
+        plt.savefig(os.path.join(save_folder, "sizefactor{}".format(fileformat)))
     plt.close()
 
 
@@ -426,11 +478,10 @@ def plot_visualization_results(adata, save_folder, batch_key, raw=False):
     fig_2d_visu.tight_layout(pad=1.5, w_pad=1.5, h_pad=1.5)
     fig_2d_visu.subplots_adjust(top=0.88)
 
-    plt.show()
     if raw:
-        plt.savefig(os.path.join(save_folder, "raw_2D_Visualisation_{}.png".format(batch_key)))
+        plt.savefig(os.path.join(save_folder, "raw_2D_Visualisation_{}{}".format(batch_key, fileformat)))
     else:
-        plt.savefig(os.path.join(save_folder, "2D_Visualisation_{}.png".format(batch_key)))
+        plt.savefig(os.path.join(save_folder, "2D_Visualisation_{}{}".format(batch_key, fileformat)))
     plt.close()
 
 
@@ -481,9 +532,9 @@ def plot_cell_cycle_cluster(adata, save_folder, raw=False):
     # fig_2d_visu.gca().set_aspect('equal', adjustable='box')
 
     if raw:
-        plt.savefig(os.path.join(save_folder, "raw_2D_Cell_Cycle.png"))
+        plt.savefig(os.path.join(save_folder, "raw_2D_Cell_Cycle{}".format(fileformat)))
     else:
-        plt.savefig(os.path.join(save_folder, "2D_Cell_Cycle.png"))
+        plt.savefig(os.path.join(save_folder, "2D_Cell_Cycle{}".format(fileformat)))
     plt.close()
 
 
@@ -509,25 +560,25 @@ def plot_highest_expr_genes(adata, save_folder, raw=False):
     fig_2d_visu.subplots_adjust(bottom=0.125, left=0.125, top=0.875, right=0.875)
 
     if raw:
-        plt.savefig(os.path.join(save_folder, "whole_data_set_raw_HEG.png"))
+        plt.savefig(os.path.join(save_folder, "whole_data_set_raw_HEG{}".format(fileformat)))
     else:
-        plt.savefig(os.path.join(save_folder, "whole_data_set_HEG.png"))
+        plt.savefig(os.path.join(save_folder, "whole_data_set_HEG{}".format(fileformat)))
 
-    # per sample
-    sample_names = np.unique(adata.obs['sample'])
-    for sample in sample_names:
-        adata_sample = adata.copy()
-        adata_sample = adata_sample[adata_sample.obs["sample"] == sample]
+    # per Diagnosis
+    diagnosis = np.unique(adata.obs['DISEASE'])
+    for diag in diagnosis:
+        adata_specimen = adata.copy()
+        adata_specimen = adata_specimen[adata_specimen.obs["DISEASE"] == diag]
         fig_2d_visu = plt.figure(facecolor='w', edgecolor='k', figsize=fig_size)
         sub = fig_2d_visu.add_subplot(1, 1, 1)
-        sc.pl.highest_expr_genes(adata_sample, n_top=20, ax=sub, show=False)
+        sc.pl.highest_expr_genes(adata_specimen, n_top=20, ax=sub, show=False)
         hf.set_title(sup_title="Highest expressed Genes", figure=fig_2d_visu)
         fig_2d_visu.subplots_adjust(bottom=0.125, left=0.125, top=0.875, right=0.875)
 
         if raw:
-            plt.savefig(os.path.join(save_folder, "_".join([sample, "raw_HEG.png"])))
+            plt.savefig(os.path.join(save_folder, "_".join([diag, "raw_HEG{}".format(fileformat)])))
         else:
-            plt.savefig(os.path.join(save_folder, "_".join([sample, "HEG.png"])))
+            plt.savefig(os.path.join(save_folder, "_".join([diag, "HEG{}".format(fileformat)])))
     plt.close()
 
 
@@ -549,9 +600,9 @@ def plot_highly_variable_genes(adata, type_dataset, save_folder, raw=False):
     sc.pl.highly_variable_genes(adata, show=False)
 
     if raw:
-        plt.savefig(os.path.join(save_folder, "_".join([type_dataset, "raw_HVG.png"])))
+        plt.savefig(os.path.join(save_folder, "_".join([type_dataset, "raw_HVG{}".format(fileformat)])))
     else:
-        plt.savefig(os.path.join(save_folder, "_".join([type_dataset, "HVG.png"])))
+        plt.savefig(os.path.join(save_folder, "_".join([type_dataset, "HVG{}".format(fileformat)])))
 
     plt.close()
 
@@ -578,9 +629,9 @@ def plot_pc_combs(adata, type_dataset, save_folder, raw=False):
     sc.pl.pca_variance_ratio(adata, show=False)
 
     if raw:
-        plt.savefig(os.path.join(save_folder, "{}_raw_pc_combs.png".format(type_dataset)))
+        plt.savefig(os.path.join(save_folder, "{}_raw_pc_combs{}".format(type_dataset, fileformat)))
     else:
-        plt.savefig(os.path.join(save_folder, "{}_pc_combs.png".format(type_dataset)))
+        plt.savefig(os.path.join(save_folder, "{}_pc_combs{}".format(type_dataset, fileformat)))
     plt.close()
 
 
@@ -607,7 +658,7 @@ def plot_batch_correction(adata, save_folder, batch_key, possible_batch_effect):
     sc.pl.umap(adata, color=possible_batch_effect, ax=sub_1, show=False, title="Sample")
     fig.subplots_adjust(bottom=0.125, left=0.025, top=0.875, right=0.850)
     plt.tight_layout()
-    plt.savefig(os.path.join(save_folder, "scanorama_{}_{}.png".format(batch_key, possible_batch_effect)))
+    plt.savefig(os.path.join(save_folder, "scanorama_{}_{}{}".format(batch_key, possible_batch_effect, fileformat)))
     plt.close()
 
 
@@ -698,5 +749,216 @@ def plot_scatter_contour(adata, batch_key, observable, save_folder, show_points=
     if save_folder is None:
         plt.show()
     else:
-        plt.savefig(os.path.join(save_folder, "_".join([observable, "UMAP_{}_contourplot.png".format(batch_key)])))
+        plt.savefig(os.path.join(
+            save_folder, "_".join([observable, "UMAP_{}_contourplot{}".format(batch_key, fileformat)])))
+    plt.close()
+
+
+def plot_project_counts_dist(adata, save_folder, raw=False):
+    fig = plt.figure(facecolor='w', edgecolor='k', figsize=(8, 8))
+    fig.subplots_adjust(bottom=0.025, left=0.025, top=0.975, right=0.975)
+    sub = fig.add_subplot(1, 1, 1)
+    p, bins, _ = plt.hist(adata.obs['n_counts'], label='total counts', bins=60, zorder=1, alpha=0.5)
+    for ind, project in enumerate(adata.obs.project.cat.categories):
+        mask_project = adata.obs['project'] == project
+        plt.hist(adata.obs['n_counts'][mask_project], label=project, bins=bins, alpha=0.5, zorder=5 - ind)
+        # sns.distplot(adata.obs['n_counts'][mask_project], kde=True, bins=bins[0], ax=sub)
+
+    hf.set_axes_label(x_label='UMI counts', y_label='counts', axes=sub)
+    hf.set_title(sup_title="Distribution of UMI counts per project", figure=fig)
+    fig.tight_layout(pad=1.5, w_pad=1.5, h_pad=1.5)
+    fig.subplots_adjust(top=0.88)
+    plt.legend()
+
+    if raw:
+        plt.savefig(os.path.join(save_folder, "raw_Distribution_project_counts{}".format(fileformat)))
+    else:
+        plt.savefig(os.path.join(save_folder, "Distribution_project_counts{}".format(fileformat)))
+    plt.close()
+
+
+def plot_hkg_dist(adata, save_folder):
+    """plot UMI-count of Housekeeping gene GAPDH to check if distribution follows an equal distribution
+    -> proof that normalisation worked
+
+    Parameters
+    ----------
+    adata : annData
+    save_folder : str
+
+    Returns
+    -------
+
+    """
+    # source: https://www.genomics-online.com/resources/16/5049/housekeeping-genes/
+    house_keeping_genes = ['ACTB', 'GAPDH', 'PGK1', 'PPIA', 'RPLP0', 'ARBP', 'B2M', 'YWHAZ', 'SDHA', 'TFRC', 'GUSB',
+                           'HMBS', 'HPRT1', 'TBP']
+    hvg_genes_selection = adata.var_names[(adata.var['highly_variable'] is True) & (adata.var['dispersions_norm'] > 20)]
+
+    share_genes = list(set(house_keeping_genes) & set(adata.var_names))
+    share_genes.extend(hvg_genes_selection)
+
+    df_adata = adata.to_df()
+
+    # adata.var['mean'] = df_adata.describe()['mean']
+
+    fig, ax = plt.subplots(figsize=(18, 8))
+    sns.boxplot(data=df_adata[share_genes], ax=ax)
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+
+    ax.set_ylabel("Normed UMI-counts")
+
+    plt.tight_layout()
+
+    plt.savefig(os.path.join(save_folder, "boxplot_distribution_hkgs{}".format(fileformat)), bbox_inches='tight')
+    plt.close()
+
+
+def plot_hvg_hkg(adata, save_folder, highly_variable_genes=True):
+    """Plot dispersions versus means for genes.
+
+    Produces Supp. Fig. 5c of Zheng et al. (2017) and MeanVarPlot() of Seurat.
+
+    Parameters
+    ----------
+    adata : annData
+        Result of :func:`~scanpy.pp.highly_variable_genes`.
+    save_folder : str
+    highly_variable_genes : bool
+    """
+
+    # source: https://www.genomics-online.com/resources/16/5049/housekeeping-genes/
+    house_keeping_genes = ['ACTB', 'GAPDH', 'PGK1', 'PPIA', 'RPLP0', 'ARBP', 'B2M', 'YWHAZ', 'SDHA', 'TFRC', 'GUSB',
+                           'HMBS', 'HPRT1', 'TBP']
+
+    share_genes = list(set(house_keeping_genes) & set(adata.var_names))
+
+    result = adata.var
+
+    if highly_variable_genes:
+        gene_subset = result.highly_variable
+    else:
+        gene_subset = result.gene_subset
+
+    # hkg_subset = np.array([True if gene in share_genes else False for gene in result.index])
+    result['hkg'] = [True if gene in share_genes else False for gene in result.index]
+
+    means = result.means
+    dispersions = result.dispersions
+    dispersions_norm = result.dispersions_norm
+
+    fig = plt.figure(figsize=fig_size)
+    fig.subplots_adjust(wspace=0.3)
+    for idx, d in enumerate([dispersions_norm, dispersions]):
+        ax = fig.add_subplot(1, 2, idx + 1)
+        # highlight hkg ind dispersion plot
+        for label, color, mask in zip(['Highly variable genes', 'Other genes', 'Housekeeping gene'],
+                                      ['black', 'grey', 'red'],
+                                      [gene_subset, ~gene_subset, result.hkg]):
+            means_, disps_ = means[mask], d[mask]
+            ax.scatter(means_, disps_, label=label, c=color, s=10)
+            ax.spines["top"].set_visible(False)
+            ax.spines["right"].set_visible(False)
+            ax.set_xlabel('mean expressions of genes')
+        if idx == 0:
+            ax.legend()
+            ax.set_ylabel('dispersions of genes (normalized)')
+        else:
+            ax.set_ylabel('dispersions of genes (not normalized)')
+
+    plt.savefig(os.path.join(save_folder, "Dispersion_HVG_HKG{}".format(fileformat)), bbox_inches='tight')
+    plt.close()
+
+
+def plot_normedcounts_dist(adata, save_folder):
+    adata.obs['normed_counts'] = adata.X.sum(axis=1)
+    fig, ax = plt.subplots(figsize=fig_size)
+    sns.distplot(adata.obs['normed_counts'], kde=False, bins=60, ax=ax)
+
+    hf.set_axes_label(x_label='Normed UMI-counts', y_label='counts', axes=ax)
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+
+    plt.savefig(os.path.join(save_folder, "Normed_UMI-counts_distribution{}".format(fileformat)), bbox_inches='tight')
+    plt.close()
+
+    # not normed counts
+    fig, ax = plt.subplots(figsize=fig_size)
+    sns.distplot(adata.obs['n_counts'], kde=False, bins=60, ax=ax)
+
+    hf.set_axes_label(x_label='UMI-counts', y_label='counts', axes=ax)
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+
+    plt.savefig(os.path.join(save_folder, "postQC__UMI-counts_distribution{}".format(fileformat)), bbox_inches='tight')
+    plt.close()
+
+    # source: https://www.genomics-online.com/resources/16/5049/housekeeping-genes/
+    house_keeping_genes = ['ACTB', 'GAPDH', 'PGK1', 'PPIA', 'RPLP0', 'ARBP', 'B2M', 'YWHAZ', 'SDHA', 'TFRC', 'GUSB',
+                           'HMBS', 'HPRT1', 'TBP']
+
+    share_genes = list(set(house_keeping_genes) & set(adata.var_names))
+    varindex_hkg = np.where(adata.var.index[np.newaxis, :] == np.array(share_genes)[:, np.newaxis])[1]
+    adata.obs['normed_counts_hkg'] = adata.X[:, varindex_hkg].sum(axis=1)
+
+    fig, ax = plt.subplots(figsize=fig_size)
+    sns.distplot(adata.obs['normed_counts_hkg'], kde=False,
+                 bins=len(np.unique(adata.obs['normed_counts_hkg'].values)), ax=ax)
+
+    hf.set_axes_label(x_label='Normed UMI-counts', y_label='counts', axes=ax)
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+
+    plt.savefig(os.path.join(
+        save_folder, "Normed_HKG_UMI-counts_distribution{}".format(fileformat)), bbox_inches='tight')
+    plt.close()
+
+
+def plot_normed_counts_dist_obs(adata, save_folder, raw=False):
+    adata.obs['normed_counts'] = adata.X.sum(axis=1)
+
+    fig = plt.figure(facecolor='w', edgecolor='k', figsize=(8, 8))
+    fig.subplots_adjust(bottom=0.025, left=0.025, top=0.975, right=0.975)
+    sub = fig.add_subplot(1, 1, 1)
+    p, bins, _ = plt.hist(adata.obs['normed_counts'], label='normed total counts', bins=60, zorder=1, alpha=0.5)
+    for ind, project in enumerate(adata.obs.project.cat.categories):
+        mask_project = adata.obs['project'] == project
+        plt.hist(adata.obs['normed_counts'][mask_project], label=project, bins=bins, alpha=0.5, zorder=5 - ind)
+
+    hf.set_axes_label(x_label='Normed UMI counts', y_label='counts', axes=sub)
+    hf.set_title(sup_title="Distribution of Normed UMI counts per flowcell", figure=fig)
+    sub.spines["top"].set_visible(False)
+    sub.spines["right"].set_visible(False)
+    fig.tight_layout(pad=1.5, w_pad=1.5, h_pad=1.5)
+    fig.subplots_adjust(top=0.88)
+    plt.legend()
+
+    if raw:
+        plt.savefig(os.path.join(save_folder, "_".join(["raw_Distribution_project_normed_counts{}".format(fileformat)])))
+    else:
+        plt.savefig(os.path.join(save_folder, "_".join(["Distribution_project_normed_counts{}".format(fileformat)])))
+    plt.close()
+
+    fig = plt.figure(facecolor='w', edgecolor='k', figsize=(8, 8))
+    fig.subplots_adjust(bottom=0.025, left=0.025, top=0.975, right=0.975)
+    sub = fig.add_subplot(1, 1, 1)
+    p, bins, _ = plt.hist(adata.obs['normed_counts'], label='normed total counts', bins=60, zorder=1, alpha=0.5)
+    for ind, specimen in enumerate(adata.obs['specimen'].cat.categories):
+        mask_project = adata.obs['specimen'] == specimen
+        plt.hist(adata.obs['normed_counts'][mask_project], label=specimen, bins=bins, alpha=0.5, zorder=5 - ind)
+        # sns.distplot(adata.obs['n_counts'][mask_project], kde=True, bins=bins[0], ax=sub)
+    sub.spines["top"].set_visible(False)
+    sub.spines["right"].set_visible(False)
+
+    hf.set_axes_label(x_label='Normed UMI counts', y_label='counts', axes=sub)
+    hf.set_title(sup_title="Distribution of Normed UMI counts per specimen", figure=fig)
+    fig.tight_layout(pad=1.5, w_pad=1.5, h_pad=1.5)
+    fig.subplots_adjust(top=0.88)
+    plt.legend()
+
+    if raw:
+        plt.savefig(os.path.join(save_folder, "_".join(["raw_Distribution_specimen_normed_counts{}".format(fileformat)])))
+    else:
+        plt.savefig(os.path.join(save_folder, "_".join(["Distribution_specimen_normed_counts{}".format(fileformat)])))
     plt.close()

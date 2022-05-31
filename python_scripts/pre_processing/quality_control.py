@@ -81,22 +81,21 @@ def qc_ncounts_ngenes(adata: anndata, save_folder: str, configs: configparser,
     # Threshold determination of UMI counts and genes:
     # -> Determine UMI count and gene threshold based on plots
     # Quality control - plot QC metrics
-    # TODO reactivate
-    # plots_preprocessing.plot_qc_metrics(
-    #     adata, save_folder=save_folder, project_name=configs['project']['project_name'],
-    #     raw=configs.getboolean("preprocessing", "read_raw_matrix"))
-    #
-    # # Thresholding decision: counts and genes
-    # plots_preprocessing.plot_distribution(adata, save_folder=save_folder,
-    #                                       project_name=configs['project']['project_name'],
-    #                                       lower_filter_counts=lower_filter_counts,
-    #                                       upper_filter_counts=upper_filter_counts,
-    #                                       upper_filter_genes=upper_filter_genes,
-    #                                       log_scale=log_scale, bins=[60, 25, 60, 60, 20],
-    #                                       raw=configs.getboolean("preprocessing", "read_raw_matrix"))
-    #
-    # plots_preprocessing.plot_project_counts_dist(
-    #     adata=adata, save_folder=save_folder, raw=configs.getboolean("preprocessing", "read_raw_matrix"))
+    plots_preprocessing.plot_qc_metrics(
+        adata, save_folder=save_folder, project_name=configs['project']['project_name'],
+        raw=configs.getboolean("preprocessing", "read_raw_matrix"))
+
+    # Thresholding decision: counts and genes
+    plots_preprocessing.plot_distribution(adata, save_folder=save_folder,
+                                          project_name=configs['project']['project_name'],
+                                          lower_filter_counts=lower_filter_counts,
+                                          upper_filter_counts=upper_filter_counts,
+                                          upper_filter_genes=upper_filter_genes,
+                                          log_scale=log_scale, bins=[60, 25, 60, 60, 20],
+                                          raw=configs.getboolean("preprocessing", "read_raw_matrix"))
+
+    plots_preprocessing.plot_project_counts_dist(
+        adata=adata, save_folder=save_folder, raw=configs.getboolean("preprocessing", "read_raw_matrix"))
 
     return adata
 
