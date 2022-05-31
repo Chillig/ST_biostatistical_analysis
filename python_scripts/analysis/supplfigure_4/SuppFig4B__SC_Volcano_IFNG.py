@@ -554,83 +554,83 @@ def main(dataset_type, save_folder, df_keys, log, dge_results_folder):
     # # 3. Assign condition to spots
     adata, observable = exclude_cytokine_dp(adata=adata, cytoresps_dict=cytoresps_dict)
 
-    for cyto in cytokines:
-        # get observable of condition
-        obs_label_condition = "_".join(['cytokine', cyto])
-        genes_labeling = genes_to_highlight[cyto]
+    cyto = 'IFNG'
+    # get observable of condition
+    obs_label_condition = "_".join(['cytokine', cyto])
+    genes_labeling = genes_to_highlight[cyto]
 
-        all_csv_files = [file
-                         for path, subdir, files in os.walk(dge_results_folder)
-                         for file in glob.glob(os.path.join(path, '*.csv'))]
+    all_csv_files = [file
+                     for path, subdir, files in os.walk(dge_results_folder)
+                     for file in glob.glob(os.path.join(path, '*.csv'))]
 
-        pattern = "".join(['*', cyto, '*all_genes.csv'])
-        for file in all_csv_files:
-            if fnmatch(file, pattern):
-                # Read out only those driver and responder genes which are specific for a cytokine
-                allgenes_df = pd.read_csv(file, error_bad_lines=False)
-                # Remove column Unnamed: 0
-                allgenes_df = allgenes_df.drop(['Unnamed: 0'], axis=1)
+    pattern = "".join(['*', cyto, '*all_genes.csv'])
+    for file in all_csv_files:
+        if fnmatch(file, pattern):
+            # Read out only those driver and responder genes which are specific for a cytokine
+            allgenes_df = pd.read_csv(file, error_bad_lines=False)
+            # Remove column Unnamed: 0
+            allgenes_df = allgenes_df.drop(['Unnamed: 0'], axis=1)
 
-                # Check if column names and row names are unique
-                print("Unique Genes Stratified Sampling:", allgenes_df['gene_symbol'].is_unique)
-                print("Unique Genes Stratified Sampling:", allgenes_df.columns.is_unique)
-                # remove duplicated rows
-                allgenes_df = allgenes_df.loc[~allgenes_df['gene_symbol'].duplicated(), :]
+            # Check if column names and row names are unique
+            print("Unique Genes Stratified Sampling:", allgenes_df['gene_symbol'].is_unique)
+            print("Unique Genes Stratified Sampling:", allgenes_df.columns.is_unique)
+            # remove duplicated rows
+            allgenes_df = allgenes_df.loc[~allgenes_df['gene_symbol'].duplicated(), :]
 
-                # Name of used design function
-                design = file.split(os.sep)[-4]
-                # Name of used DGE Analysis method
-                method = file.split(os.sep)[-1].split("_")[-4]
-                # Create output folder
-                output_folder = os.path.join(save_folder, design, cyto)
-                os.makedirs(output_folder, exist_ok=True)
+            # Name of used design function
+            design = file.split(os.sep)[-4]
+            # Name of used DGE Analysis method
+            method = file.split(os.sep)[-1].split("_")[-4]
+            # Create output folder
+            output_folder = os.path.join(save_folder, design, cyto)
+            os.makedirs(output_folder, exist_ok=True)
 
-                allgenes_df = _write_dataframe(adata, df=allgenes_df, cytokine=cyto, observable=obs_label_condition,
-                                               output_folder=output_folder, method=method)
+            allgenes_df = _write_dataframe(adata, df=allgenes_df, cytokine=cyto, observable=obs_label_condition,
+                                           output_folder=output_folder, method=method)
 
-                print("# ------ Volcano plot ------ #")
-                # 3. Volcano plot interactive plot
-                plotly_interactive_volcano(df=allgenes_df, df_keys=df_keys, save_folder=output_folder,
-                                           key="".join([method, "_", cyto, "+", "_vs_", cyto, "-"]),
-                                           x_lab=r'log$_2$(FC)', y_lab=r'-log$_{10}$(pvalue)',
-                                           log2fc_cut=1, pval_cut=0.05)
+            print("# ------ Volcano plot ------ #")
+            # 3. Volcano plot interactive plot
+            plotly_interactive_volcano(df=allgenes_df, df_keys=df_keys, save_folder=output_folder,
+                                       key="".join([method, "_", cyto, "+", "_vs_", cyto, "-"]),
+                                       x_lab=r'log$_2$(FC)', y_lab=r'-log$_{10}$(pvalue)',
+                                       log2fc_cut=1, pval_cut=0.05)
 
-                volcano_plot(df=allgenes_df, df_keys=df_keys, cytokine=cyto, adjust=True,
-                             label_genes=genes_labeling, title="_".join([method, cyto, "Volcano_plot_zoom"]),
-                             save_folder=output_folder, log2fc_cut=1.0, threshold=0.05)
+            volcano_plot(df=allgenes_df, df_keys=df_keys, cytokine=cyto, adjust=True,
+                         label_genes=genes_labeling, title="_".join([method, cyto, "Volcano_plot_zoom"]),
+                         save_folder=output_folder, log2fc_cut=1.0, threshold=0.05)
 
-                print("# ------ Violin plots of Novel and Golden Standard genes ------ #")
-                # Get expression level of genes of interest to create boxplots
-                if isinstance(genes_labeling, dict):
-                    driver_group = genes_to_highlight[cyto]['Driver_genes']
-                    responder_group = genes_to_highlight[cyto]['Responder_genes']
-                    merged_genes = driver_group.copy()
-                    merged_genes.extend(responder_group)
-                else:
-                    merged_genes = genes_labeling.copy()
-                # First check if genes are in data set
-                available_genes = list(set(adata.var.index) & set(merged_genes))
-                available_genes.append(cyto)
+            print("# ------ Violin plots of Novel and Golden Standard genes ------ #")
+            # Get expression level of genes of interest to create boxplots
+            if isinstance(genes_labeling, dict):
+                driver_group = genes_to_highlight[cyto]['Driver_genes']
+                responder_group = genes_to_highlight[cyto]['Responder_genes']
+                merged_genes = driver_group.copy()
+                merged_genes.extend(responder_group)
+            else:
+                merged_genes = genes_labeling.copy()
+            # First check if genes are in data set
+            available_genes = list(set(adata.var.index) & set(merged_genes))
+            available_genes.append(cyto)
 
-                # 3. get counts for each gene of interest
-                goi = pd.DataFrame()
-                goi['Cyto+_vs_Cyto-'] = adata.obs[obs_label_condition].values
-                # available_genes = ['IL17A', 'IFNG', 'IL13']
-                for gene in available_genes:
-                    if gene in adata.var_names:
-                        # Get counts
-                        adata_gene, new_obs_name = get_expression_values(adata=adata, gene=gene)
-                        # 4. sub-divide into cyto+ and cyto- group and read out counts
-                        spatial_adata_gene = create_obs_cytopos_cytoneg(
-                            adata=adata_gene, cyto=cyto, gene=gene, observable=obs_label_condition)
-                        goi[gene] = spatial_adata_gene.obs["_".join([gene, 'group'])].values
+            # 3. get counts for each gene of interest
+            goi = pd.DataFrame()
+            goi['Cyto+_vs_Cyto-'] = adata.obs[obs_label_condition].values
+            # available_genes = ['IL17A', 'IFNG', 'IL13']
+            for gene in available_genes:
+                if gene in adata.var_names:
+                    # Get counts
+                    adata_gene, new_obs_name = get_expression_values(adata=adata, gene=gene)
+                    # 4. sub-divide into cyto+ and cyto- group and read out counts
+                    spatial_adata_gene = create_obs_cytopos_cytoneg(
+                        adata=adata_gene, cyto=cyto, gene=gene, observable=obs_label_condition)
+                    goi[gene] = spatial_adata_gene.obs["_".join([gene, 'group'])].values
 
-                        # 5. Visualise counts of gene of interest in a violin plot
-                        plot_violins(adata=spatial_adata_gene, group=gene, groupby=obs_label_condition,
-                                     output_folder=output_folder, log=log)
+                    # 5. Visualise counts of gene of interest in a violin plot
+                    plot_violins(adata=spatial_adata_gene, group=gene, groupby=obs_label_condition,
+                                 output_folder=output_folder, log=log)
 
-                # Save counts of genes of interest
-                goi.to_csv(os.path.join(output_folder, "_".join([cyto, "Counts_Highlight_genes.csv"])))
+            # Save counts of genes of interest
+            goi.to_csv(os.path.join(output_folder, "_".join([cyto, "Counts_Highlight_genes.csv"])))
 
 
 if __name__ == '__main__':

@@ -6,7 +6,7 @@
     Date last modified: 4/29/2021
     Python Version: 3.7
 """
-from python_scripts.utils import gene_lists, add_observables as ctools
+from python_scripts.utils import gene_lists
 
 import scanpy as sc
 import numpy as np
@@ -16,6 +16,7 @@ from datetime import date
 
 from collections import OrderedDict
 import matplotlib.pyplot as plt
+import matplotlib as mpl
 
 # figure properties
 fig_size = (8, 8)
@@ -25,6 +26,23 @@ title_fontsize = 18
 legend_fontsize = 14
 text_fontsize = 14
 fileformat = '.pdf'
+
+
+def get_camp(adata, cyto):
+    max_val = adata.obs['{}_counts'.format(cyto)].max()
+    norm = mpl.colors.Normalize(vmin=adata.obs['{}_counts'.format(cyto)].min(), vmax=max_val)
+    cmap_ctyo = mpl.cm.ScalarMappable(norm=norm, cmap=mpl.cm.viridis)
+
+    if max_val < 10:
+        ticks = np.arange(1, max_val + 1, 1)
+    elif max_val < 50:
+        ticks = np.linspace(1, max_val, 4, endpoint=True)
+        ticks = ticks.round()
+    else:
+        ticks = np.linspace(1, max_val, 8, endpoint=True)
+        ticks = ticks.round()
+
+    return cmap_ctyo, norm, ticks
 
 
 def get_cropped_sampleimg(img_key):
@@ -76,8 +94,8 @@ def plot_clusters_counts(sup_adata, cyto, save_folder, obs_label, obs_counts, im
     # color_dict[" & ".join([cyto, "Responders"])] = "gold"
     color_dict["Others"] = "silver"
 
-    diseases = ["PSO", "AE", "LICHEN", "PRP"]
-    biopsy_type = ["LESONAL", "NON LESIONAL"]
+    diseases = ['Pso', 'AD', 'LP', 'PRP']
+    biopsy_type = ["LESIONAL", "NON LESIONAL"]
 
     # samples = np.unique(sup_adata[cyto].obs['sample'])
     samples, crops_img = get_cropped_sampleimg(img_key=img_key)
@@ -158,6 +176,118 @@ def plot_clusters_counts(sup_adata, cyto, save_folder, obs_label, obs_counts, im
                 plt.close()
 
 
+def plot_clusters_counts_newsamples(sup_adata, cyto, save_folder, obs_label, obs_counts, img_key="lowres"):
+    """Plot counts of cytokines and responders and highlight cytokine positive and responder positive spots on H&E image
+
+    Parameters
+    ----------
+    sup_adata : annData
+        containing annData object
+    cyto : str
+        cytokine name
+    save_folder : str
+    obs_label : str
+    obs_counts : str
+    img_key : str
+        hires or lowres
+
+    Returns
+    -------
+
+    """
+    # Size of count spots
+    size = 0.9
+
+    color_dict = OrderedDict()
+    if cyto == 'IFNG':
+        color_dict[cyto] = "#ff7f00"  # orange LICHEN "#ff7f00"
+    elif cyto == "IL13":
+        color_dict[cyto] = "#e41a1c"  # red AE
+    else:
+        color_dict[cyto] = "#377eb8"  # blue PSO
+
+    color_dict["Responders"] = "y"
+    # color_dict[" & ".join([cyto, "Responders"])] = "gold"
+    color_dict["Others"] = "silver"
+
+    samples = np.unique(sup_adata.obs['capture_area'])
+    for ind, area in enumerate(samples):
+        temp_adata = sup_adata[sup_adata.obs["capture_area"] == area]
+        # read out counts of responders
+        adata_resps = temp_adata[(temp_adata.obs[obs_label] != "Others") & (temp_adata.obs[obs_label] != cyto)].copy()
+        # read out counts of cytokine
+        adata_cyto = temp_adata[temp_adata.obs[obs_label] == cyto].copy()
+        # get labels of cytokine and responder spots
+        cell_types_unique = list(np.unique(temp_adata.obs[obs_label]))
+
+        list_colors = []
+        for i_color in cell_types_unique:
+            list_colors.append(color_dict[i_color])
+
+        if len(cell_types_unique) > 0:
+            # ----------
+            # TODO Add info epidermis, cyto+ and responder +
+            sample = temp_adata.obs['sample'].cat.categories[0]
+            cmap, norm, ticks = get_camp(adata=adata_cyto, cyto=cyto)
+
+            fig, ax = plt.subplots(figsize=fig_size)
+            ax.imshow(temp_adata.uns['spatial'][sample]['images']['hires'])
+            ax.invert_yaxis()
+
+            # OTHERS LABEL
+            _ = ax.scatter(
+                temp_adata.obsm[
+                    'spatial'][:, 0] * temp_adata.uns['spatial'][sample]['scalefactors']['tissue_hires_scalef'],
+                temp_adata.obsm[
+                    'spatial'][:, 1] * temp_adata.uns['spatial'][sample]['scalefactors']['tissue_hires_scalef'],
+                s=4, c=color_dict["Others"], label="Others")
+            # Responder label
+            _ = ax.scatter(
+                adata_resps.obsm[
+                    'spatial'][:, 0] * adata_resps.uns['spatial'][sample]['scalefactors']['tissue_hires_scalef'],
+                adata_resps.obsm[
+                    'spatial'][:, 1] * adata_resps.uns['spatial'][sample]['scalefactors']['tissue_hires_scalef'],
+                s=4,  c=color_dict["Responders"], label='Responder')
+
+            if adata_cyto.shape[0] > 0:
+                # Cytokine label
+                scpl = ax.scatter(
+                    adata_cyto.obsm[
+                        'spatial'][:, 0] * adata_cyto.uns['spatial'][sample]['scalefactors']['tissue_hires_scalef'],
+                    adata_cyto.obsm[
+                        'spatial'][:, 1] * adata_cyto.uns['spatial'][sample]['scalefactors']['tissue_hires_scalef'],
+                    s=4, c=color_dict[cyto], label=cyto)
+                # Cytokine counts
+                scpl = ax.scatter(
+                    adata_cyto.obsm[
+                        'spatial'][:, 0] * adata_cyto.uns['spatial'][sample]['scalefactors']['tissue_hires_scalef'],
+                    adata_cyto.obsm[
+                        'spatial'][:, 1] * adata_cyto.uns['spatial'][sample]['scalefactors']['tissue_hires_scalef'],
+                    cmap=cmap.cmap, s=2,  norm=norm, c=adata_cyto.obs['{}_counts'.format(cyto)])
+
+                cb = fig.colorbar(scpl, orientation='vertical', ticks=ticks)
+                cb.ax.set_ylabel('UMI-counts / spot', rotation=90)
+
+            # Legend: outside of axis 1.45
+            leg = ax.legend(bbox_to_anchor=(1.6, 0.6), ncol=1, fontsize=12)
+            leg.get_frame().set_linewidth(0.0)
+
+            plt.tight_layout()
+
+            ax.axes.xaxis.set_visible(False)
+            ax.axes.yaxis.set_visible(False)
+            # ----------
+
+            if img_key == "lowres":
+                plt.savefig(os.path.join(save_folder, "_".join(["Radial_plot", area, cyto, ".png"])),
+                            bbox_inches='tight',  bbox_extra_artists=(leg,), dpi=200)
+                plt.close()
+            else:
+                plt.savefig(os.path.join(save_folder, "_".join(["Radial_plot", area, cyto, '.pdf'])),
+                            bbox_inches='tight',  bbox_extra_artists=(leg,))
+                plt.close()
+
+
 def convert_categories_cytokines_responders_others(adata, cyto_responder_genes, save_folder, img_key):
     """Add observable to annData object containing the three categories cytokine, responders and others
 
@@ -230,12 +360,15 @@ def convert_categories_cytokines_responders_others(adata, cyto_responder_genes, 
         adata.obs[obs_label] = adata.obs[obs_label].astype('category')
 
         plot_clusters_counts(adata, cyto, save_folder, obs_label=obs_label, obs_counts=obs_counts, img_key=img_key)
+        # TODO save this in a rolling slide deck
+        plot_clusters_counts_newsamples(
+            adata, cyto, save_folder, obs_label=obs_label, obs_counts=obs_counts, img_key='lowres')
 
         # Get max. UMI-counts per tissue section
-        samples = np.unique(adata.obs['sample'].values)
+        specimen_names = np.unique(adata.obs['specimen'].values)
         max_umicounts = []
-        for sample in samples:
-            sample_adata = adata[adata.obs['sample'] == sample].copy()
+        for specimen in specimen_names:
+            sample_adata = adata[adata.obs['specimen'] == specimen].copy()
             m_cyto_counts = sample_adata.obs["_".join([cyto, 'clusters'])] == cyto
             max_umicounts.append(sample_adata.obs["_".join([cyto, 'counts'])][m_cyto_counts].sum())
 
@@ -247,12 +380,6 @@ def main(save_folder, adata):
     img_key = 'hires'
     # 1. Get cytokines and responders
     t_cell_cytocines, cyto_resps_list, cytokine_responders = gene_lists.get_publication_cyto_resps()
-
-    # 3. Add meta data like which samples belong to which donor (optional)
-    if "patient" not in adata.obs_keys():
-        adata, tissue_cell_labels, disease_labels, lesion_labels = ctools.add_metadata(adata)
-        # 1.2 Remove spots having no tissue/cell labels (since 06.10.2020)
-        adata = adata[np.where(adata.obs[tissue_cell_labels].to_numpy().any(axis=1))[0]]
 
     """Paper Figure 4B: Highlight cytokine and responder genes containing spots and UMI-counts """
     convert_categories_cytokines_responders_others(adata, cyto_responder_genes=cytokine_responders,

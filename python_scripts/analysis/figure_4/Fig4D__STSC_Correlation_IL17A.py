@@ -14,6 +14,7 @@ import os
 import pandas as pd
 import numpy as np
 import pingouin
+import math
 
 import matplotlib.pyplot as plt
 from adjustText import adjust_text
@@ -21,7 +22,7 @@ from matplotlib.patches import Rectangle
 import plotly.graph_objects as go
 
 dotsize = 9
-fig_size = (8, 8)
+fig_size = (10, 8)
 xy_fontsize = 16
 xy_ticks = 12
 title_fontsize = 18
@@ -151,8 +152,8 @@ def get_updowninbetween_masks(df_st, df_sc, significance_level, value, log2fc_cu
     return sig_13_mask, sig_24_mask, not_sig_mask, cross_mask, index_hkg_st, index_hkg_sc
 
 
-def plotly_interactive_singedppvalues(df_st, df_sc, significance_level, value, save_folder, key, data_sets,
-                                      log2fc_cut=1., threshold=0.05, zoom=True):
+def plotly_interactive_singedppvalues(df_st, df_sc, cytokine_name, significance_level, value, save_folder, key,
+                                      data_sets, log2fc_cut=1., threshold=0.05, zoom=True):
     """Plot interactive plot using plotly
 
     Parameters
@@ -161,6 +162,7 @@ def plotly_interactive_singedppvalues(df_st, df_sc, significance_level, value, s
         Spatial DGE Analysis results
     df_sc : pandas.Dataframe
         Single cell DGE Analysis results
+    cytokine_name : str
     significance_level : str
         pval or padj
     value : str
@@ -185,7 +187,7 @@ def plotly_interactive_singedppvalues(df_st, df_sc, significance_level, value, s
         df_st=df_st, df_sc=df_sc, threshold=threshold, log2fc_cut=log2fc_cut,
         value=value, significance_level=significance_level)
     # Check masks
-    check_masks(df_st, df_sc, value, sig_13_mask, sig_24_mask, not_sig_mask, cross_mask, cytokine, save_folder)
+    check_masks(df_st, df_sc, value, sig_13_mask, sig_24_mask, not_sig_mask, cross_mask, cytokine_name, save_folder)
 
     if 'p' in value:
         xy_labels = r'signed log$_{10}$p-values'
@@ -234,14 +236,16 @@ def plotly_interactive_singedppvalues(df_st, df_sc, significance_level, value, s
         fig.write_html(os.path.join(save_folder, "_".join(["Full", key, "interactive.html"])))
 
 
-def plot_signed_ppvalues(df_st, df_sc, significance_level, label_genes, save_folder, value, data_sets, sig_r,
-                         threshold=0.05, adjust=False, zoom=True):
+def plot_signed_ppvalues(df_st, df_sc, cytokine_name, significance_level, label_genes, save_folder, value, data_sets,
+                         sig_r, threshold=0.05, dge_method_name='glmGamPoi',
+                         design_function_name='cdr_patient_annotation_cyto',  adjust=False, zoom=True):
     """Plot signed and log10 transformed p-values
 
     Parameters
     ----------
     df_st : pandas.Dataframe
     df_sc : pandas.Dataframe
+    cytokine_name : str
     significance_level : str
     label_genes : dict
     save_folder : str
@@ -251,6 +255,8 @@ def plot_signed_ppvalues(df_st, df_sc, significance_level, label_genes, save_fol
     threshold : float
     adjust : bool
     zoom : bool
+    dge_method_name : str
+    design_function_name : str
 
     Returns
     -------
@@ -261,7 +267,7 @@ def plot_signed_ppvalues(df_st, df_sc, significance_level, label_genes, save_fol
     sig_13_mask, sig_24_mask, not_sig_mask, cross_mask, _, _ = get_updowninbetween_masks(
         df_st=df_st, df_sc=df_sc, threshold=threshold, log2fc_cut=1, value=value, significance_level=significance_level)
     # Check masks
-    check_masks(df_st, df_sc, value, sig_13_mask, sig_24_mask, not_sig_mask, cross_mask, cytokine, save_folder)
+    check_masks(df_st, df_sc, value, sig_13_mask, sig_24_mask, not_sig_mask, cross_mask, cytokine_name, save_folder)
 
     if 'p' in value:
         xy_labels = r'signed log$_{10}$p-values'
@@ -300,7 +306,8 @@ def plot_signed_ppvalues(df_st, df_sc, significance_level, label_genes, save_fol
                         label=r"{} <= 0.05 and |log$_2$FC| >= 1".format(legend_label))
 
     # Add driver and responder gene annotations
-    color_genes = get_colors_genes(df_st=df_st, df_sc=df_sc, label_genes=label_genes, value=value)
+    color_genes = get_colors_genes(df_st=df_st, df_sc=df_sc, label_genes=label_genes, value=value,
+                                   cytokine_name=cytokine_name)
     texts = []
     for ind_label, (x, y) in enumerate(zip(color_genes['x'], color_genes['y'])):
         texts.append(ax.text(x, y, color_genes['gene_symbol'].values[ind_label], size=text_fontsize,
@@ -312,15 +319,15 @@ def plot_signed_ppvalues(df_st, df_sc, significance_level, label_genes, save_fol
 
     # Add Threshold
     log10_cut = -np.log10(threshold)
-    if cytokine == 'IL17A':
+    if cytokine_name == 'IL17A':
         # Full: 83; Zoomed: 39
         if zoom:
-            ax.text(33, log10_cut + 0.3, "5% FDR", size=10, color='k', zorder=3)
-            ax.text(log10_cut, np.amin(df_sc[value].values), "5% FDR", size=10, color='k', zorder=3)
-            ax.set_ylim([-15, 50])
-            ax.set_xlim([-28, 38])
+            ax.text(math.ceil(df_st[value].max()) - 7, log10_cut + 0.3, "5% FDR", size=10, color='k', zorder=3)
+            ax.text(log10_cut + 0.3, math.floor(df_sc[value].min()) + 0.3, "5% FDR", size=10, color='k', zorder=3)
+            ax.set_ylim([math.floor(df_sc[value].min()) - 0.5, math.ceil(df_sc[value].max()) + 0.5])
+            ax.set_xlim([math.floor(df_st[value].min()) - 0.5, math.ceil(df_st[value].max()) + 0.5])
             # Add correlation and correlation p-value
-            ax.text(np.amax(df_st[value].values) / 2 - np.amax(df_st[value].values) / 10, 51,
+            ax.text(9, math.ceil(df_sc[value].max()),
                     'r = {:.2f}; p = {:.2e}'.format(sig_r['r'].values[0], sig_r['p-val'].values[0]),
                     fontstyle='italic', fontsize=text_fontsize)
         else:
@@ -347,13 +354,17 @@ def plot_signed_ppvalues(df_st, df_sc, significance_level, label_genes, save_fol
                 fontstyle='italic', fontsize=text_fontsize)
 
     # Add legend, Labels Driver and Responder genes
+    # Shrink current axis by 20%
+    box = ax.get_position()
+    ax.set_position([box.x0, box.y0, box.width * 0.6, box.height])
     # create blank rectangle
     driver_rect = Rectangle((0, 0), 1, 1, fc="w", fill=True, edgecolor='w', linewidth=0)
     resp_rect = Rectangle((0, 0), 1, 1, fc="w", fill=False, edgecolor='w', linewidth=0)
     leg = ax.legend([ax_sig, ax_notsig_noteffectsize, ax_notsig, driver_rect, resp_rect],
                     (r"{} $\leq$ 0.05 and |log$_2$FC| $\geq$ 1".format(legend_label),
                      r"{} $<$ 0.05 and |log$_2$FC| $<$ 1".format(legend_label),
-                     "{} $>$ 0.05".format(legend_label), "Leukocyte genes", "{} responder genes".format(cytokine)))
+                     "{} $>$ 0.05".format(legend_label), "Leukocyte genes", "{} responder genes".format(cytokine_name)),
+                    loc='center left', bbox_to_anchor=(1, 0.5))
     leg_color = ['k', 'k', 'k', 'purple', 'mediumblue']
     for ind, text in enumerate(leg.get_texts()):
         plt.setp(text, color=leg_color[ind])
@@ -364,19 +375,19 @@ def plot_signed_ppvalues(df_st, df_sc, significance_level, label_genes, save_fol
     ax.spines['bottom'].set_visible(True)
     ax.spines['left'].set_visible(True)
 
-    plt.tight_layout()
+    # plt.tight_layout()
 
     if zoom:
-        fig.savefig(os.path.join(save_folder, "_".join(["_".join(['Zoomed', cytokine, value, "plot"]),
-                                                        dge_method, design_function, '.pdf'])))
+        fig.savefig(os.path.join(save_folder, "_".join(["_".join(['Zoomed', cytokine_name, value, "plot"]),
+                                                        dge_method_name, design_function_name, '.pdf'])))
     else:
-        fig.savefig(os.path.join(save_folder, "_".join(["_".join(['Full', cytokine, value, "plot"]),
-                                                        dge_method, design_function, '.pdf'])))
+        fig.savefig(os.path.join(save_folder, "_".join(["_".join(['Full', cytokine_name, value, "plot"]),
+                                                        dge_method_name, design_function_name, '.pdf'])))
 
     plt.close()
 
 
-def get_colors_genes(df_st, df_sc, label_genes, value):
+def get_colors_genes(df_st, df_sc, cytokine_name, label_genes, value):
     """Get colors for driver and responder genes
 
     This function creates a data frame for driver and responder genes containing the signed p-values as x and y
@@ -388,6 +399,7 @@ def get_colors_genes(df_st, df_sc, label_genes, value):
         Data frame containing the results of the dge analysis
     df_sc : pandas.Dataframe
         Data frame containing the results of the dge analysis
+    cytokine_name : str
     label_genes : dict
         contains the gene symbols for driver and responder genes
     value : str
@@ -427,7 +439,7 @@ def get_colors_genes(df_st, df_sc, label_genes, value):
 
     # Add color for cytokines
     ind_cytos = np.where(label_info['gene_symbol'][np.newaxis, :] == np.array(cytokines)[:, np.newaxis])[1]
-    if cytokine == 'IL17A':
+    if cytokine_name == 'IL17A':
         label_info['color'].values[ind_cytos] = ['#ff7f00'] * len(ind_cytos)
     else:
         label_info['color'].values[ind_cytos] = ['#377eb8'] * len(ind_cytos)
@@ -558,7 +570,7 @@ def data_preparation(path_st_data, path_sc_data):
     return df_st_data, df_sc_data
 
 
-def main(path_st_data, path_sc_data, save_folder, log2fc_cut=1.0, pval_cut=0.05, zoom=True):
+def main(path_st_data, path_sc_data, cytokine_name, save_folder, log2fc_cut=1.0, pval_cut=0.05, zoom=True):
     """Plot signed log10-transformed p-values of ST vs. scRNA-seq DGE Analysis results
 
     Parameters
@@ -567,6 +579,7 @@ def main(path_st_data, path_sc_data, save_folder, log2fc_cut=1.0, pval_cut=0.05,
         path to DGE Analysis result of the Spatial transcriptomics data set
     path_sc_data : str
         path to DGE Analysis result of the Single-cell transcriptomics data set
+    cytokine_name : str
     save_folder : str
         path to result storing folder
     log2fc_cut : float
@@ -601,14 +614,15 @@ def main(path_st_data, path_sc_data, save_folder, log2fc_cut=1.0, pval_cut=0.05,
                                pval_cut=pval_cut, log2fc_cut=log2fc_cut, method='spearman')
 
     print("3. Plot signed pp-value plot")
-    plot_signed_ppvalues(df_st=df_st, df_sc=df_sc, label_genes=genes[cytokine], save_folder=save_folder,
+    plot_signed_ppvalues(df_st=df_st, df_sc=df_sc, label_genes=genes[cytokine_name], save_folder=save_folder,
                          significance_level='padj', value='signed_FDR', data_sets=['ST dataset', 'scRNA-seq dataset'],
-                         threshold=pval_cut, adjust=True, sig_r=sig_corr, zoom=zoom)
+                         threshold=pval_cut, adjust=True, sig_r=sig_corr, zoom=zoom, cytokine_name=cytokine_name)
 
     # Interactive signed p-value plot
     plotly_interactive_singedppvalues(
-        df_st=df_st, df_sc=df_sc, value='signed_FDR', save_folder=save_folder, key=cytokine, significance_level='padj',
-        data_sets=['ST dataset', 'scRNA-seq dataset'], log2fc_cut=log2fc_cut, threshold=pval_cut, zoom=zoom)
+        df_st=df_st, df_sc=df_sc, value='signed_FDR', save_folder=save_folder, key=cytokine_name,
+        significance_level='padj', data_sets=['ST dataset', 'scRNA-seq dataset'], log2fc_cut=log2fc_cut,
+        threshold=pval_cut, zoom=zoom, cytokine_name=cytokine_name)
 
 
 if __name__ == '__main__':
@@ -645,5 +659,5 @@ if __name__ == '__main__':
                              os.path.sep, comparisons, os.path.sep, "single_cell_", comparisons,
                              "_glmGamPoi_DGE_all_genes.csv"]))
 
-    main(path_st_data=st_path, path_sc_data=sc_path, save_folder=savepath,
+    main(path_st_data=st_path, path_sc_data=sc_path, cytokine_name=cytokine, save_folder=savepath,
          log2fc_cut=log2fc_threshold, pval_cut=pval_threshold, zoom=zoom_in)

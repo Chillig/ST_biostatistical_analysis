@@ -47,7 +47,7 @@ def plot_standalone_colorbar(tissuecomb_colors, labels, save_folder):
     # replace _ with  &
     labels = [label.replace("_", " & ") for label in labels]
 
-    fig = plt.figure(figsize=fig_size)
+    fig = plt.figure(figsize=(8, 6))
     # [left, bottom, width, height]
     ax = fig.add_axes([0.1, 0.05, 0.16, 0.9])  # work only if rotation = 0
     # PyCharm bug: https://stackoverflow.com/questions/23248017/cannot-find-reference-xxx-in-init-py-python-pycharm
@@ -57,7 +57,40 @@ def plot_standalone_colorbar(tissuecomb_colors, labels, save_folder):
     cbar.ax.set_yticklabels(labels, fontsize=xy_ticks, rotation=0, ha="left")
     ax.set_title('Tissue layers', fontsize=title_fontsize)
     plt.tight_layout()
-    plt.savefig(os.path.join(save_folder, "colorbar.pdf"))
+    plt.savefig(os.path.join(save_folder, "Tissue_layer_colorbar.pdf"))
+    plt.close()
+
+
+def plot_standalone_colorbar_disease(diseasecomb_colors, labels, save_folder):
+    """Plot a standalone vertical and horizontal Colorbar
+
+    Parameters
+    ----------
+    diseasecomb_colors : matplotlib.colors.ListedColormap
+    labels : list of str
+    save_folder : str
+
+    Returns
+    -------
+
+    """
+
+    num_colors = len(diseasecomb_colors.colors)
+    norm = mpl.colors.Normalize(vmin=0, vmax=num_colors)
+    # replace _ with  &
+    labels = [label.replace("_", " & ") for label in labels]
+
+    fig = plt.figure(figsize=(4, 6))
+    # [left, bottom, width, height]
+    ax = fig.add_axes([0.1, 0.05, 0.16, 0.9])  # work only if rotation = 0
+    # PyCharm bug: https://stackoverflow.com/questions/23248017/cannot-find-reference-xxx-in-init-py-python-pycharm
+    cbar = mpl.colorbar.ColorbarBase(
+        ax, cmap=ListedColormap(diseasecomb_colors.colors), norm=norm, orientation='vertical')
+    cbar.set_ticks(np.linspace(0, num_colors, num_colors + 1)[:-1] + 0.5)
+    cbar.ax.set_yticklabels(labels, fontsize=xy_ticks, rotation=0, ha="left")
+    ax.set_title('Disease', fontsize=title_fontsize)
+    plt.tight_layout()
+    plt.savefig(os.path.join(save_folder, "Disease_colorbar.pdf"))
     plt.close()
 
 
@@ -82,17 +115,20 @@ def plot_standalone_legend(points, save_folder):
                            label="{:s}".format(str(points[i]))) for i in range(len(points))]
     plt.close()
 
-    if any(points > 6):
+    if any(points >= 10):
+        label_space = 5
+    elif any((points >= 6) | (points < 10)):
         label_space = 3
     else:
         label_space = 1
 
     # Create figure without an axis
-    fig = plt.figure(figsize=fig_size)
+    fig = plt.figure(figsize=(4, 14))
     fig.legend(patches, points, labelspacing=label_space, title="Cluster size",
                loc='center', frameon=False, facecolor="w", handletextpad=2, handlelength=2,
                title_fontsize=title_fontsize, fontsize=legend_fontsize,
                bbox_transform=fig.transFigure, borderpad=.0, scatterpoints=1)
+    plt.tight_layout()
     # Save figure
     fig.savefig(os.path.join(save_folder, "_".join(["Legend", fileformat])),)
     plt.close()

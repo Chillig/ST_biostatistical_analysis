@@ -246,8 +246,8 @@ def plot_compare_inex_respondercounts(adata, df_includedcounts, df_excludedcount
         ks_test = scstats.ks_2samp(df_includedcounts[col_names].values, df_excludedcounts[col_names].values)
         print(ks_test)
 
-        included_colname = " ".join([cyto, 'included responder counts'])
-        excluded_colname = " ".join([cyto, 'excluded responder counts'])
+        included_colname = "included"
+        excluded_colname = "excluded"
 
         df_includedcounts = df_includedcounts.rename(columns={col_names: included_colname})
         df_excludedcounts = df_excludedcounts.rename(columns={col_names: excluded_colname})
@@ -277,6 +277,7 @@ def plot_compare_inex_respondercounts(adata, df_includedcounts, df_excludedcount
 
         ax.spines["top"].set_visible(False)
         ax.spines["right"].set_visible(False)
+        plt.title('{} responder counts'.format(cyto))
 
         plt.tight_layout()
         plt.savefig(os.path.join(save_folder, "_".join([cyto, 'Boxplots_InExcluded_respondercounts.pdf'])))

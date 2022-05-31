@@ -245,12 +245,6 @@ def main(save_folder, adata):
     # 1. Get cytokines and responders
     t_cell_cytocines, cyto_resps_list, cytokine_responders = gene_lists.get_publication_cyto_resps()
 
-    # 3. Add meta data like which samples belong to which donor (optional)
-    if "patient" not in adata.obs_keys():
-        adata, tissue_cell_labels, disease_labels, lesion_labels = ctools.add_metadata(adata)
-        # 1.2 Remove spots having no tissue/cell labels (since 06.10.2020)
-        adata = adata[np.where(adata.obs[tissue_cell_labels].to_numpy().any(axis=1))[0]]
-
     # 4. Use only tissue tyoes of interest
     # 4.1 Add tissue types
     adata = ctools.add_tissue_obs(adata)

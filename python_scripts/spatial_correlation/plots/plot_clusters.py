@@ -51,12 +51,9 @@ def plot_clusters_counts(sup_adata, cyto, save_folder, obs_label, obs_counts):
     color_dict["Responders"] = "y"
     color_dict["Others"] = "silver"
 
-    diseases = ["PSO", "AE", "LICHEN", "PRP"]
-    biopsy_type = ["LESONAL", "NON LESIONAL"]
-
-    samples, crops_img = helper_functions.get_cropped_sampleimg(img_key=img_key)
-    for ind, sample in enumerate(samples):
-        temp_adata = sup_adata[sup_adata.obs["sample"] == sample]
+    # samples, crops_img = helper_functions.get_cropped_sampleimg(img_key=img_key)
+    for ind, specimen in enumerate(sup_adata.obs["specimen"].cat.categories):
+        temp_adata = sup_adata[sup_adata.obs["specimen"] == specimen]
         # read out counts of cytokine and responder spots
         test_counts = temp_adata[temp_adata.obs[obs_label] != "Others"]
         # get labels of cytokine and responder spots
@@ -66,42 +63,37 @@ def plot_clusters_counts(sup_adata, cyto, save_folder, obs_label, obs_counts):
         for i_color in cell_types_unique:
             list_colors.append(color_dict[i_color])
 
-        if len(cell_types_unique) > 0:
+        if test_counts.shape[0] > 0:
+            diagnose = " & ".join(test_counts.obs['DISEASE'].cat.categories)
+            biopsy_type_temp = " & ".join(test_counts.obs['biopsy_type'].cat.categories)
+            library_id_temp = "_".join(test_counts.obs['library_id'].cat.categories[0].split('_')[:-1])
 
-            diagnose = temp_adata.obs[diseases].loc[:, (temp_adata.obs[diseases] != 0).all()].columns.values[0]
             fig, ax = plt.subplots(figsize=fig_size)
-            sc.pl.spatial(temp_adata, size=1.3, img_key=img_key, library_id=sample,
+            # crop_coord=crops_img[ind]
+            sc.pl.spatial(temp_adata, size=1.3, img_key=img_key, library_id=library_id_temp,
                           color=obs_label, groups=cell_types_unique, zorder=1, show=False,
-                          legend_loc='left margin', ax=ax, alpha_img=1, crop_coord=crops_img[ind],
+                          legend_loc='left margin', ax=ax, alpha_img=1,
                           palette=list_colors)
             if cyto == "IL17A":
-                sc.pl.spatial(test_counts, size=size, img_key=img_key, library_id=sample,
-                              color=obs_counts, zorder=2, alpha_img=0, show=False, crop_coord=crops_img[ind],
+                sc.pl.spatial(test_counts, size=size, img_key=img_key, library_id=library_id_temp,
+                              color=obs_counts, zorder=2, alpha_img=0, show=False,
                               ax=ax, vmin=0, vmax=800,
-                              title=" ".join(["Diagnose:", diagnose, "; Biopsy type:",
-                                              temp_adata.obs[biopsy_type].loc[:, (temp_adata.obs[biopsy_type] !=
-                                                                                  0).all()].columns.values[0]]))
+                              title=" ".join(["Diagnose:", diagnose, "; Biopsy type:", biopsy_type_temp]))
             elif cyto == "IFNG":
-                sc.pl.spatial(test_counts, size=size, img_key=img_key, library_id=sample,
-                              color=obs_counts, zorder=2, alpha_img=0, show=False, crop_coord=crops_img[ind],
+                sc.pl.spatial(test_counts, size=size, img_key=img_key, library_id=library_id_temp,
+                              color=obs_counts, zorder=2, alpha_img=0, show=False,
                               ax=ax, vmin=0, vmax=100,
-                              title=" ".join(["Diagnose:", diagnose, "; Biopsy type:",
-                                              temp_adata.obs[biopsy_type].loc[:, (temp_adata.obs[biopsy_type] !=
-                                                                                  0).all()].columns.values[0]]))
+                              title=" ".join(["Diagnose:", diagnose, "; Biopsy type:", biopsy_type_temp]))
             elif cyto == "IL13":
-                sc.pl.spatial(test_counts, size=size, img_key=img_key, library_id=sample,
-                              color=obs_counts, zorder=2, alpha_img=0, show=False, crop_coord=crops_img[ind],
+                sc.pl.spatial(test_counts, size=size, img_key=img_key, library_id=library_id_temp,
+                              color=obs_counts, zorder=2, alpha_img=0, show=False,
                               ax=ax, vmin=0, vmax=50,
-                              title=" ".join(["Diagnose:", diagnose, "; Biopsy type:",
-                                              temp_adata.obs[biopsy_type].loc[:, (temp_adata.obs[biopsy_type] !=
-                                                                                  0).all()].columns.values[0]]))
+                              title=" ".join(["Diagnose:", diagnose, "; Biopsy type:", biopsy_type_temp]))
             else:
-                sc.pl.spatial(test_counts, size=size, img_key=img_key, library_id=sample,
-                              color=obs_counts, zorder=2, alpha_img=0, show=False, crop_coord=crops_img[ind],
+                sc.pl.spatial(test_counts, size=size, img_key=img_key, library_id=library_id_temp,
+                              color=obs_counts, zorder=2, alpha_img=0, show=False,
                               ax=ax, vmin=0, vmax=100,
-                              title=" ".join(["Diagnose:", diagnose, "; Biopsy type:",
-                                              temp_adata.obs[biopsy_type].loc[:, (temp_adata.obs[biopsy_type] !=
-                                                                                  0).all()].columns.values[0]]))
+                              title=" ".join(["Diagnose:", diagnose, "; Biopsy type:", biopsy_type_temp]))
             # Invert both axis due to flipped and mirrored images
             ax.invert_xaxis()
             ax.invert_yaxis()
@@ -119,10 +111,10 @@ def plot_clusters_counts(sup_adata, cyto, save_folder, obs_label, obs_counts):
             plt.tight_layout()
 
             if img_key == "lowres":
-                plt.savefig(os.path.join(save_folder, "_".join(["Radial_plot", sample, cyto, ".png"])),
+                plt.savefig(os.path.join(save_folder, "_".join(["Radial_plot", specimen, cyto, ".png"])),
                             bbox_inches='tight',  bbox_extra_artists=(leg,))
                 plt.close()
             else:
-                plt.savefig(os.path.join(save_folder, "_".join(["Radial_plot", sample, cyto, fileformat])),
+                plt.savefig(os.path.join(save_folder, "_".join(["Radial_plot", specimen, cyto, fileformat])),
                             bbox_inches='tight',  bbox_extra_artists=(leg,))
                 plt.close()
