@@ -54,7 +54,7 @@ def load_dataset(configs):
 
 
 def determine_heg(adata, save_folder):
-    """Plot the highest expressed genes in a sample or whole data set
+    """Plot the highest expressed genes in a Disease or whole data set
     Genes which are highly expressed can be, in some (disease) contexts, biologically relevant
 
     Parameters
@@ -180,7 +180,7 @@ def apply_qc_filter(adata, apply_mt_threshold):
 
 
 def apply_normalisation(adata, save_folder, configs):
-    """Normalize the raw counts to account for differences in sequencing depth per cell for each sample
+    """Normalize the raw counts to account for differences in sequencing depth per cell for each specimen
 
     Parameters
     ----------
@@ -201,55 +201,6 @@ def apply_normalisation(adata, save_folder, configs):
         norm_adata = normalization.normalize_by_scanpy(adata=adata, configs=configs)
 
     return norm_adata
-
-
-def add_metadata(adata):
-    """Add metaData as observable to annData object
-        -> data specific
-
-    Parameters
-    ----------
-    adata : annData
-
-    Returns
-    -------
-
-    """
-    # get labels
-    tissue_cell_labels, disease_labels, lesion_labels = ht.get_tissue_annot(adata)
-    # get batches assigned to each patient (currently we have 2 or 4 samples per patient)
-    # TODO
-    # df_patients = ht.map_sample_batch_list(
-    #     adata=adata, num_samples_patient=[4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 2, 2, 2, 2])
-    #
-    # # assign donor to each spot
-    # adata.obs['patient'] = 0
-    # for project in df_patients:
-    #     for ind, s_c in enumerate(df_patients[project]['sample']):
-    #         m_spots = adata.obs['sample'] == s_c
-    #         adata.obs['patient'][m_spots] = df_patients[project]['batch'][ind]
-    # # need information about how often samples were found
-    # adata.obs['patient'] = adata.obs['patient'].astype('int').astype('category')
-
-    # assign Diagnostics
-    adata.obs['disease'] = 'Unknown'
-    adata.obs['disease'] = adata.obs['disease'].astype('<U16')
-    for spot_label in disease_labels:
-        m_spots = adata.obs[spot_label] == 1
-        adata.obs['disease'][m_spots] = spot_label
-    adata.obs['disease'] = adata.obs['disease'].astype('string').astype('category')
-
-    # assign Biopsy type
-    # np.all(np.where((adata.obs['biopsy_type'] == "NON LESIONAL"))[0] == np.where((adata.obs['LESONAL'] == 0))[0])
-    # assign biopsy type
-    adata.obs['biopsy_type'] = 'Unknown'
-    adata.obs['biopsy_type'] = adata.obs['biopsy_type'].astype('<U16')
-    for spot_label in lesion_labels:
-        m_spots = adata.obs[spot_label] == 1
-        adata.obs['biopsy_type'][m_spots] = spot_label
-    adata.obs['biopsy_type'] = adata.obs['biopsy_type'].astype('string').astype('category')
-
-    return adata, tissue_cell_labels, disease_labels, lesion_labels
 
 
 def main(configs, adata, save_folder):
@@ -295,8 +246,8 @@ def main(configs, adata, save_folder):
     print("\n-------- Start Pre-processing and Visualization --------")
 
     # 2.0.1
-    # show 20thst highest expressed genes (HEG) in data set and per sample
-    # determine_heg(adata=adata, save_folder=save_folder)
+    # show 20thst highest expressed genes (HEG) in data set and per DISEASE
+    determine_heg(adata=adata, save_folder=save_folder)
 
     # 2.0.2
     if configs.getboolean('preprocessing', 'filter_doublets'):
@@ -422,16 +373,16 @@ def main(configs, adata, save_folder):
             cc_genes_file=configs['input_files']['cell_cycle'], adata=norm_adata, save_folder=save_folder,
             raw=configs.getboolean("preprocessing", "read_raw_matrix"))
 
-    # 2.5 Apply Batch correction if samples are from same (or different) data set but splitted into batches
+    # 2.5 Apply Batch correction if specimen are from same (or different) data set but splitted into batches
     # Dr. Maren Buettner:
     # "During the QC step, we observed differences across samples for instance, in the library size per dataset.
     # Such differences may contribute to the batch effect."
     if configs.getboolean("preprocessing", "apply_batch_correction"):
         print("\n         Batch Correction\n")
         norm_bc_adata = batch_correction.apply_batch_correction(
-            norm_adata, save_folder=save_folder, n_comps=n_comps, batch_key='sample',
+            norm_adata, save_folder=save_folder, n_comps=n_comps, batch_key='specimen',
             bc_tool=configs["preprocessing"]['batch_correction_tool'],
-            possible_batch_effects=['sample', 'project', 'phase', 'patient', 'disease', 'biopsy_type',
+            possible_batch_effects=['sample', 'specimen', 'project', 'phase', 'patient', 'disease', 'biopsy_type',
                                     'capture_area', 'object_slide'])
         del norm_adata
 
@@ -502,59 +453,26 @@ if __name__ == '__main__':
     unppadata_filename = '{}_unpp.h5'.format(configs_file['data']['data_type'])
     if not os.path.isfile(os.path.join(adata_savepath, unppadata_filename)):
         _, unpp_filtered_adata, _, _ = load_dataset(configs=configs_file)  # 93373 x 20613
+        sc.write(os.path.join(adata_savepath, unppadata_filename), unpp_filtered_adata)
+    else:
+        unpp_filtered_adata = sc.read(os.path.join(adata_savepath, unppadata_filename))
 
-        # adjust for renamed column HAIRFOLLICLE to HAIR FOLLICLE
-        m_hairfollicle = ~np.isnan(unpp_filtered_adata.obs['HAIR FOLLICLE'])
-        unpp_filtered_adata.obs['HAIRFOLLICLE'][m_hairfollicle] = unpp_filtered_adata.obs[
-            'HAIR FOLLICLE'][m_hairfollicle]
-
-        # JUNCTION is new name for INTERFACE
-        unpp_filtered_adata.obs.loc[
-            ~np.isnan(unpp_filtered_adata.obs['INTERFACE']), 'JUNCTION'] = unpp_filtered_adata.obs.loc[
-            ~np.isnan(unpp_filtered_adata.obs['INTERFACE']), 'INTERFACE']
-
+    unppadata_cleaned_filename = '{}_unpp_cleaned.h5'.format(configs_file['data']['data_type'])
+    if not os.path.isfile(os.path.join(adata_savepath, unppadata_cleaned_filename)):
         # Add patient info for new samples
         # 1. Remove all samples with no SAMPLE annotation (0)
         m_unkown_samples = (unpp_filtered_adata.obs['SAMPLE'] == 0) | (unpp_filtered_adata.obs['SAMPLE'] == '0')
         unpp_filtered_adata = unpp_filtered_adata[~m_unkown_samples].copy()  # -> removed 9746 spots -> 83627 left
+        # TODO with Alex new sample annotations: only 81705 spots left .. -> check with him
 
         # 2. Add sample ids to sample names
-        # m_samplenames = ~np.isnan(adata.obs['SAMPLE'])
         unpp_filtered_adata.obs['SAMPLE'] = unpp_filtered_adata.obs['SAMPLE'].astype(str)
         m_samplenames = ~pd.to_numeric(unpp_filtered_adata.obs['SAMPLE'], errors='coerce').isna()
         unpp_filtered_adata.obs.loc[m_samplenames, 'SAMPLE'] = unpp_filtered_adata.obs.loc[
             m_samplenames, 'SAMPLE'].replace(r'\.0$', '', regex=True)
 
-        unpp_filtered_adata.obs['Sample_CaptureArea'] = unpp_filtered_adata.obs['sample'].copy()
-
-        if unpp_filtered_adata.obs['sample'].str.contains('21L0089').any():
-            unpp_filtered_adata.obs['sample'] = unpp_filtered_adata.obs['sample'].astype(str)
-            # remove 21L008977 from sample names
-            unpp_filtered_adata.obs['sample'] = unpp_filtered_adata.obs['sample'].str.replace('|'.join([r"21L0089\d+"]),
-                                                                                              '', regex=True)
-            # add sample ids to sample names
-            new_samplenames = pd.DataFrame(
-                {'prefix': unpp_filtered_adata.obs.loc[m_samplenames, 'sample'].values,
-                 'vals': unpp_filtered_adata.obs.loc[m_samplenames, 'SAMPLE'].values}).agg(''.join, axis=1)
-            unpp_filtered_adata.obs.loc[m_samplenames, 'sample'] = new_samplenames.values
-            unpp_filtered_adata.obs['sample'] = unpp_filtered_adata.obs['sample'].astype('category')
-
         # # 1.1 Add meta data like which samples belong to which donor (since 04.10.2020)
-        # add biopsy_type to new samples (all lesional)
-        m_new_lesional = ~(np.isnan(unpp_filtered_adata.obs['LESIONAL']))
-        unpp_filtered_adata.obs.loc[m_new_lesional, 'LESONAL'] = unpp_filtered_adata.obs.loc[m_new_lesional, 'LESIONAL']
-        unpp_filtered_adata.obs['LESIONAL'] = unpp_filtered_adata.obs['LESONAL'].copy()
-        # drop column LESONAL
-        unpp_filtered_adata.obs = unpp_filtered_adata.obs.drop('LESONAL', axis=1)
-        if 'LESONAL' in unpp_filtered_adata.obs.columns:
-            print('Drop did not work ..')
-
-        # add Metadata
-        unpp_filtered_adata, _tissue_cell_labels, _disease_labels, _lesion_labels = add_metadata(unpp_filtered_adata)
-        # rename LESONAL to LESIONAL
-        unpp_filtered_adata.obs = unpp_filtered_adata.obs.replace(
-            to_replace={'biopsy_type': 'LESONAL'}, value={'biopsy_type': 'LESIONAL'}, regex=True)
-        unpp_filtered_adata.obs['biopsy_type'] = unpp_filtered_adata.obs['biopsy_type'].astype('str').astype('category')
+        unpp_filtered_adata, _lesion_labels = add_observables.add_lesion_metadata(unpp_filtered_adata)
 
         # Save annotations for normalisation in .csv file
         # Use annotations from pathologist instead of clusters
@@ -565,33 +483,28 @@ if __name__ == '__main__':
         # DERMIS, upper EPIDERMIS, middle and basal EPIDERMIS, JUNCTION
         unpp_filtered_adata = add_observables.add_spottypes_obs(adata=unpp_filtered_adata)
         # 1.2 Remove spots having no tissue label: 81331 × 20613  neu: 83627
+        # TODO with new annotations: 78902
         unpp_filtered_adata = unpp_filtered_adata[~(unpp_filtered_adata.obs['tissue_layer'] == 'Unknown')].copy()
 
         # adjust for renamed column disease to DISEASE
         # 1. add DISEASE to disease column
-        unpp_filtered_adata.obs['disease'] = unpp_filtered_adata.obs['disease'].astype('str')
         unpp_filtered_adata.obs['DISEASE'] = unpp_filtered_adata.obs['DISEASE'].astype('str')
-        m_disease = ~(unpp_filtered_adata.obs['DISEASE'] == 'nan')
-        unpp_filtered_adata.obs.loc[m_disease, 'disease'] = unpp_filtered_adata.obs.loc[m_disease, 'DISEASE'].copy()
-        # 2. rename PSO to Pso, LICHEN PLANUS to LP, AE to AD
+        # 2. rename PSO to Pso
         unpp_filtered_adata.obs = unpp_filtered_adata.obs.replace(
-            to_replace={'disease': 'AE'}, value={'disease': 'AD'}, regex=True)
-        unpp_filtered_adata.obs = unpp_filtered_adata.obs.replace(
-            to_replace={'disease': 'LICHEN'}, value={'disease': 'LP'}, regex=True)
-        unpp_filtered_adata.obs = unpp_filtered_adata.obs.replace(
-            to_replace={'disease': 'PSO'}, value={'disease': 'Pso'}, regex=True)
-        unpp_filtered_adata.obs['disease'] = unpp_filtered_adata.obs['disease'].astype('category')
+            to_replace={'DISEASE': 'PSO'}, value={'DISEASE': 'Pso'}, regex=True)
+        unpp_filtered_adata.obs['DISEASE'] = unpp_filtered_adata.obs['DISEASE'].astype('category')
 
         # Add patient info for nan samples
-        # unpp_filtered_adata.obs['patient'] = unpp_filtered_adata.obs['patient'].astype(int)
+        # patient column resembls SAMPLE column but with numbers from 1 to 40
         m_patients = np.isnan(unpp_filtered_adata.obs['patient'])
-        # max_patient_old = unpp_filtered_adata.obs['patient'].max() + 1
+        max_patient_old = unpp_filtered_adata.obs['patient'].max() + 1
         new_patients_anonym = np.unique(unpp_filtered_adata.obs.loc[m_patients, 'SAMPLE'])
         unpp_filtered_adata.obs.loc[m_patients, 'patient'] = unpp_filtered_adata.obs.loc[m_patients, 'SAMPLE']
-        # array_new_patients = np.arange(max_patient_old, max_patient_old + len(new_patients_anonym), 1, dtype=int)
-        # 22 new patients: 81331 spots with 20613 genes
-        # unpp_filtered_adata.obs = unpp_filtered_adata.obs.replace({
-        #     'patient': dict(zip(new_patients_anonym, array_new_patients))}, regex=True)
+        array_new_patients = np.arange(max_patient_old, max_patient_old + len(new_patients_anonym), 1, dtype=int)
+        # 22 new patients: 78902 spots with 20613 genes
+        # rename to 1-40
+        unpp_filtered_adata.obs = unpp_filtered_adata.obs.replace({
+            'patient': dict(zip(new_patients_anonym, array_new_patients))}, regex=True)
         unpp_filtered_adata.obs['patient'] = unpp_filtered_adata.obs['patient'].astype(int).astype('category')
 
         # Add batch == duplicates info same patient but different capture area
@@ -603,11 +516,18 @@ if __name__ == '__main__':
         unpp_filtered_adata.obs['replicates'] = unpp_filtered_adata.obs[
             ['patient', 'biopsy_type']].apply(lambda row: '_'.join(row.values.astype(str)), axis=1)
 
+        # to get the actual sample id == specimen: combine capture area with patient ID
+        # TODO check with Alex if we really have 100 specimens ..
+        unpp_filtered_adata.obs['specimen'] = unpp_filtered_adata.obs['sample'].astype(str)
+        unpp_filtered_adata.obs['specimen'] = unpp_filtered_adata.obs[
+            ['capture_area', 'patient']].apply(lambda row: '_'.join(row.values.astype(str)), axis=1)
+        unpp_filtered_adata.obs['specimen'] = unpp_filtered_adata.obs['specimen'].astype('category')
+
         # save adata
-        sc.write(os.path.join(adata_savepath, unppadata_filename), unpp_filtered_adata)
+        sc.write(os.path.join(adata_savepath, unppadata_cleaned_filename), unpp_filtered_adata)
         # unpp_filtered_adata.obs.to_excel(os.path.join(adata_savepath, 'MetaData_P15509_P16357_P21093.xlsx'))
     else:
-        unpp_filtered_adata = sc.read(os.path.join(adata_savepath, unppadata_filename))
+        unpp_filtered_adata = sc.read(os.path.join(adata_savepath, unppadata_cleaned_filename))
 
     print("-------- Finished: Read out values --------")
     pp_adata, filename_adata = main(configs=configs_file, adata=unpp_filtered_adata, save_folder=output_path)
