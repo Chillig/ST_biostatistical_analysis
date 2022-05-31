@@ -146,6 +146,7 @@ def create_config_review(path):
         config.set('preprocessing', 'filter_doublets', 'False')
         # which kind of normalisation step shall be applied: scran (R) or scanpy
         config.set("preprocessing", "normalisation_function", 'scran')
+        config.set("preprocessing", "normalisation_groups", 'tissue_layer')
         config.set("preprocessing", "exclude_highly_expressed", 'False')
         config.set("preprocessing", "apply_scaling", 'False')
         config.set("preprocessing", "get_cc_effect", 'False')
@@ -175,7 +176,7 @@ def init_vars():
     # initialization variables
     # create saving folder in current project path
     today = date.today()
-    today = '2022-04-01'
+    # today = '2022-04-01'
     savepath = os.path.join("..", "..", "adata_storage", str(today))
     os.makedirs(savepath, exist_ok=True)
 
