@@ -43,9 +43,10 @@ Define input directory.
 ## Input 
 # Input directory 
 # TODO change to relative path
-input.folder <- file.path("..", "..", "input", "pathway_analysis")
+# input.folder <- file.path("..", "..", "input", "pathway_analysis")
+input.folder <- file.path("/Users/christina.hillig/PycharmProjects/ST_Immune_publication/Publication_analysis/input/pathway_analysis")
 # Date
-date <- "2021-02-01"
+date <- "2022-05-11"
 # Data set 
 dataset.type <- 'Leukocytes'
 # Sequencing technique
@@ -56,7 +57,7 @@ comparison <- 'IL17A_vs_Others'
 plot_cytokine <- TRUE
 
 # Used design function:
-design.function <- "cdr_patient_annotation_cyto"
+design.function <- "cdr_project_patient_annotation_condition"
 
 # General input directory
 input.dir <- get_inputdir(input.folder = input.folder, date.file = date,
@@ -87,7 +88,8 @@ height_img <- 8
 Create output directory.
 ```{r}
 ## Output
-output.folder <- file.path("..", "..")
+# output.folder <- file.path("..", "..")
+output.folder <- "/Users/christina.hillig/PycharmProjects/ST_Immune_publication/Publication_analysis"
 # General output directory
 output.dir <- get_outputdir(output.folder = output.folder, dataset.type = dataset.type,
                             seq.technique = seq.technique, genename=cytokine)
@@ -127,13 +129,13 @@ Now we can start with idetifying differential expressed genes with our manually 
 # I. Define significant DEx genes and background genes
 # I.a) sort genes into groups belonging either to reference or test (control) condition
 df.ref_degenes <- get_significantgenes(df.dge_results = df.dge_res, p_value = p.value,
-                              lfc_factor = -l2fc.factor, op = `<`) 
+                              lfc_factor = l2fc.factor, op = `>`) 
 df.ref <- df.ref_degenes[[1]]
 # I. Rank genes based on their fold change
 ranked_genes.ref <- do_rank_genes(df.dge_results = df.ref)
 
 df.ctrl_degenes <- get_significantgenes(df.dge_results = df.dge_res, p_value = p.value,
-                                       lfc_factor = l2fc.factor, op = `>`) 
+                                       lfc_factor = -l2fc.factor, op = `<`) 
 df.ctrl <- df.ctrl_degenes[[1]]
 
 # I. Rank  genes based on their fold change
@@ -219,6 +221,7 @@ if (!is.null(nrow(reactome.ref)))
     fig.pathways.REACTOME(reactome_res = reactome.ref,
                           entrezid_log2fc = ranked_genes.ref,
                           showCategories = show_categories, 
+                          sig.cytokine = cytokine,
                           output.dir = output.dir,
                           title = "Cytopos_REACTOME_Pathway_Enrichment_Analysis.pdf", 
                           width = width_img, height = height_img)
@@ -245,6 +248,7 @@ if (!is.null(nrow(reactome.ctrl)))
     fig.pathways.REACTOME(reactome_res = reactome.ctrl,
                           entrezid_log2fc = ranked_genes.ctrl,
                           showCategories = show_categories,
+                          sig.cytokine = cytokine,
                           width = width_img, height = height_img,
                           output.dir = output.dir, 
                           title = "Cytoneg_REACTOME_Pathway_Enrichment_Analysis.pdf")
