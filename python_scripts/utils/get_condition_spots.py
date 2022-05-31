@@ -157,18 +157,19 @@ def get_spots_per_condition_multiple(adata, observable, cell_label, save_folder,
     # dataframe for DGE analysis
     df_condition = pd.DataFrame({"geneNames": adata.var.index})
     # meta Data
-    df_metadata = pd.DataFrame(columns=["sample", "barcode", "condition", "cluster_label", "patient", "disease",
-                                        "biopsy_type", "n_spots", "sizefactor", 'batch', 'capture_area'])
+    df_metadata = pd.DataFrame(
+        columns=["barcode", "sample", "project", "specimen", "condition", "cluster_label", "patient", "disease",
+                 "biopsy_type", "n_spots", "sizefactor", 'batch', 'capture_area'])
 
     # spots having all required conditions fulfilled
-    sample_names = np.unique(adata.obs['sample'])
+    specimen_names = np.unique(adata.obs['specimen'])
 
     cluster_labels = np.unique(adata.obs[observable])
     for cluster_label in cluster_labels:
         # get count from spots and add counts to dataframe
-        for ind, sample in enumerate(sample_names):
-            # get a sub-dataframe for only the current sample
-            ad = adata[adata.obs['sample'] == sample].copy()
+        for ind, specimen in enumerate(specimen_names):
+            # get a sub-dataframe for only the current specimen
+            ad = adata[adata.obs['specimen'] == specimen].copy()
             if 'counts' in adata.layers.keys():
                 sample_count_matrix = ad.layers['counts']
             else:
@@ -186,22 +187,25 @@ def get_spots_per_condition_multiple(adata, observable, cell_label, save_folder,
             sample_barcodes = ad.obs.index
             matrix = sample_count_matrix[indexlist_obs_cluster]
             for index, spot in enumerate(matrix):
-                # Must be named like that as index in obs is not unique
+                # Must be named like that as index in obs is not unique, only unique on a single capture area
                 df_condition[".".join(
-                    [sample, sample_barcodes[index], observable, cluster_label]).replace(" ", "_")] = spot
+                    [specimen, sample_barcodes[index], observable, cluster_label]).replace(" ", "_")] = spot
 
                 # save to metaData
-                df_temp = pd.DataFrame({"sample": [sample],
-                                        "barcode": [sample_barcodes[index]],
-                                        "condition": [cluster_label],
-                                        "cluster_label": [ad.obs[cell_label].values[indexlist_obs_cluster[index]]],
-                                        "patient": [int(ad.obs['patient'].values[indexlist_obs_cluster[index]])],
-                                        "disease": [ad.obs['disease'].values[indexlist_obs_cluster[index]]],
-                                        "biopsy_type": [ad.obs['biopsy_type'].values[indexlist_obs_cluster[index]]],
-                                        "n_spots": [n_spots],
-                                        "sizefactor": [ad.obs['size_factors'].values[indexlist_obs_cluster[index]]],
-                                        "batch": [ad.obs['object_slide'].values[indexlist_obs_cluster[index]]],  # Slide
-                                        "capture_area": [ad.obs['capture_area'].values[indexlist_obs_cluster[index]]]})  # CaptureArea on slide
+                df_temp = pd.DataFrame({
+                    "barcode": [sample_barcodes[index]],
+                    "sample": [ad.obs['sample'].values[indexlist_obs_cluster[index]]],
+                    "project": [ad.obs['project'].values[indexlist_obs_cluster[index]]],
+                    "specimen": [specimen],
+                    "condition": [cluster_label],
+                    "cluster_label": [ad.obs[cell_label].values[indexlist_obs_cluster[index]]],
+                    "patient": [int(ad.obs['patient'].values[indexlist_obs_cluster[index]])],
+                    "disease": [ad.obs['DISEASE'].values[indexlist_obs_cluster[index]]],
+                    "biopsy_type": [ad.obs['biopsy_type'].values[indexlist_obs_cluster[index]]],
+                    "n_spots": [n_spots],
+                    "sizefactor": [ad.obs['size_factors'].values[indexlist_obs_cluster[index]]],
+                    "batch": [ad.obs['object_slide'].values[indexlist_obs_cluster[index]]],  # Slide
+                    "capture_area": [ad.obs['capture_area'].values[indexlist_obs_cluster[index]]]})  # CaptureArea on slide
                 df_metadata = df_metadata.append(df_temp, ignore_index=True)
 
     df_metadata.to_csv(os.path.join(save_folder, "metaData_{}_{}.csv".format(observable, paper_figure)))

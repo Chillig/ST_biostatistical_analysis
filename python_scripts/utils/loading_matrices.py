@@ -603,7 +603,7 @@ def main(filename, read_raw_matrix=False, spatial_concat=True):
             slide_name=config_paths[16][0],
             velocyto_path=velo_path,
             object_slide=config_paths[23][0],
-            patient = config_paths[24][0])
+            patient=config_paths[24][0])
 
         # initialize list of adatas
         list_filtered_annot_data = [filtered_annot_data]
@@ -649,7 +649,7 @@ def main(filename, read_raw_matrix=False, spatial_concat=True):
                 sample_id=config_paths[2][c_sample] + "_" + config_paths[3][c_sample],
                 slide_name=config_paths[16][c_sample], filenames=feature_bc_matrix_string,
                 velocyto_path=velo_path, object_slide=config_paths[23][c_sample],
-                patient = config_paths[24][c_sample])
+                patient=config_paths[24][c_sample])
 
             # # Concatenate data sets (also do this if you have more than one donor!)
             if spatial_concat:
@@ -732,6 +732,7 @@ def main(filename, read_raw_matrix=False, spatial_concat=True):
         # # Loop to load all data sets
         for c_sample in tqdm(range(len(config_paths[0][1:])), desc='Loading samples'):
             c_sample += 1
+            print("_".join([config_paths[2][c_sample], config_paths[3][c_sample]]))
             # path to h5 and matrices
             path_matrix = os.path.join(os.sep, config_paths[0][c_sample], config_paths[2][c_sample],
                                        config_paths[1][c_sample],

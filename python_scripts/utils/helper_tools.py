@@ -242,97 +242,6 @@ def concatenate_adatas(adatas, batch_key='library_id'):
     return adata_spatial
 
 
-def store_categories_as_clusters(adata, annotations):
-    """
-    Determine one label per spot, by choosing always the category with lowest No. of spots assigned to it.
-    Save it in a vector and add it as new observable to annData object.
-
-    :param adata: [annData]
-    :param annotations: [list]
-    :return: [annData]
-    """
-    # split annotations by disease and tissue / cell types
-    elements = ["LESONAL", "NON LESIONAL"]
-    try:
-        index = []
-        for el in elements:
-            index.append(annotations.index(el))
-        target_index = np.amax(index) + 1
-    except ValueError:
-        target_index = None
-        print("REMINDER: Insert 'LESONAL' and 'NON LESIONAL' in your excel file")
-
-    tissue_cell_labels = annotations[target_index:]
-
-    # remove cell cycle annotations from tissue_cell_labels list
-    for cc in ["G1_score", "G2M_score", "S_score", "M_score"]:
-        try:
-            tissue_cell_labels.remove(cc)
-        except ValueError:
-            continue
-
-    # save annotations in one vector
-    # if one spot got several labels choose the one which has the lowest number of total spots assigned
-    if len(tissue_cell_labels) > 0:
-        if "ANNOTATOR" in tissue_cell_labels:
-            tissue_cell_labels.remove("ANNOTATOR")
-        spots_per_label = dict()
-        for label in tissue_cell_labels:
-            spots_per_label[label] = len(adata.obs[label][adata.obs[label] == 1])
-
-        value_missing_assignments = len(tissue_cell_labels) + 1
-        label_missing_assignments = "Unknown"
-        label_per_spot = []
-        value_per_spot = []
-        # loop through each spot (super slow method ...)
-        for c in range(len(adata.obs.index.values)):
-            # get labels from that spot and label it with the category having the lowest number of spots assigned to it
-            spot_adata = adata[c]
-            # get non zero indices and label name
-            indices = np.nonzero(spot_adata.obs[tissue_cell_labels].to_numpy())[1]
-
-            if len(indices) > 1:
-                labels = list(itemgetter(*indices)(tissue_cell_labels))
-
-                # TODO find a better way to choose between multiple labels the one which shall be used for the spot
-                sequence_selection = np.array([i for i in range(len(labels))])
-                # define weights using the number of spots assigned to these labels
-                spots_counts = [spots_per_label.get(cat) for cat in labels]
-                index_spot = random.choices(sequence_selection, weights=1/np.asarray(spots_counts), k=1)[0]
-
-                # save cluster label with int values from 0 to number of tissue/cell type annotations
-                value_per_spot.append(indices[index_spot])
-                label_per_spot.append(labels[index_spot])
-            elif len(indices) == 1:
-                labels = tissue_cell_labels[indices[0]]
-                # save cluster label with int values from 0 to number of tissue/cell type annotations
-                value_per_spot.append(indices[0])
-                label_per_spot.append(labels)
-            else:
-                # spots without label ...
-                label_per_spot.append(label_missing_assignments)
-                value_per_spot.append(value_missing_assignments)
-
-        # missing spots barcodes index
-        missing_spots_index = np.where(np.asarray(label_per_spot) == label_missing_assignments)[0]
-        if len(missing_spots_index) > 0:
-            missing_spots_samples = np.unique(adata.obs['sample'][
-                                                  np.where(np.asarray(label_per_spot) == label_missing_assignments)[0]])
-            print("Missing spots from sample(s): ", missing_spots_samples)
-
-        # save labels per spot as observable in adata object
-        adata.obs['groups'] = label_per_spot
-        adata.obs['cat_clusters'] = value_per_spot
-        # store lables as categories
-        adata.obs['groups'] = adata.obs['groups'].astype('category')
-        adata.obs['cat_clusters'] = adata.obs['cat_clusters'].astype('category')
-
-    else:
-        print("No manual annotations found")
-
-    return adata
-
-
 def map_sample_batch_list(adata, num_samples_patient):
     """
 
@@ -417,14 +326,7 @@ def get_tissue_annot(adata):
     disease_labels = np.array(annotations[:disease_index])
     lesion_labels = np.array(itemgetter(*index)(annotations))
 
-    # remove cell cycle annotations from tissue_cell_labels list
-    for cc in ["G1_score", "G2M_score", "S_score", "M_score"]:
-        try:
-            tissue_cell_labels.remove(cc)
-        except ValueError:
-            continue
-
-    return tissue_cell_labels, disease_labels, lesion_labels
+    return disease_labels, lesion_labels
 
 
 def assign_donor_spot(adata, no_samples_per_patient=4):
@@ -446,3 +348,22 @@ def assign_donor_spot(adata, no_samples_per_patient=4):
         donor_samples = samples[c_donors: no_samples_per_patient + c_donors]
         adata.obs['donor'][np.in1d(adata.obs['library_id'], donor_samples)] = str(counter)
     adata.obs['donor'] = adata.obs['donor'].cat.remove_unused_categories()
+
+
+def junction_to_epidermis_derdepth1(adata, tissue_layers, layers):
+    # Rename tissue region 'INTERFACE' to upper, middle or basal EPIDERMIS because some spots got both labels
+    m_interface = adata.obs['JUNCTION'] == 1
+    if isinstance(layers, list):
+        df_temp = adata.obs[layers][m_interface]
+    else:
+        df_temp = adata.obs[[layers]][m_interface]
+    df_temp = df_temp.loc[:, df_temp.columns].replace(1, pd.Series(df_temp.columns, df_temp.columns))
+    df_temp['JUNCTION'] = '0'
+    for col in df_temp.columns[:-1]:
+        df_temp['JUNCTION'] += df_temp[col].astype(str)
+    df_temp["JUNCTION"] = df_temp.JUNCTION.str.replace('0', '')
+    adata.obs[tissue_layers] = adata.obs[tissue_layers].astype(str)
+    adata.obs[tissue_layers][m_interface] = df_temp["JUNCTION"]
+    adata.obs[tissue_layers] = adata.obs[tissue_layers].astype('category')
+
+    return adata

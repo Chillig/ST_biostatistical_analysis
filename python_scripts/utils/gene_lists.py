@@ -115,7 +115,7 @@ def get_color_signaturegenes():
     signatures["IFNG"] = "#ff7f00"  # orange LICHEN
     signatures["IL13"] = "#e41a1c"  # red AE
     signatures["IL17A"] = "#377eb8"  # blue PSO
-    # signatures["HkG"] = '#4daf4a'  # green GAPDH
+    signatures["HkG"] = '#4daf4a'  # green GAPDH
 
     return signatures
 
@@ -183,6 +183,10 @@ def get_permuted_respondergenes_log2fc1():
     cytoresps_dict["IL17A_IFNG_responder"] = cytoresps_dict["IFNG"]
     cytoresps_dict["IL17A_IL13_responder"] = cytoresps_dict["IL13"]
 
+    cytoresps_dict.pop('IFNG', None)
+    cytoresps_dict.pop('IL13', None)
+    cytoresps_dict.pop('IL17A', None)
+
     cytokines = list(cytoresps_dict.keys())
 
     return cytokines, cytoresps_dict
@@ -223,6 +227,10 @@ def get_permuted_respondergenes_log2fc1_5():
 
     cytoresps_dict["IL17A_IFNG_responder"] = cytoresps_dict["IFNG"]
     cytoresps_dict["IL17A_IL13_responder"] = cytoresps_dict["IL13"]
+
+    cytoresps_dict.pop('IFNG', None)
+    cytoresps_dict.pop('IL13', None)
+    cytoresps_dict.pop('IL17A', None)
 
     cytokines = list(cytoresps_dict.keys())
 

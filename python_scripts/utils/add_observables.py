@@ -4,50 +4,20 @@ import numpy as np
 from itertools import combinations
 
 
-def add_metadata(adata):
+def add_lesion_metadata(adata):
+    """Add metaData as observable to annData object
+        -> data specific
+
+    Parameters
+    ----------
+    adata : annData
+
+    Returns
+    -------
+
     """
-    Assign batch and patient coviariate to each spots (-> important for eg batch correction)
-
-    :param adata: [annData]
-    :return:
-    """
-
-    # get batches (object slide = batch) TODO
-    df_batches = ht.map_sample_batch_list(adata=adata,
-                                          num_samples_patient=[4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
-                                                               4*3, 4, 4, 4, 4])
-    # assign batch to each spot
-    batches = []
-    for project in df_batches:
-        for ind, s_c in enumerate(df_batches[project]['sample']):
-            no_spots = adata[adata.obs['sample'] == s_c].shape[0]
-            batches.extend(np.ones(no_spots) * df_batches[project]['batch'][ind])
-    # need information about how often samples were found
-    adata.obs['batch'] = batches
-    adata.obs['batch'] = adata.obs['batch'].astype('int').astype('category')
-
-    # get batches assigned to each patient (currently we have 2 to 4 samples per patient)
-    # last four biopsies of last donor are from two different time points TODO
-    df_patients = ht.map_sample_batch_list(adata=adata,
-                                           num_samples_patient=[4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 2, 2, 4])
-
-    # assign donor to each spot
-    adata.obs['patient'] = 0
-    for project in df_patients:
-        for ind, s_c in enumerate(df_patients[project]['sample']):
-            m_spots = adata.obs['sample'] == s_c
-            adata.obs['patient'][m_spots] = df_patients[project]['batch'][ind]
-    # need information about how often samples were found
-    adata.obs['patient'] = adata.obs['patient'].astype('int').astype('category')
-
-    # assign Diagnostics
-    tissue_cell_labels, disease_labels, lesion_labels = ht.get_tissue_annot(adata)
-    adata.obs['disease'] = 'Unknown'
-    adata.obs['disease'] = adata.obs['disease'].astype('<U16')
-    for spot_label in disease_labels:
-        m_spots = adata.obs[spot_label] == 1
-        adata.obs['disease'][m_spots] = spot_label
-    adata.obs['disease'] = adata.obs['disease'].astype('string').astype('category')
+    # get labels
+    disease_labels, lesion_labels = ht.get_tissue_annot(adata)
 
     # assign biopsy type
     adata.obs['biopsy_type'] = 'Unknown'
@@ -57,7 +27,7 @@ def add_metadata(adata):
         adata.obs['biopsy_type'][m_spots] = spot_label
     adata.obs['biopsy_type'] = adata.obs['biopsy_type'].astype('string').astype('category')
 
-    return adata, tissue_cell_labels, disease_labels, lesion_labels
+    return adata, lesion_labels
 
 
 def add_spottypes_obs(adata):
@@ -74,7 +44,7 @@ def add_spottypes_obs(adata):
     # 1. Select tissue types of interest
     # Stand: 22.03.2022
     spot_types = ['DERMIS', 'upper EPIDERMIS', 'middle EPIDERMIS', 'basal EPIDERMIS', 'JUNCTION',
-                  'SEBACEOUS GLAND', 'SWEAT GLAND', 'MUSCLE', 'HAIRFOLLICLE', 'VESSEL']
+                  'SEBACEOUS GLAND', 'SWEAT GLAND', 'MUSCLE', 'HAIR FOLLICLE', 'VESSEL']
 
     adata.obs['spot_type'] = 'Unknown'
     adata.obs['spot_type'] = adata.obs['spot_type'].astype('<U64')
@@ -85,7 +55,7 @@ def add_spottypes_obs(adata):
     adata.obs['spot_type'] = adata.obs['spot_type'].astype('category')
     adata.obs['spot_type'] = adata.obs['spot_type'].cat.reorder_categories(
         ['upper EPIDERMIS', 'middle EPIDERMIS', 'basal EPIDERMIS', 'JUNCTION', 'DERMIS',
-         'MUSCLE', 'VESSEL', 'HAIRFOLLICLE', 'SEBACEOUS GLAND', 'SWEAT GLAND', 'Unknown'])
+         'MUSCLE', 'VESSEL', 'HAIR FOLLICLE', 'SEBACEOUS GLAND', 'SWEAT GLAND', 'Unknown'])
 
     return adata
 
@@ -121,14 +91,10 @@ def add_tissuelayers_obs(adata):
 
 
 def add_disease_healthy_obs(adata):
-    # 1 Select tissue types of interest
-    diagnosis = ['PSO', 'AE', 'LICHEN', 'PRP']
-
     adata.obs['healthy_disease'] = 'NON LESIONAL'
     adata.obs['healthy_disease'] = adata.obs['healthy_disease'].astype('<U32')
-    for disease in diagnosis:
-        m_disease = (adata.obs[disease] == 1) & (adata.obs['NON LESIONAL'] == 0)
-        adata.obs['healthy_disease'][m_disease] = disease
+    m_disease = adata.obs['NON LESIONAL'] == 0
+    adata.obs['healthy_disease'][m_disease] = adata.obs['DISEASE'][m_disease]
 
     return adata
 
@@ -287,9 +253,9 @@ def _mark_cells_by_markergene(adata, genes_dict, label, condition):
 
     # get counts
     if "counts" in adata.layers.keys():
-        default_counts = np.copy(adata.layers['counts']).sum(axis=1)
+        default_counts = np.copy(adata.layers['counts'].sum(axis=1))
     else:
-        default_counts = np.copy(adata.X).sum(axis=1)
+        default_counts = np.copy(adata.X.sum(axis=1))
 
     for ind, cell in enumerate(genes_dict.keys()):
         # First check if genes are in data set
@@ -306,9 +272,9 @@ def _mark_cells_by_markergene(adata, genes_dict, label, condition):
             index_genes.extend(varindex_genes)
             # get counts
             if "counts" in adata.layers.keys():
-                counts_genes = np.copy(adata.layers["counts"])[:, varindex_genes]
+                counts_genes = adata.layers["counts"][:, varindex_genes].copy()
             else:
-                counts_genes = np.copy(adata.X)[:, varindex_genes]
+                counts_genes = adata.X[:, varindex_genes].copy()
 
             # create mask
             if counts_genes.shape[1] > 1:
