@@ -127,10 +127,6 @@ def main(save_folder: str, adata_folder: str, input_folder: str):
     Fig4B__SC_UMAP_IL17A.main(save_folder=save_folder, adata=pp_sc_adata)
     Fig4C__SC_Volcano_plot.main(dataset_type='SC', save_folder=save_folder, df_keys=['log2fc', 'pval', 'gene_symbol'],
                                 log=False, dge_results_folder=sc_path_il17a)
-    # TODO add receptor genes also to correlation plot
-    # Fig4D__STSC_Correlation_IL17A.main(
-    #     path_st_data=st_file_il17a, path_sc_data=sc_file_il17a, save_folder=save_folder, cytokine_name='IL17A',
-    #     log2fc_cut=1., pval_cut=0.05, zoom=True)
 
     """ Figure 5 """
     t_cell_cytocines, cyto_resps_list, cytokine_responders = gene_lists.get_publication_cyto_resps()
@@ -144,20 +140,10 @@ def main(save_folder: str, adata_folder: str, input_folder: str):
     # Create figure 5E-G
     save_folder_fig5eg = os.path.join(save_folder, 'Weighted_Spearman_unppadata', 'Unweighted_fit', str(date.today()))
     os.makedirs(save_folder_fig5eg, exist_ok=True)
-    radius = np.arange(0, 10, 1)
     counts_dict = csdcc.main(
         save_folder=save_folder_fig5eg, adata=unpp_st_adata, corr_method=corr_method, get_plots=False,
         find_responders=False, radius=radius,
         cond_genes=t_cell_cytocines, genes_resps=cytokine_responders)
-
-    # Compare ST pseudo-bulk (dashed line) and spatial approach (solid line) slopes
-    save_folder_fig5 = os.path.join(save_folder, 'Weighted_Spearman_unppadata', 'ST_vs_bulk', str(date.today()))
-    os.makedirs(save_folder_fig5, exist_ok=True)
-    for r in radius:
-        Fig4FH__Weighted_Correlation.plot__stwc_tissuelayers(
-            bulk_df_counts=df_bulk, st_df_counts=counts_dict[r],
-            cytokine_responders=cytokine_responders, save_folder=save_folder_fig5, distance=r,
-            corr_method=corr_method)
 
     """ ----  Supplemental Figures  ---- """
     SuppFig1A__cytokine_counts_skinlayers.main(save_folder=save_folder, adata=unpp_st_adata)
@@ -194,35 +180,6 @@ def main(save_folder: str, adata_folder: str, input_folder: str):
     # 2. Identify DEGs (python) and create Volcano plots (R script)
     # 3. Identify new responder genes using DEGs from radii 1-5 and rerun density clustering
     SuppFig8AC__refined_responds.main()
-
-
-    save_folder = '/Volumes/CH__data/ST_immune_publication/Revision/Fig8'
-    save_folder_fig8 = os.path.join(save_folder, 'Weighted_Spearman_unppadata', 'Unweighted_fit', str(date.today()))
-    os.makedirs(save_folder_fig8, exist_ok=True)
-    dict_corr_fig8af, df_counts_cytoresps_fig8af = SuppFig8A__ST_pseudobulk_Correlation_permutedresponders.main(
-        save_folder=save_folder_fig8, adata=unpp_st_adata, corr_method=corr_method)
-    # Figure 8G-L
-    cytokines, permutated_cytokine_responders = gene_lists.get_permuted_respondergenes_log2fc1_5()
-    counts_dict_fig8gl = csdcc.main(
-        save_folder=save_folder_fig8, adata=unpp_st_adata, corr_method=corr_method, get_plots=False,
-        find_responders=False, radius=radius, genes_resps=permutated_cytokine_responders,
-        cond_genes=list(cytokines))
-
-    # --------------------
-    # df_counts_cytoresps_fig8fh = os.path.join(
-    #     save_folder, 'Weighted_Spearman_unppadata', 'ST_real_vs_permuted', str(date.today()))
-    # os.makedirs(df_counts_cytoresps_fig8fh, exist_ok=True)
-    # for r in radius:
-    #     Fig4FH__Weighted_Correlation.plot__stwc_tissuelayers(
-    #         bulk_df_counts=df_counts_cytoresps_fig8af, st_df_counts=counts_dict_fig8gl[r],
-    #         cytokine_responders=permutated_cytokine_responders, save_folder=save_folder_fig8, distance=r,
-    #         corr_method=corr_method)
-    #     Fig4FH__Weighted_Correlation.plot__stwc_permuted_tissuelayers(
-    #         df_counts_realresps=counts_dict[r], df_counts_permutedresps=counts_dict_fig8gl[r],
-    #         real_cytokine_resps=cytokine_responders, permuted_cytokine_responders=permutated_cytokine_responders,
-    #         save_folder=df_counts_cytoresps_fig8fh, distance=r, corr_method=corr_method)
-
-    # TODO add Figure 4C and Suppl Fig 7B
 
     """ Supplemental Table """
     # Supplemental Table 1
