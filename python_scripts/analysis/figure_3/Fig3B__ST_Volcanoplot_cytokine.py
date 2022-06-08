@@ -184,6 +184,7 @@ def plot_violins(adata, group, groupby, output_folder, log=False):
 
     kwargs = {"saturation": 1}
     fig, axs = plt.subplots(figsize=figure_size, dpi=300)
+    axs.grid(False)
     sc.pl.violin(adata, "_".join([group, 'group']), use_raw=False, layer='counts',
                  groupby=groupby, palette=[color_gene, "grey"], xlabel=" ", inner='box', split=False,
                  stripplot=False, jitter=False, size=2, cut=0, show=False, ax=axs, bw=.1, **kwargs)
@@ -200,8 +201,9 @@ def plot_violins(adata, group, groupby, output_folder, log=False):
     axs.spines["right"].set_visible(False)
 
     plt.tight_layout()
-    fig.savefig(os.path.join(output_folder, "_".join([groupby, "_", group, 'Violinplot', '.png'])),
-                format='png', dpi=300)
+    # fig.savefig(os.path.join(output_folder, "_".join([groupby, "_", group, 'Violinplot', '.png'])),
+    #             format='png', dpi=300)
+    fig.savefig(os.path.join(output_folder, "_".join([groupby, "_", group, 'Violinplot', '.pdf'])))
     plt.close()
 
 
@@ -274,14 +276,14 @@ def set_axislimits(cytokine):
 
     """
     if cytokine == 'IFNG':
-        xlim = [-35, 15]  # [-15, 35]
-        ylim = [0, 50]
+        xlim = [-36, 10]  # [-15, 35]
+        ylim = [0, 65]
     elif cytokine == 'IL13':
-        xlim = [-30, 15]  # [-15, 30]
-        ylim = [0, 12.5]
+        xlim = [-36, 10]  # [-15, 30]
+        ylim = [0, 26]
     elif cytokine == 'IL17A':
-        xlim = [-30, 15]  # [-15, 30]
-        ylim = [0, 42]
+        xlim = [-28, 15]  # [-15, 30]
+        ylim = [0, 45]
     else:
         xlim = None
         ylim = None
@@ -446,12 +448,7 @@ def plotly_interactive_volcano(df, df_keys, save_folder, key, x_lab, y_lab, log2
     pval = df_keys[1]
     log2fc = df_keys[0]
 
-    if 'pval' in pval:
-        y_labels = r'-log$_{10}$p-values'
-        legend_label = 'p-value'
-    else:
-        y_labels = r'-log$_{10}$FDR-corrected p-value'
-        legend_label = 'FDR'
+    legend_label = 'FDR'
 
     # create masks for all scenarios
     m_sig_log2fc, m_sig_log2fc_pval, m_sig_pval, m_inbetween, index_hkg = get_updowninbetween_masks(
@@ -565,12 +562,12 @@ def _write_dataframe(adata, df, cytokine, observable, output_folder, method):
     return df
 
 
-def main(dataset_type, save_folder, df_keys, log, dge_results_folder):
+def main(adata, save_folder, df_keys, log, dge_results_folder):
     """
 
     Parameters
     ----------
-    dataset_type : str
+    adata : annData
     save_folder : str
     df_keys : list
     log : bool
@@ -580,22 +577,17 @@ def main(dataset_type, save_folder, df_keys, log, dge_results_folder):
     -------
 
     """
-    # Determine name of cluster observable
-    if dataset == 'SC':
-        cluster_label = 'cluster_labels'
-    else:
-        cluster_label = 'tissue_type'
-
     print("# ------ Load data ------ #")
     cytokines, allinone, cytoresps_dict = gene_lists.get_publication_cyto_resps()
     # genes_to_highlight = gene_lists.highlight_genes()
     genes_to_highlight = gene_lists.highlight_genes_receptors()
-    # # 1. Load adata
-    adata = load_adata(type_dataset=dataset_type, cluster_label=cluster_label)
-    # # 2 Read out only T-cell spots by leukocyte markers
+    # # 1. Read out only T-cell spots by leukocyte markers
     adata = get_sub_adata(adata=adata, gene=gene_lists.leukocyte_markers())
-    # # 3. Assign condition to spots
+    # # 2. Assign condition to spots
     adata, observable = exclude_cytokine_dp(adata=adata, cytoresps_dict=cytoresps_dict)
+    # 1. get observable for cytokine genes
+    adata, _ = add_observables.convert_variable_to_observable(
+        adata=adata, gene_names=cytokines, task='cell_gene', label='celltype', condition=None)
 
     for cyto in cytokines:
         # get observable of condition
@@ -676,8 +668,8 @@ def main(dataset_type, save_folder, df_keys, log, dge_results_folder):
                         goi[gene] = spatial_adata_gene.obs["_".join([gene, 'group'])].values
 
                         # 5. Visualise counts of gene of interest in a violin plot
-                        # plot_violins(adata=spatial_adata_gene, group=gene, groupby=obs_label_condition,
-                        #              output_folder=output_folder, log=log)
+                        plot_violins(adata=spatial_adata_gene, group=gene, groupby=obs_label_condition,
+                                     output_folder=output_folder, log=log)
 
                 # Save counts of genes of interest
                 goi.to_csv(os.path.join(output_folder, "_".join([cyto, "Counts_Highlight_genes.csv"])))
@@ -692,9 +684,12 @@ if __name__ == '__main__':
     input_folder = os.path.join("..", "..", "..",
                                 'input', 'dge_analysis', '2021-02-01_spatial__cdr_patient_annotation_cyto')
 
+    # # 1. Load adata
+    pp_adata = load_adata(type_dataset=dataset, cluster_label='tissue_layer')
+
     # create output path
     output_path = os.path.join("..", "..", "..", "output", "Figure_3B", str(today))
     os.makedirs(output_path, exist_ok=True)
 
-    main(dataset_type=dataset, save_folder=output_path, df_keys=columns, log=log_transform,
+    main(adata=pp_adata, save_folder=output_path, df_keys=columns, log=log_transform,
          dge_results_folder=input_folder)
