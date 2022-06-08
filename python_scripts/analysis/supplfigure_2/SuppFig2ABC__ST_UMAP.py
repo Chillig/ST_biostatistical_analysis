@@ -6,7 +6,7 @@
     Date last modified: May/02/2021
     Python Version: 3.7
 """
-from python_scripts.utils import gene_lists, add_observables
+from python_scripts.utils import gene_lists, add_observables, helper_tools
 
 import scanpy as sc
 import numpy as np
@@ -152,7 +152,7 @@ def get_tissueregions(adata, tissue_label):
     """
     m_epidermis = np.array(
         adata.obs[tissue_label].values)[:, np.newaxis] == np.array(
-        ['upper EPIDERMIS', 'basal EPIDERMIS', 'middle EPIDERMIS', 'INTERFACE'])[np.newaxis, :]
+        ['upper EPIDERMIS', 'basal EPIDERMIS', 'middle EPIDERMIS', 'JUNCTION'])[np.newaxis, :]
     m_epidermis = m_epidermis.sum(axis=1).astype(bool)
 
     m_dermis = np.array(
@@ -168,20 +168,25 @@ def get_tissueregions(adata, tissue_label):
     return adata
 
 
-def main(save_folder, spatial_adata):
-    """
-    Read out data for ST and scRNA-seq DGE Analysis and create UMAPs for Figure 3A/E and Suppl. Figures 3
+def main(save_folder, spatial_adata, spatial_cluster_label: str = 'tissue_layer'):
+    """ Read out data for ST and create UMAPs for Suppl. Figures 2A/B/C
 
-    :return:
-    """
-    spatial_cluster_label = 'tissue_type'
+    Parameters
+    ----------
+    save_folder
+    spatial_adata
+    spatial_cluster_label
 
+    Returns
+    -------
+
+    """
     # 1. load gene lists
     cytokines, allinone, cytoresps_dict = gene_lists.get_publication_cyto_resps()
     leukocyte_markers = gene_lists.leukocyte_markers()
 
     # 2. remove all spots without a tissue label
-    spatial_adata = spatial_adata[spatial_adata.obs[spatial_cluster_label] != 'Unknown']
+    spatial_adata = spatial_adata[spatial_adata.obs[spatial_cluster_label] != 'Unknown'].copy()
 
     # 3. get observable for cytokine genes and leukocyte markers
     spatial_adata, obs_name = add_observables.convert_variable_to_observable(
@@ -195,6 +200,11 @@ def main(save_folder, spatial_adata):
 
     # 5. add observable healthy_disease
     spatial_adata = add_observables.add_disease_healthy_obs(spatial_adata)
+
+    # Rename Junction to epidermis parts or Derdepth1
+    adata_leukocytes = helper_tools.junction_to_epidermis_derdepth1(
+        adata=adata_leukocytes, tissue_layers='tissue_layer',
+        layers=['upper EPIDERMIS', 'middle EPIDERMIS', 'basal EPIDERMIS', 'DERdepth1'])
 
     # keys: 'patient', 'biopsy_type', 'disease', 'tissue_type'
     # Suppl Figure 2A
@@ -225,6 +235,6 @@ if __name__ == '__main__':
     os.makedirs(output_path, exist_ok=True)
 
     # Load data:
-    pp_st_adata = sc.read(os.path.join("..", "..", "..", 'adata_storage', '2020-12-04_Visium_Data_QC_BC_clustered.h5'))
+    pp_st_adata = sc.read(os.path.join("..", "..", "..", 'adata_storage', 'st_QC_normed_BC_project_PsoADLP.h5'))
 
     main(save_folder=output_path, spatial_adata=pp_st_adata)
