@@ -6,7 +6,7 @@
     Date last modified: May/02/2021
     Python Version: 3.7
 """
-from python_scripts.utils import gene_lists, add_observables as ctools
+from python_scripts.utils import gene_lists
 
 import scanpy as sc
 import numpy as np
@@ -66,37 +66,35 @@ def plot_cytokinecounts(sup_adata, cyto, save_folder, obs_label, obs_counts, img
 
     color_dict = OrderedDict()
     if cyto == 'IFNG':
-        color_dict[cyto] = "#ff7f00"  # orange LICHEN "#ff7f00"
+        color_dict[cyto] = "#ff7f00"  # orange LP
     elif cyto == "IL13":
-        color_dict[cyto] = "#e41a1c"  # red AE
+        color_dict[cyto] = "#e41a1c"  # red AD
     else:
-        color_dict[cyto] = "#377eb8"  # blue PSO
-
-    diseases = ["PSO", "AE", "LICHEN", "PRP"]
-    biopsy_type = ["LESIONAL", "NON LESIONAL"]
+        color_dict[cyto] = "#377eb8"  # blue Pso
 
     # samples = np.unique(sup_adata[cyto].obs['sample'])
     samples, crops_img = get_cropped_sampleimg(img_key=img_key)
     for ind, sample in enumerate(samples):
-        temp_adata = sup_adata[sup_adata.obs["sample"] == sample]
+        temp_adata = sup_adata[sup_adata.obs["sample"] == sample].copy()
         # read out counts of cytokine and responder spots
-        test_counts = temp_adata[temp_adata.obs[obs_label] == cyto]
+        test_counts = temp_adata[temp_adata.obs[obs_label] == cyto].copy()
         # get labels of cytokine and responder spots
-        cell_types_unique = list(np.unique(temp_adata.obs[obs_label]))
+        # cell_types_unique = list(np.unique(temp_adata.obs[obs_label]))
 
-        if len(cell_types_unique) > 0:
+        if test_counts.shape[0] > 0:
+            diagnose = " & ".join(test_counts.obs['DISEASE'].cat.categories)
+            biopsy_type_temp = " & ".join(test_counts.obs['biopsy_type'].cat.categories)
+            library_id_temp = "_".join(test_counts.obs['library_id'].cat.categories[0].split('_')[:-1])
 
-            diagnose = temp_adata.obs[diseases].loc[:, (temp_adata.obs[diseases] != 0).all()].columns.values[0]
             fig, ax = plt.subplots(figsize=fig_size)
-            sc.pl.spatial(test_counts, size=1.1, img_key=img_key, library_id=sample,
+            sc.pl.spatial(test_counts, size=1.1, img_key=img_key, library_id=library_id_temp,
                           color=obs_label, alpha_img=1, show=False, crop_coord=crops_img[ind],
                           ax=ax, palette=['black'], legend_loc='no')
-            sc.pl.spatial(test_counts, size=size, img_key=img_key, library_id=sample,
+            sc.pl.spatial(test_counts, size=size, img_key=img_key, library_id=library_id_temp,
                           color=obs_counts, alpha_img=0, show=False, crop_coord=crops_img[ind],
                           ax=ax, vmin=1,
-                          title=" ".join(["Diagnose:", diagnose, "; Biopsy type:",
-                                          temp_adata.obs[biopsy_type].loc[:, (temp_adata.obs[biopsy_type] !=
-                                                                              0).all()].columns.values[0]]))
+                          vmax=sup_adata[sup_adata.obs[obs_label] == cyto].obs["{}_counts".format(cyto)].max(),
+                          title=" ".join(["Diagnose:", diagnose, "; Biopsy type:", biopsy_type_temp]))
             # Invert both axis due to flipped and mirrored images
             ax.invert_xaxis()
             ax.invert_yaxis()
@@ -190,14 +188,14 @@ def convert_categories_cytokines_responders_others(adata, cyto_responder_genes, 
         adata.obs[obs_clusters] = adata.obs[obs_label].astype('category')
         adata.obs[obs_label] = adata.obs[obs_label].astype('category')
 
-        # comment todo
+        # Plot cytokine counts on H&E image
         plot_cytokinecounts(adata, cyto, save_folder, obs_label=obs_label, obs_counts=obs_counts, img_key=img_key)
 
         # Get max. UMI-counts per tissue section
-        samples = np.unique(adata.obs['sample'].values)
+        specimens = np.unique(adata.obs['specimen'].values)
         max_umicounts = []
-        for sample in samples:
-            sample_adata = adata[adata.obs['sample'] == sample].copy()
+        for specimen in specimens:
+            sample_adata = adata[adata.obs['specimen'] == specimen].copy()
             m_cyto_counts = sample_adata.obs["_".join([cyto, 'clusters'])] == cyto
             max_umicounts.append(sample_adata.obs["_".join([cyto, 'counts'])][m_cyto_counts].sum())
 
@@ -210,10 +208,12 @@ def convert_categories_cytokines_responders_others(adata, cyto_responder_genes, 
             diagnose = 'AD'
         elif cyto == 'IFNG':
             diagnose = 'LP'
+        else:
+            diagnose = 'Unknown'
         umicounts = []
-        for sample in samples:
-            sample_adata = adata[np.all([adata.obs['sample'] == sample,
-                                         adata.obs['disease'] == diagnose], axis=0)].copy()
+        for specimen in specimens:
+            sample_adata = adata[np.all([adata.obs['specimen'] == specimen,
+                                         adata.obs['DISEASE'] == diagnose], axis=0)].copy()
             m_cyto_counts = sample_adata.obs["_".join([cyto, 'clusters'])] == cyto
             umicounts.append(sample_adata.obs["_".join([cyto, 'counts'])][m_cyto_counts].sum())
 
@@ -228,12 +228,6 @@ def main(save_folder, adata):
     # 1. Get cytokines and responders
     t_cell_cytocines, cyto_resps_list, cytokine_responders = gene_lists.get_publication_cyto_resps()
 
-    # 3. Add meta data like which samples belong to which donor (optional)
-    if "patient" not in adata.obs_keys():
-        adata, tissue_cell_labels, disease_labels, lesion_labels = ctools.add_metadata(adata)
-        # 1.2 Remove spots having no tissue/cell labels (since 06.10.2020)
-        adata = adata[np.where(adata.obs[tissue_cell_labels].to_numpy().any(axis=1))[0]]
-
     """Paper Figure 4B: Highlight cytokine and responder genes containing spots and UMI-counts """
     convert_categories_cytokines_responders_others(adata, cyto_responder_genes=cytokine_responders,
                                                    save_folder=save_folder, img_key=img_key)
@@ -247,7 +241,8 @@ if __name__ == '__main__':
 
     # 2. Load unpre-processed anndata object
     unpp_st_adata = sc.read(
-        os.path.join("..", "..", "..", "adata_storage", "2020-10-06", "st_adata_P15509_P16357_wo_4_7_unpp.h5"))
+        os.path.join("..", "..", "..", "adata_storage", "2022-04-08",
+                     "Spatial Transcriptomics_unpp_cleaned_PsoADLP.h5"))
 
     img_resolution = 'hires'
     main(save_folder=savepath, adata=unpp_st_adata)
