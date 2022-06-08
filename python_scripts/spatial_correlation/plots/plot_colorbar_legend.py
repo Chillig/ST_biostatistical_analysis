@@ -94,12 +94,13 @@ def plot_standalone_colorbar_disease(diseasecomb_colors, labels, save_folder):
     plt.close()
 
 
-def plot_standalone_legend(points, save_folder):
+def plot_standalone_legend(points, size_multiplier, save_folder):
     """Plot a legend without a graph
 
     Parameters
     ----------
     points : numpy.array
+    size_multiplier: int
     save_folder : str
 
     Returns
@@ -107,7 +108,11 @@ def plot_standalone_legend(points, save_folder):
 
     """
     # increase point size
-    large_points = points.astype(int)**2 * 36
+    if 0 in points:
+        # have to start at 1, otherwise points disappear in plot due to zero size
+        large_points = points.astype(int)**2 * size_multiplier + 1
+    else:
+        large_points = points.astype(int) ** 2 * size_multiplier
     colors = ['k'] * len(points)
 
     # Draw circles
@@ -115,7 +120,9 @@ def plot_standalone_legend(points, save_folder):
                            label="{:s}".format(str(points[i]))) for i in range(len(points))]
     plt.close()
 
-    if any(points >= 10):
+    if any(points >= 20):
+        label_space = 7
+    elif any((points >= 10) | (points < 20)):
         label_space = 5
     elif any((points >= 6) | (points < 10)):
         label_space = 3
@@ -123,11 +130,11 @@ def plot_standalone_legend(points, save_folder):
         label_space = 1
 
     # Create figure without an axis
-    fig = plt.figure(figsize=(4, 14))
-    fig.legend(patches, points, labelspacing=label_space, title="Cluster size",
+    fig = plt.figure(figsize=(8, 10))
+    fig.legend(patches, points, labelspacing=label_space, title="# cyto+ spots in cluster",
                loc='center', frameon=False, facecolor="w", handletextpad=2, handlelength=2,
                title_fontsize=title_fontsize, fontsize=legend_fontsize,
-               bbox_transform=fig.transFigure, borderpad=.0, scatterpoints=1)
+               bbox_transform=fig.transFigure, borderpad=.0, scatterpoints=1, ncol=3)
     plt.tight_layout()
     # Save figure
     fig.savefig(os.path.join(save_folder, "_".join(["Legend", fileformat])),)

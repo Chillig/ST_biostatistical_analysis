@@ -240,7 +240,8 @@ def plot_compare_inex_respondercounts(adata, df_includedcounts, df_excludedcount
         # counts = adata.obs['n_counts'][~m_cytoresp]
 
         # Apply test to check wether the responders are enriched in the cyto+ spots
-        print(corr_stats.apply_wilcoxontest(df_includedcounts[col_names].values, df_excludedcounts[col_names].values))
+        #  - only works if measurement have same samples size
+        # print(corr_stats.apply_wilcoxontest(df_includedcounts[col_names].values, df_excludedcounts[col_names].values))
 
         # Two-sample Kolmogorov–Smirnov test
         ks_test = scstats.ks_2samp(df_includedcounts[col_names].values, df_excludedcounts[col_names].values)
