@@ -324,8 +324,8 @@ def plot_signed_ppvalues(df_st, df_sc, cytokine_name, significance_level, label_
         if zoom:
             ax.text(math.ceil(df_st[value].max()) - 7, log10_cut + 0.3, "5% FDR", size=10, color='k', zorder=3)
             ax.text(log10_cut + 0.3, math.floor(df_sc[value].min()) + 0.3, "5% FDR", size=10, color='k', zorder=3)
-            ax.set_ylim([math.floor(df_sc[value].min()) - 0.5, math.ceil(df_sc[value].max()) + 0.5])
-            ax.set_xlim([math.floor(df_st[value].min()) - 0.5, math.ceil(df_st[value].max()) + 0.5])
+            # ax.set_ylim([math.floor(df_sc[value].min()) - 0.5, math.ceil(df_sc[value].max()) + 0.5])
+            # ax.set_xlim([math.floor(df_st[value].min()) - 0.5, math.ceil(df_st[value].max()) + 0.5])
             # Add correlation and correlation p-value
             ax.text(9, math.ceil(df_sc[value].max()),
                     'r = {:.2f}; p = {:.2e}'.format(sig_r['r'].values[0], sig_r['p-val'].values[0]),
@@ -340,8 +340,8 @@ def plot_signed_ppvalues(df_st, df_sc, cytokine_name, significance_level, label_
                     fontstyle='italic', fontsize=text_fontsize)
     else:
         if zoom:
-            ax.set_ylim([-18, 25])
-            ax.set_xlim([-18, 48])
+            # ax.set_ylim([-18, 25])
+            # ax.set_xlim([-18, 48])
             ax.text(43, log10_cut + 0.1, "5% FDR", size=8, color='k', zorder=3)
             ax.text(log10_cut + 0.2, np.amin(df_sc[value].values), "5% FDR", size=8, color='k', zorder=3)
         else:
