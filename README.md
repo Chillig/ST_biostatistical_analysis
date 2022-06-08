@@ -1,5 +1,5 @@
-# Low numbers of cytokine transcripts drive inflammatory skin diseases by initiating amplification cascades in localized epidermal clusters
-Schäbitz A*, Hillig C*, Farnoud A, Jargosch M, Scala E, Pilz AC, Bhalla N, Mubarak M, Thomas J, Stahle M, 
+# Spatial transcriptomics landscape of non-communicable inflammatory skin diseases
+Schäbitz A*, Hillig C*, Mubarak M, Jargosch M, Farnoud A, Scala E, Pilz AC, Bhalla N, Thomas J, Stahle M, 
 Biedermann T, Schmidt-Weber CB, Theis F, Garzorz-Stark N, Eyerich K*, Menden MP*, Eyerich S*§ <br>
 
 You can find the preprint version of the manuscript here: <br>
