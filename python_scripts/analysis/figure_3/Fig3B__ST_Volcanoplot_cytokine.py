@@ -682,7 +682,7 @@ if __name__ == '__main__':
     log_transform = False
 
     input_folder = os.path.join("..", "..", "..",
-                                'input', 'dge_analysis', '2021-02-01_spatial__cdr_patient_annotation_cyto')
+                                'input', 'dge_analysis', '2022-04-08_spatial__cdr_project_patient_annotation_cyto')
 
     # # 1. Load adata
     pp_adata = load_adata(type_dataset=dataset, cluster_label='tissue_layer')
