@@ -10,10 +10,13 @@
 from python_scripts.spatial_correlation import corr_statistics as corr_stats
 from python_scripts.utils import gene_lists
 from python_scripts.spatial_correlation.plots import plot_colorbar_legend
+from python_scripts.spatial_correlation import helper_functions as ht
 
 import scanpy as sc
+import scipy
 import numpy as np
 import pandas as pd
+import itertools
 from collections import OrderedDict
 import os
 from datetime import date
@@ -24,6 +27,7 @@ from scipy.optimize import curve_fit
 import seaborn as sns
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
+from matplotlib.lines import Line2D  # for legend handle
 
 
 fig_size = (6, 6)
@@ -399,6 +403,78 @@ def new_weighted_transcripts_correlation_plot(df_counts_cytoresps, genes_dict, c
     # df_counts_cytoresps = df_counts_cytoresps.replace({'0': np.nan, 0: np.nan})
     df_counts_cytoresps = df_counts_cytoresps.replace({np.nan: 0})
 
+    cyto_combs = list(set(itertools.combinations(genes_dict.keys(), 2)))
+    colors = {'LP': 'orange', 'AD': 'red', 'Pso': 'blue'}
+
+    # Correlation between cytokine counts
+    for cyto_combination in cyto_combs:
+        fig, ax = plt.subplots(figsize=(6, 6))
+        ax.grid(False)
+        corr, pval = scipy.stats.pearsonr(df_counts_cytoresps[cyto_combination[0]],
+                                          df_counts_cytoresps[cyto_combination[1]])
+
+        ax.scatter(df_counts_cytoresps[cyto_combination[0]], df_counts_cytoresps[cyto_combination[1]],
+                   c=df_counts_cytoresps['disease'].map(colors))
+        ax.set_ylabel(cyto_combination[1])
+        ax.set_xlabel(cyto_combination[0])
+
+        # Add text: Correlation value and p-value
+        ax.text(
+            df_counts_cytoresps[cyto_combination[0]].max() / 2 - df_counts_cytoresps[cyto_combination[0]].max() / 10,
+            df_counts_cytoresps[cyto_combination[1]].max(),
+            'r = {:.2f}; p = {:.2e}'.format(corr, pval), fontstyle='italic', fontsize=text_fontsize)
+
+        # add a legend
+        handles = [Line2D([0], [0], marker='o', color='w', markerfacecolor=v, label=k, markersize=8) for k, v in
+                   colors.items()]
+        ax.legend(title='Disease', handles=handles, bbox_to_anchor=(1.05, 1), loc='upper left')
+        plt.tight_layout()
+        # remove upper and right edge lines in plot
+        sns.despine(ax=ax)
+
+        # Save figure
+        fig.savefig(os.path.join(
+            save_folder, 'Fig4A-C__{}_{}_bulkapproach{}'.format(cyto_combination[0], cyto_combination[1], fileformat)))
+        plt.close()
+
+    # Correlation between cytokine responder counts
+    cytoresps_combs = list(set(itertools.combinations(['IFNG_responder', 'IL13_responder', 'IL17A_responder'], 2)))
+    colors = {'LP': 'tab:blue', 'AD': 'tab:orange', 'Pso': 'tab:red'}
+    text_pos = {'Pso': df_counts_cytoresps.max()[1],
+                'AD': df_counts_cytoresps.max()[1] / 2,
+                'LP': df_counts_cytoresps.min()[1]}
+    for cyto_combination in cytoresps_combs:
+        fig, ax = plt.subplots(figsize=(6, 6))
+        ax.grid(False)
+        for diag in np.unique(df_counts_cytoresps['disease']):
+            df_counts_cytoresps_temp = df_counts_cytoresps[df_counts_cytoresps['disease'] == diag]
+            corr, pval = scipy.stats.pearsonr(df_counts_cytoresps_temp[cyto_combination[0]],
+                                              df_counts_cytoresps_temp[cyto_combination[1]])
+
+            ax.scatter(df_counts_cytoresps_temp[cyto_combination[0]], df_counts_cytoresps_temp[cyto_combination[1]],
+                       c=colors[diag])
+            ax.set_ylabel(cyto_combination[1])
+            ax.set_xlabel(cyto_combination[0])
+
+            # Add text: Correlation value and p-value
+            ax.text(text_pos[diag], df_counts_cytoresps_temp.max()[0] + 1,
+                    r'{}: r = {:.2f}; p = {:.2e}'.format(diag, corr, pval),
+                    fontstyle='italic', fontsize=10)
+
+        # add a legend
+        handles = [Line2D([0], [0], marker='o', color='w', markerfacecolor=v, label=k, markersize=8) for k, v in
+                   colors.items()]
+        ax.legend(title='Disease', handles=handles, bbox_to_anchor=(1.05, 1), loc='upper left')
+        plt.tight_layout()
+        # remove upper and right edge lines in plot
+        sns.despine(ax=ax)
+
+        # Save figure
+        fig.savefig(os.path.join(
+            save_folder, 'Fig4A-C__{}_{}_bulkapproach{}'.format(cyto_combination[0], cyto_combination[1], fileformat)))
+        plt.close()
+
+    # Save dataframe
     for cyto in genes_dict.keys():
         weighted_cytoname = "_".join(['weighted', cyto])
         df_counts_cytoresps[weighted_cytoname] = df_counts_cytoresps[cyto]
@@ -862,14 +938,7 @@ def weighted_transcripts_correlation_wdisease_plot(df_counts_cytoresps, genes_di
 def main(save_folder, adata, corr_method):
     # parameter
     tissue_types = ['upper EPIDERMIS', 'middle EPIDERMIS', 'basal EPIDERMIS']
-
-    adata.obs['n_counts'] = adata.X.sum(1)
-    # number of counts per spot in log
-    adata.obs['log_counts'] = np.log(adata.obs['n_counts'])
-    # number of genes per spot
-    adata.obs['n_genes'] = (adata.X > 0).sum(1)
-    mt_gene_mask = [gene.startswith('MT-') for gene in adata.var_names]
-    adata.obs['mt_frac'] = adata.X[:, mt_gene_mask].sum(1) / adata.obs['n_counts']
+    epidermis_layers = ['upper EPIDERMIS', 'middle EPIDERMIS', 'basal EPIDERMIS']
 
     # 1. Get cytokines and responders
     t_cell_cytocines, cyto_resps_list, cytokine_responders = gene_lists.get_publication_cyto_resps()
@@ -879,6 +948,8 @@ def main(save_folder, adata, corr_method):
         bool_col = adata.obs[tissue_types] == 1
         merged = bool_col.sum(axis=1)
         adata = adata[merged == 1]
+        # Rename tissue region 'JUNCTION' to basal EPIDERMIS because some spots got both labels
+        adata = ht.interface_to_epidermis(adata, tissue_layers='tissue_layer', epidermis_layers=epidermis_layers)
 
     # 3. Get counts of cyotkines and their responders in the EPIDERMIS
     df_correlation = get_bulk_cytoresp_counts(adata=adata, genes_dict=cytokine_responders, tissue_types=tissue_types)
