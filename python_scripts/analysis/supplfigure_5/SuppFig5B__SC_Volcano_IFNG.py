@@ -258,8 +258,8 @@ def set_axislimits(cytokine):
 
     """
     if cytokine == 'IFNG':
-        xlim = [-10, 35]
-        ylim = [0, 50]
+        xlim = [-55, 55]
+        ylim = [0, 25]
     elif cytokine == 'IL13':
         xlim = [-10, 30]
         ylim = [0, 20]
@@ -380,7 +380,7 @@ def volcano_plot(df, df_keys, cytokine, label_genes, title, save_folder, adjust=
         ax.text(np.amax(df[log2fc]) - 3, -np.log10(threshold) + 0.2, '5% FDR',
                 size=text_fontsize, color='k', zorder=5)
     else:
-        ax.text(xlim[1] - 5, -np.log10(threshold) + 0.2, '5% FDR', size=text_fontsize, color='k', zorder=5)
+        ax.text(xlim[1] - 10, -np.log10(threshold) + 0.2, '5% FDR', size=text_fontsize, color='k', zorder=5)
 
     fig.savefig(os.path.join(save_folder, "".join([title, file_format])))
     plt.close()
@@ -539,7 +539,7 @@ def main(dataset_type, save_folder, df_keys, log, dge_results_folder):
 
     """
     # Determine name of cluster observable
-    if dataset == 'SC':
+    if dataset_type == 'SC':
         cluster_label = 'cluster_labels'
     else:
         cluster_label = 'tissue_type'
@@ -576,6 +576,9 @@ def main(dataset_type, save_folder, df_keys, log, dge_results_folder):
             print("Unique Genes Stratified Sampling:", allgenes_df.columns.is_unique)
             # remove duplicated rows
             allgenes_df = allgenes_df.loc[~allgenes_df['gene_symbol'].duplicated(), :]
+
+            # Flip signs
+            allgenes_df['log2fc'] = -allgenes_df['log2fc']
 
             # Name of used design function
             design = file.split(os.sep)[-4]
