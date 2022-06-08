@@ -70,6 +70,7 @@ def plot_umicount_dotplot(df, signatures_hkg, title, ylabels, xlabels, save_fold
     """
     fig, ax = plt.subplots(nrows=1, ncols=1, facecolor='w', edgecolor='k', figsize=figure_size)
     fig.subplots_adjust(hspace=0.8, wspace=0.25)
+    ax.grid(False)
     ax.set_title(title, fontsize=title_fontsize)
     ax.scatter('x-axis', 'y-axis', data=df, s='dot_size', c='color', linewidths=.5, edgecolors='k')
     ax.set_xlim([-0.2, len(signatures_hkg) - 0.8])
@@ -343,43 +344,43 @@ def main(adata, save_folder):
     m_lesion = [adata.obs['NON LESIONAL'] == 0]
 
     # Read out cytokine counts in certain tissue layers and norm them by the number of involved tissue types
-    df_hc_ifng = (adata.obs['IFNG_counts_upper EPIDERMIS'].values[tuple(m_lesion)] +
+    df_hc_ifng = (adata.obs['IFNG_counts_basal EPIDERMIS'].values[tuple(m_lesion)] +
+                  adata.obs['IFNG_counts_DERdepth1'].values[tuple(m_lesion)])
+    df_lc_ifng = (adata.obs['IFNG_counts_upper EPIDERMIS'].values[tuple(m_lesion)] +
                   adata.obs['IFNG_counts_middle EPIDERMIS'].values[tuple(m_lesion)] +
-                  adata.obs['IFNG_counts_basal EPIDERMIS'].values[tuple(m_lesion)] +
-                  adata.obs['IFNG_counts_DERdepth1'].values[tuple(m_lesion)] +
-                  adata.obs['IFNG_counts_DERdepth2'].values[tuple(m_lesion)])
-    df_lc_ifng = (adata.obs['IFNG_counts_DERdepth3'].values[tuple(m_lesion)] +
+                  adata.obs['IFNG_counts_DERdepth2'].values[tuple(m_lesion)] +
+                  adata.obs['IFNG_counts_DERdepth3'].values[tuple(m_lesion)] +
                   adata.obs['IFNG_counts_DERdepth4'].values[tuple(m_lesion)] +
                   adata.obs['IFNG_counts_DERdepth5'].values[tuple(m_lesion)] +
                   adata.obs['IFNG_counts_DERdepth7'].values[tuple(m_lesion)])
 
     # Apply Wilcoxon test to check if IFN-g is enriched in specific tissue layers
-    apply_wilcoxontest(df_highcounts=df_hc_ifng / 5, df_lowcounts=df_lc_ifng / 5, save_folder=save_folder)
+    apply_wilcoxontest(df_highcounts=df_hc_ifng / 2, df_lowcounts=df_lc_ifng / 6, save_folder=save_folder)
 
-    df_hc_il13 = (adata.obs['IL13_counts_basal EPIDERMIS'].values[tuple(m_lesion)] +
-                  adata.obs['IL13_counts_DERdepth1'].values[tuple(m_lesion)]) / 2
+    df_hc_il13 = (adata.obs['IL13_counts_middle EPIDERMIS'].values[tuple(m_lesion)] +
+                  adata.obs['IL13_counts_basal EPIDERMIS'].values[tuple(m_lesion)] +
+                  adata.obs['IL13_counts_DERdepth1'].values[tuple(m_lesion)] +
+                  adata.obs['IL13_counts_DERdepth2'].values[tuple(m_lesion)]) / 4
     df_lc_il13 = (adata.obs['IL13_counts_DERdepth3'].values[tuple(m_lesion)] +
                   adata.obs['IL13_counts_DERdepth4'].values[tuple(m_lesion)] +
                   adata.obs['IL13_counts_DERdepth5'].values[tuple(m_lesion)] +
                   adata.obs['IL13_counts_DERdepth6'].values[tuple(m_lesion)] +
                   adata.obs['IL13_counts_DERdepth7'].values[tuple(m_lesion)] +
-                  adata.obs['IL13_counts_upper EPIDERMIS'].values[tuple(m_lesion)] +
-                  adata.obs['IL13_counts_middle EPIDERMIS'].values[tuple(m_lesion)] +
-                  adata.obs['IL13_counts_DERdepth2'].values[tuple(m_lesion)]) / 8
+                  adata.obs['IL13_counts_upper EPIDERMIS'].values[tuple(m_lesion)]) / 6
 
     # Apply Wilcoxon test to check if IL-13 is enriched in specific tissue layers
     apply_wilcoxontest(df_highcounts=df_hc_il13, df_lowcounts=df_lc_il13, save_folder=save_folder)
 
     df_hc_il17a = (adata.obs['IL17A_counts_basal EPIDERMIS'].values[tuple(m_lesion)] +
                    adata.obs['IL17A_counts_upper EPIDERMIS'].values[tuple(m_lesion)] +
-                   adata.obs['IL17A_counts_middle EPIDERMIS'].values[tuple(m_lesion)]) / 3
+                   adata.obs['IL17A_counts_middle EPIDERMIS'].values[tuple(m_lesion)]+
+                   adata.obs['IL17A_counts_DERdepth1'].values[tuple(m_lesion)]) / 4
     df_lc_il17a = (adata.obs['IL17A_counts_DERdepth3'].values[tuple(m_lesion)] +
                    adata.obs['IL17A_counts_DERdepth4'].values[tuple(m_lesion)] +
                    adata.obs['IL17A_counts_DERdepth5'].values[tuple(m_lesion)] +
                    adata.obs['IL17A_counts_DERdepth6'].values[tuple(m_lesion)] +
                    adata.obs['IL17A_counts_DERdepth7'].values[tuple(m_lesion)] +
-                   adata.obs['IL17A_counts_DERdepth2'].values[tuple(m_lesion)] +
-                   adata.obs['IL17A_counts_DERdepth1'].values[tuple(m_lesion)]) / 7
+                   adata.obs['IL17A_counts_DERdepth2'].values[tuple(m_lesion)]) / 7
 
     # Apply Wilcoxon test to check if IL-17A is enriched in specific tissue layers
     apply_wilcoxontest(df_highcounts=df_hc_il17a, df_lowcounts=df_lc_il17a, save_folder=save_folder)
