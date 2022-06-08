@@ -373,7 +373,7 @@ def main(adata, save_folder):
 
     df_hc_il17a = (adata.obs['IL17A_counts_basal EPIDERMIS'].values[tuple(m_lesion)] +
                    adata.obs['IL17A_counts_upper EPIDERMIS'].values[tuple(m_lesion)] +
-                   adata.obs['IL17A_counts_middle EPIDERMIS'].values[tuple(m_lesion)]+
+                   adata.obs['IL17A_counts_middle EPIDERMIS'].values[tuple(m_lesion)] +
                    adata.obs['IL17A_counts_DERdepth1'].values[tuple(m_lesion)]) / 4
     df_lc_il17a = (adata.obs['IL17A_counts_DERdepth3'].values[tuple(m_lesion)] +
                    adata.obs['IL17A_counts_DERdepth4'].values[tuple(m_lesion)] +
@@ -394,6 +394,7 @@ if __name__ == '__main__':
 
     # Load unpreprocessed but not normalised annData object
     unpp_adata = sc.read(
-        os.path.join("..", "..", "..", "adata_storage", "2020-10-06", "st_adata_P15509_P16357_wo_4_7_unpp.h5"))
+        os.path.join("..", "..", "..", "adata_storage", "2022-04-08",
+                     "Spatial Transcriptomics_unpp_cleaned_PsoADLP.h5"))
 
     main(adata=unpp_adata, save_folder=save_path)
