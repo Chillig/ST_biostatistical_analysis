@@ -7,108 +7,10 @@
 """
 
 import numpy as np
-import copy
-import math
-import pandas as pd
-from operator import itemgetter
+import anndata
 
 
-def prepare_rawadata(adata):
-    """Add metadata to anndata object: n_counts, log_counts, n_genes, mt_frac, patient, tissue_type
-
-    Parameters
-    ----------
-    adata : annData
-
-    Returns
-    -------
-
-    """
-    adata.obs['n_counts'] = adata.X.sum(1)
-    # number of counts per spot in log
-    adata.obs['log_counts'] = np.log(adata.obs['n_counts'])
-    # number of genes per spot
-    adata.obs['n_genes'] = (adata.X > 0).sum(1)
-    # Check if all genes starting with MT- are actually Mitochondrial genes..
-    # MT genes: ['MT-ND1', 'MT-ND2', 'MT-CO1', 'MT-CO2', 'MT-ATP8', 'MT-ATP6', 'MT-CO3',
-    # 'MT-ND3', 'MT-ND4L', 'MT-ND4', 'MT-ND5', 'MT-ND6', 'MT-CYB']
-    # MT-ND: mitochondrially encoded NADH dehydrogenase
-    # MT-CO: mitochondrially encoded cytochrome c oxidase
-    # MT-ATP: mitochondrially encoded ATP synthase
-    mt_gene_mask = [gene.startswith('MT-') for gene in adata.var_names]
-    adata.obs['mt_frac'] = adata.X[:, mt_gene_mask].sum(1) / adata.obs['n_counts']
-
-    # 1. Add meta data like which samples belong to which donor (optional)
-    if "patient" not in adata.obs_keys():
-        adata, tissue_cell_labels, disease_labels, lesion_labels = add_metadata(adata)
-        # 1.2 Remove spots having no tissue/cell labels (since 06.10.2020)
-        adata = adata[np.where(adata.obs[tissue_cell_labels].to_numpy().any(axis=1))[0]]
-
-    adata = add_tissue_obs(adata)
-
-    return adata
-
-
-def add_metadata(adata):
-    """Assign batch and patient as co-viariate to each spot (-> important for e.g. batch correction, DGE analysis ..)
-
-    Parameters
-    ----------
-    adata : annData
-
-    Returns
-    -------
-
-    """
-
-    # get batches (object slide = batch)
-    df_batches = map_sample_batch_list(adata=adata,
-                                       num_samples_patient=[4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4])
-    # assign batch to each spot
-    batches = []
-    for project in df_batches:
-        for ind, s_c in enumerate(df_batches[project]['sample']):
-            no_spots = adata[adata.obs['sample'] == s_c].shape[0]
-            batches.extend(np.ones(no_spots) * df_batches[project]['batch'][ind])
-    # need information about how often samples were found
-    adata.obs['batch'] = batches
-    adata.obs['batch'] = adata.obs['batch'].astype('int').astype('category')
-
-    # get batches assigned to each patient (currently we have 2 to 4 samples per patient)
-    # last four biopsies of last donor are from two different time points
-    df_patients = map_sample_batch_list(adata=adata,
-                                        num_samples_patient=[4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 2, 2, 4])
-    # assign donor to each spot
-    donors = []
-    for project in df_patients:
-        for ind, s_c in enumerate(df_patients[project]['sample']):
-            no_spots = adata[adata.obs['sample'] == s_c].shape[0]
-            donors.extend(np.ones(no_spots) * df_patients[project]['batch'][ind])
-    # need information about how often samples were found
-    adata.obs['patient'] = donors
-    adata.obs['patient'] = adata.obs['patient'].astype('int').astype('category')
-
-    # assign Diagnostics
-    tissue_cell_labels, disease_labels, lesion_labels = get_tissue_annot(adata)
-    spot_disease = []
-    for spot_label in disease_labels:
-        spots = adata[adata.obs[spot_label] == 1]
-        spot_disease.extend([spot_label] * spots.shape[0])
-    adata.obs['disease'] = spot_disease
-    adata.obs['disease'] = adata.obs['disease'].astype('string').astype('category')
-
-    # assign Diagnostics
-    spot_biopsy = []
-    for spot_label in lesion_labels:
-        spots = adata[adata.obs[spot_label] == 1]
-        spot_biopsy.extend([spot_label] * spots.shape[0])
-    adata.obs['biopsy_type'] = spot_biopsy
-    adata.obs['biopsy_type'] = adata.obs['biopsy_type'].astype('string').astype('category')
-
-    return adata, tissue_cell_labels, disease_labels, lesion_labels
-
-
-def convert_categories_cytokines_responders_others(adata, cyto_responder_genes):
+def convert_categories_cytokines_responders_others(adata: anndata, cyto_responder_genes: dict):
     """Add observable column to adata marking the spots either as "Other" (2), "Responders" (1) or cytokine (0)
         - others label = 2
         - responder label = 1
@@ -183,7 +85,7 @@ def convert_categories_cytokines_responders_others(adata, cyto_responder_genes):
     return adata
 
 
-def add_columns_genes(adata, genes, label, count_threshold=1):
+def add_columns_genes(adata: anndata, genes: str, label: str, count_threshold: int = 1):
     """Add columns of counts, label, and clusters to adata object beginning with term label
         gene(s) label = 0
         others label = 1
@@ -269,135 +171,44 @@ def add_columns_genes(adata, genes, label, count_threshold=1):
     return adata
 
 
-def add_tissue_obs(adata):
-    """Add tissue layers as observable to adata
+def mark_spotsincluster(adata: anndata, sub_adata: anndata, spot_indices: [int, list], obs_conditional_gene_counts: str,
+                        gene: str):
+    """Marking spots either as "Other" (0), "cyto- nn spots" (2) or "cyto+ spots" (1)
+        - others label = 0
+        - responder label = 2
+        - cytokine label 1
 
     Parameters
     ----------
     adata : annData
+    sub_adata : annData
+    spot_indices: int, list
+    obs_conditional_gene_counts: str
+    gene : str
 
     Returns
     -------
 
     """
-    # 1 Select tissue types of interest
-    tissue_types = ['upper EPIDERMIS', 'middle EPIDERMIS', 'basal EPIDERMIS',
-                    'DERdepth1', 'DERdepth2', 'DERdepth3', 'DERdepth4', 'DERdepth5', 'DERdepth6', 'DERdepth7',
-                    'INTERFACE']
+    # Add number of spots to index of sub_adata to read out the correct spots from adata
+    # get and add index_num_spots from previous samples
+    temp_sample = np.unique(sub_adata.obs['specimen'])[0]
 
-    adata.obs['tissue_type'] = 'Unknown'
-    adata.obs['tissue_type'] = adata.obs['tissue_type'].astype('<U64')
-    for tissue in tissue_types:
-        m_tissue = adata.obs[tissue] == 1
-        adata.obs['tissue_type'][m_tissue] = tissue
+    # check if you read out correct spots with
+    ind_sample = np.where(adata.obs['specimen'] == temp_sample)[0]
+    spot_indices_sample = ind_sample[spot_indices]
+    if not np.all(
+            sub_adata.obs.iloc[spot_indices].index == adata.obs.iloc[spot_indices_sample].index):
+        print("You do not read out the correct spots!! ", np.unique(sub_adata.obs['specimen']))
 
-    adata.obs['tissue_type'] = adata.obs['tissue_type'].astype('category')
+    adata.obs['{}_in_sdcc'.format(gene)] = adata.obs['{}_in_sdcc'.format(gene)].astype(str)
+    adata.obs['{}_in_sdcc'.format(gene)].iloc[spot_indices_sample] = 2
+    # conditional gene of interest -> label = 1
+    m_cg = adata.obs[obs_conditional_gene_counts].iloc[spot_indices_sample].values > 0
+    if np.any(m_cg):
+        adata.obs['{}_in_sdcc'.format(gene)].iloc[spot_indices_sample[m_cg]] = 1
+
+    # Convert to type category
+    adata.obs['{}_in_sdcc'.format(gene)] = adata.obs['{}_in_sdcc'.format(gene)].astype('category')
+
     return adata
-
-
-def map_sample_batch_list(adata, num_samples_patient):
-    """
-
-    Parameters
-    ----------
-    adata : annData
-    num_samples_patient : list
-        [4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 2, 2, 2, 2]
-
-    Returns
-    -------
-
-    """
-
-    def order_of_magnitude(number):
-        return math.floor(math.log(number, 10))
-
-    metadata_batch = pd.DataFrame(columns=["sample", "batch"])
-    metadata = dict()
-    list_project_samples = dict()
-    for ind, project in enumerate(np.unique(adata.obs['project'])):
-        list_project_samples[project] = np.unique(adata.obs['sample'][adata.obs['project'] == project])
-        sample_names = [int(i.split('_')[1]) for i in list_project_samples[project]]
-
-        temp_num_oom = 10 ** order_of_magnitude(np.amax(sample_names))
-        max_samplenumber = np.amax(sample_names) - temp_num_oom
-
-        rest = max_samplenumber % num_samples_patient[ind]
-        if rest != 0:
-            max_samplenumber = max_samplenumber + rest
-
-        # determine no batches
-        num_batches = 0
-        list_batches = num_samples_patient.copy()
-        number_samples = copy.copy(max_samplenumber)
-        while True:
-            list_batches.remove(num_samples_patient[num_batches])
-            if ((number_samples - num_samples_patient[num_batches]) == 0) | \
-                    (num_batches == (len(num_samples_patient) - 1)):
-                num_batches += 1
-                break
-            number_samples = number_samples - num_samples_patient[num_batches]
-            num_batches += 1
-
-        batches = []
-        for i_c in range(num_batches):
-            batches.extend([i_c + 1 + ind] * num_samples_patient[i_c])
-
-        array_sampleids = np.arange(1 + temp_num_oom, temp_num_oom + max_samplenumber + 1)
-
-        for i_c in range(len(array_sampleids)):
-            metadata_batch.loc[i_c] = ["_".join([project, str(array_sampleids[i_c])]), batches[i_c]]
-
-        metadata[project] = pd.DataFrame(columns=["sample", "batch"])
-        for i_c in range(len(sample_names)):
-            sample_batch = metadata_batch[(metadata_batch ==
-                                           list_project_samples[project][i_c]).any(1)].stack().unique()
-            metadata[project].loc[i_c] = [sample_batch[0], sample_batch[1]]
-        num_samples_patient = list_batches
-
-    return metadata
-
-
-def get_tissue_annot(adata):
-    """Get tissue annotations saved in adata object
-
-    Parameters
-    ----------
-    adata
-
-    Returns
-    -------
-
-    """
-    # Use annotations from pathologist instead of clusters
-    obs_keys = list(adata.obs_keys())
-    # get all manual annotations by extracting all keys with upper case characters
-    annotations = [char for char in obs_keys if any(c.isupper() for c in char)]
-
-    if "ANNOTATOR" in annotations:
-        annotations.remove("ANNOTATOR")
-
-    # split annotations by disease and tissue / cell types
-    elements = ["LESONAL", "NON LESIONAL"]
-    try:
-        index = []
-        for el in elements:
-            index.append(annotations.index(el))
-        target_index = np.amax(index) + 1
-        disease_index = np.amin(index)
-    except ValueError:
-        target_index = None
-        print("REMINDER: Insert 'LESONAL' and 'NON LESIONAL' in your excel file")
-
-    tissue_cell_labels = annotations[target_index:]
-    disease_labels = np.array(annotations[:disease_index])
-    lesion_labels = np.array(itemgetter(*index)(annotations))
-
-    # remove cell cycle annotations from tissue_cell_labels list
-    for cc in ["G1_score", "G2M_score", "S_score", "M_score"]:
-        try:
-            tissue_cell_labels.remove(cc)
-        except ValueError:
-            continue
-
-    return tissue_cell_labels, disease_labels, lesion_labels
