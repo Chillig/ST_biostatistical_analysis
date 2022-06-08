@@ -11,7 +11,6 @@ from python_scripts.spatial_correlation import tools, condition_graphs as cyto_g
     refine_responder_genes
 from python_scripts.spatial_correlation.plots import plot_clusters, plot_count_distributions, plot_evaluations, \
     plot_spatial_correlation, plot_compositions
-from python_scripts.utils import gene_lists
 from python_scripts.spatial_correlation import helper_functions
 
 import numpy as np
@@ -304,8 +303,8 @@ def get_cluster_counts(adata, tissue_types, cytokine_responders, save_folder, di
                                 df_counts.at[index_counter, resp_gene] = np.divide(
                                     counts_respgene.iloc[list(indices_spots), :][resp_gene][
                                         m_respgene_cytopos].sum(), 1)
-                        # else:
-                        #     print("Responder gene not in dataset: ", resp_gene)
+                        else:
+                            print("Responder gene not in dataset: ", resp_gene)
 
                     # np.count_nonzero(nn_obs[obs_resp_counts])
                     df_counts.at[index_counter, 'disease'] = np.unique(sub_adata.obs['DISEASE'])[0]
@@ -403,45 +402,24 @@ def run_spatialcorrelation(adata, tissue_types, cytokine_responders, save_folder
     df_counts, df_excluded_spot_counts, df_counts_responders, df_included_spots, adata = get_cluster_counts(
         adata=adata, tissue_types=tissue_types, cytokine_responders=cytokine_responders,
         distance=radius, save_folder=save_folder, find_responders=find_responders, get_plots=get_plots)
-    # TODO Info for steffi: BET3L and FAM26D are no longer in dataset.. -> overall 71 responder genez
+    # Info: BET3L and FAM26D are no longer in dataset.. -> overall 71 responder genes
 
     # Perform DGE analysis between cyto and nn spots
     if find_responders and ("counts" in adata.layers.keys()):
-        # refine_responder_genes.rank_densitycluster_vs_others_genes(adata, cytokine_responders, save_folder, radius=radius)
+        # refine_responder_genes.rank_densitycluster_vs_others_genes(
+        #     adata, cytokine_responders, save_folder, radius=radius)
         # refine_responder_genes.rank_densitycluster_genes(adata, cytokine_responders, save_folder, radius=radius)
         refine_responder_genes.rank_cyto_vs_others_genes(adata, cytokine_responders, save_folder, radius=radius)
 
-    # TODO get composition of responder counts per cytokine and per disease
-    # plot_compositions.main(df_counts=df_counts, cytokine_responders=cytokine_responders, save_folder=save_folder)
-
-    # df_counts = pd.read_csv('/Users/christina.hillig/PycharmProjects/ST_Immune_publication/Publication_analysis/output/reviewers/1/UMI_counts_correlation.csv')
+    # Get composition of responder counts per cytokine and per disease
+    plot_compositions.main(df_counts=df_counts, cytokine_responders=cytokine_responders, save_folder=save_folder)
 
     # 4. Plot correlation
-    plot_correlation = False
-    if plot_correlation:
-        # Pearson Correlation -> Workflow Figure 1
-        fig1_corr_pval = plot_spatial_correlation.plot__spatial_correlation(
-            df_counts=df_counts, cytokine_responders=cytokine_responders, save_folder=save_folder, distance=radius,
-            corr_method=corr_method)
-        fig1_disease_corr_pval = plot_spatial_correlation.plot__spatial_correlation__wdisease(
-            df_counts=df_counts, cytokine_responders=cytokine_responders, save_folder=save_folder, distance=radius,
-            corr_method=corr_method)
-        # Suppl. Figure 4: Weighted Pearson Correlation by number of cytokines in cluster, coloring tissue layers combs.
-        figs4_corr_pval = plot_spatial_correlation.plot__swc_tissuelayers(
-            df_counts=df_counts, cytokine_responders=cytokine_responders, save_folder=save_folder, distance=radius,
-            corr_method=corr_method)
-        # Weighted by transcripts
-        # figs4_wtcorr_pval = plot_spatial_correlation.plot__stwc_tissuelayers(
-        #     df_counts=df_counts, cytokine_responders=cytokine_responders, save_folder=save_folder, distance=radius,
-        #     corr_method=corr_method)
-        # Figure 4G-I: Weighted Pearson Correlation by number of cytokines in cluster, coloring disease
-        fig4_disease_corr_pval = plot_spatial_correlation.plot__swc_disease(
-            df_counts=df_counts, cytokine_responders=cytokine_responders, save_folder=save_folder, distance=radius,
-            corr_method=corr_method)
-        # Weighted by transcripts
-        fig4_disease_wtcorr_pval = plot_spatial_correlation.plot__swtc_disease(
-            df_counts=df_counts, cytokine_responders=cytokine_responders, save_folder=save_folder, distance=radius,
-            corr_method=corr_method)
+    # Weighted by transcripts
+    figs4_wtcorr_pval = plot_spatial_correlation.plot__stwc_tissuelayers(
+        df_counts=df_counts, cytokine_responders=cytokine_responders, save_folder=save_folder, distance=radius,
+        corr_method=corr_method)
+    sig.append(figs4_wtcorr_pval)
 
     # # 5.1 Plot distribution of responder spot counts which a excluded in the analysis
     # plot_count_distributions.plot_excluded_responder_spots(
@@ -464,12 +442,6 @@ def run_spatialcorrelation(adata, tissue_types, cytokine_responders, save_folder
     #     adata=adata, df_included_responder=df_included_spots, df_excluded_responder=df_excluded_spot_counts,
     #     t_cell_cytocines=cytokine_responders.keys(), save_folder=save_folder)
 
-    # Weighted by transcripts - goes into publication
-    figs4_wtcorr_pval = plot_spatial_correlation.plot__stwc_tissuelayers(
-        df_counts=df_counts, cytokine_responders=cytokine_responders, save_folder=save_folder, distance=radius,
-        corr_method=corr_method)
-    sig.append(figs4_wtcorr_pval)
-
     return sig, df_counts
 
 
@@ -489,7 +461,6 @@ def data_preparation(adata, tissue_types, epidermis_layers, conditional_genes, c
 
     """
     # Subset adata to tissue_types of interest: upper EPIDERMIS', 'middle EPIDERMIS', 'basal EPIDERMIS'
-    # TODO call function from rename observables
     if tissue_types:
         bool_col = adata.obs[tissue_types] == 1
         merged = bool_col.sum(axis=1)
