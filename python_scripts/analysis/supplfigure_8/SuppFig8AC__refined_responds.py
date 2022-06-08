@@ -70,18 +70,18 @@ def get_labels(data, fill):
      '111': '3'}
     """
 
-    N = len(data)
+    num_sets = len(data)
 
-    sets_data = [set(data[i]) for i in range(N)]  # sets for separate groups
+    sets_data = [set(data[i]) for i in range(num_sets)]  # sets for separate groups
     s_all = set(chain(*data))                     # union of all sets
 
     # bin(3) --> '0b11', so bin(3).split('0b')[-1] will remove "0b"
     set_collections = {}
-    for n in range(1, 2**N):
-        key = bin(n).split('0b')[-1].zfill(N)
+    for n in range(1, 2**num_sets):
+        key = bin(n).split('0b')[-1].zfill(num_sets)
         value = s_all
-        sets_for_intersection = [sets_data[i] for i in range(N) if key[i] == '1']
-        sets_for_difference = [sets_data[i] for i in range(N) if key[i] == '0']
+        sets_for_intersection = [sets_data[i] for i in range(num_sets) if key[i] == '1']
+        sets_for_difference = [sets_data[i] for i in range(num_sets) if key[i] == '0']
         for s in sets_for_intersection:
             value = value & s
         for s in sets_for_difference:
@@ -105,18 +105,22 @@ def get_labels(data, fill):
 
 def venn5(labels, names, cytokine, save_folder, **options):
     """
+    Credits to https://github.com/tctianchi/pyvenn
     plots a 5-set Venn diagram
-    @type labels: dict[str, str]
-    @type names: list[str]
-    @rtype: (Figure, AxesSubplot)
-    input
-      labels: a label dict where keys are identified via binary codes ('00001', '00010', '00100', ...),
+
+    Parameters
+    ----------
+    labels : dict, a label dict where keys are identified via binary codes ('00001', '00010', '00100', ...),
               hence a valid set could look like: {'00001': 'text 1', '00010': 'text 2', '00100': 'text 3', ...}.
               unmentioned codes are considered as ''.
-      names:  group names
-      more:   colors, figsize, dpi, fontsize
-    return
-      pyplot Figure and AxesSubplot object
+    names : group names
+    cytokine : str
+    save_folder : str
+    options :
+
+    Returns
+    -------
+
     """
     colors = options.get('colors', [default_colors[i] for i in range(5)])
     figsize = options.get('figsize', (13, 13))
@@ -218,8 +222,9 @@ def main():
     unpp_st_adata = unpp_st_adata[unpp_st_adata.obs['DISEASE'] != 'PRP'].copy()
 
     input_dir = '/Volumes/CH__data/ST_immune_publication/Revision/data/DGE_cyto_vs_others_Spearman'
+    output_dir = '/Volumes/CH__data/ST_immune_publication/Revision/FigS10'
 
-    # TODO adjust cut-offs -> make more stringent than log2fc > 1
+    # Adjust Cut-offs -> make more stringent than log2fc > 1 ?
     log2fc_cutoff = 1.
     padj_cutoff = 0.001
 
@@ -228,9 +233,7 @@ def main():
     # Per cytokine
     for cytokine in ['IL17A', 'IFNG', 'IL13']:
         save_folder = os.path.join(
-            os.path.join(
-                '/Users/christina.hillig/PycharmProjects/ST_Immune_publication/Publication_analysis/output/reviewers',
-                'refined_response', str(date.today()), "log2FC_{}".format(log2fc_cutoff)))
+            os.path.join(output_dir, 'refined_response', str(date.today()), "log2FC_{}".format(log2fc_cutoff)))
         os.makedirs(save_folder, exist_ok=True)
 
         # Load in for radius 1-3 DEGs derived from refine_responder_genes.py and density_clustering
@@ -241,32 +244,29 @@ def main():
         df_r5 = pd.read_csv(os.path.join(input_dir, '5', '{}_in_sdcc_wilcoxon__radius5.csv'.format(cytokine)))
 
         # Find up-regulated genes in cyto+
-        r1_up_genes = df_r1.loc[(df_r1['1_logfoldchanges'] > log2fc_cutoff) & (df_r1['1_pvals_adj'] < padj_cutoff),
-                                '1_names'].values
-        r2_up_genes = df_r2.loc[(df_r1['1_logfoldchanges'] > log2fc_cutoff) & (df_r2['1_pvals_adj'] < padj_cutoff),
-                                '1_names'].values
-        r3_up_genes = df_r3.loc[(df_r3['1_logfoldchanges'] > log2fc_cutoff) & (df_r3['1_pvals_adj'] < padj_cutoff),
-                                '1_names'].values
-        r4_up_genes = df_r4.loc[(df_r4['1_logfoldchanges'] > log2fc_cutoff) & (df_r4['1_pvals_adj'] < padj_cutoff),
-                                '1_names'].values
-        r5_up_genes = df_r5.loc[(df_r5['1_logfoldchanges'] > log2fc_cutoff) & (df_r5['1_pvals_adj'] < padj_cutoff),
-                                '1_names'].values
+        r1_up_genes = list(df_r1.loc[(df_r1['1_logfoldchanges'] > log2fc_cutoff) & (df_r1['1_pvals_adj'] < padj_cutoff),
+                                     '1_names'].values)
+        r2_up_genes = list(df_r2.loc[(df_r1['1_logfoldchanges'] > log2fc_cutoff) & (df_r2['1_pvals_adj'] < padj_cutoff),
+                                     '1_names'].values)
+        r3_up_genes = list(df_r3.loc[(df_r3['1_logfoldchanges'] > log2fc_cutoff) & (df_r3['1_pvals_adj'] < padj_cutoff),
+                                     '1_names'].values)
+        r4_up_genes = list(df_r4.loc[(df_r4['1_logfoldchanges'] > log2fc_cutoff) & (df_r4['1_pvals_adj'] < padj_cutoff),
+                                     '1_names'].values)
+        r5_up_genes = list(df_r5.loc[(df_r5['1_logfoldchanges'] > log2fc_cutoff) & (df_r5['1_pvals_adj'] < padj_cutoff),
+                                     '1_names'].values)
 
         # drop signature cytokine
-        r1_up_genes.tolist().remove(cytokine)
-        r2_up_genes.tolist().remove(cytokine)
-        r3_up_genes.tolist().remove(cytokine)
-        r4_up_genes.tolist().remove(cytokine)
-        r5_up_genes.tolist().remove(cytokine)
+        r1_up_genes.remove(cytokine)
+        r2_up_genes.remove(cytokine)
+        r3_up_genes.remove(cytokine)
+        r4_up_genes.remove(cytokine)
+        r5_up_genes.remove(cytokine)
 
         subset_12 = list(np.intersect1d(r1_up_genes, r2_up_genes))
         intersect = list(np.intersect1d(subset_12, r3_up_genes))
         intersect = list(np.intersect1d(intersect, r4_up_genes))
         intersect = list(np.intersect1d(intersect, r5_up_genes))
 
-        # plot_venndiagram(r1_genes=r1_up_genes, r2_genes=r2_up_genes, r3_genes=r3_up_genes, r4_genes=r4_up_genes,
-        #                  r5_genes=r5_up_genes, cyto=cytokine, save_folder=save_folder)
-        # https://github.com/tctianchi/pyvenn
         labels = get_labels([r1_up_genes, r2_up_genes, r3_up_genes, r4_up_genes, r5_up_genes], fill=['number'])
         venn5(labels, names=['Radius 1', 'Radius 2', 'Radius 3', 'Radius 4', 'Radius 5'],
               cytokine=cytokine, save_folder=save_folder)
@@ -280,15 +280,13 @@ def main():
 
         dict_newresponders[cytokine] = intersect
 
-        # TODO add Venndiagarmm responder new vs keratonicyte experiment
+        # Venndiagarmm responder new vs keratinocyte experiment
         plot_venn2(set1=set(cyto_resps[cytokine]), set2=set(intersect), save_folder=save_folder, cyto=cytokine)
 
     # try density clustering with new responder genes..
     # parameter
     save_folder = os.path.join(
-        os.path.join(
-            '/Users/christina.hillig/PycharmProjects/ST_Immune_publication/Publication_analysis/output/reviewers',
-            'refined_response', str(date.today()), "log2FC_{}".format(log2fc_cutoff)))
+        os.path.join(output_dir, 'refined_response', str(date.today()), "log2FC_{}".format(log2fc_cutoff)))
     os.makedirs(save_folder, exist_ok=True)
     tissue_layers = ['upper EPIDERMIS', 'middle EPIDERMIS', 'basal EPIDERMIS']
     epidermis_layers = ['upper EPIDERMIS', 'middle EPIDERMIS', 'basal EPIDERMIS']
@@ -296,7 +294,7 @@ def main():
     density_clustering.main(
         adata=unpp_st_adata, save_folder=save_folder, tissue_types=tissue_layers, epidermis_layers=epidermis_layers,
         radii=radius, corr_method='spearman', get_plots=False, conditional_genes=list(dict_newresponders.keys()),
-        conditionalgenes_responders=dict_newresponders)
+        conditionalgenes_responders=dict_newresponders, find_responders=False)
 
     # TODO Run Fig 4A-C with new responder genes
 
