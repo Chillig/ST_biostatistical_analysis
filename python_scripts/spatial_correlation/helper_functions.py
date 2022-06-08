@@ -7,10 +7,12 @@
 """
 
 import numpy as np
+import pandas as pd
+from collections import OrderedDict
 
 
 def figure_params():
-    fig_size = (8, 8)
+    fig_size = (6, 6)
     xy_fontsize = 16
     xy_ticks = 12
     title_fontsize = 18
@@ -34,3 +36,39 @@ def get_cropped_sampleimg(img_key):
         crops_img = (np.asarray(crops_img) * res_proportion).round()
 
     return samples, crops_img
+
+
+def interface_to_epidermis(adata, tissue_layers, epidermis_layers):
+    # Rename tissue region 'INTERFACE' to upper, middle or basal EPIDERMIS because some spots got both labels
+    m_interface = adata.obs['JUNCTION'] == 1
+    if isinstance(epidermis_layers, list):
+        df_temp = adata.obs[epidermis_layers][m_interface]
+    else:
+        df_temp = adata.obs[[epidermis_layers]][m_interface]
+    df_temp = df_temp.loc[:, df_temp.columns].replace(1, pd.Series(df_temp.columns, df_temp.columns))
+    df_temp['JUNCTION'] = '0'
+    for col in df_temp.columns[:-1]:
+        df_temp['JUNCTION'] += df_temp[col].astype(str)
+    df_temp["JUNCTION"] = df_temp.JUNCTION.str.replace('0', '')
+    adata.obs[tissue_layers][m_interface] = df_temp["JUNCTION"]
+    adata.obs[tissue_layers] = adata.obs[tissue_layers].cat.remove_unused_categories()
+
+    return adata
+
+
+def get_color_signaturegenes():
+    # Group cytokines into Type 1-3 (Signature T-cells)
+    signatures = OrderedDict()
+    # publication
+    signatures["IFNG"] = "#ff7f00"  # orange LICHEN
+    signatures["IL13"] = "#e41a1c"  # red AE
+    signatures["IL17A"] = "#377eb8"  # blue PSO
+    signatures["HkG"] = '#4daf4a'  # green GAPDH
+    signatures["IFNG_IL13_responder"] = "sandybrown"  # orange LICHEN
+    signatures["IFNG_IL17A_responder"] = "goldenrod"  # red AE
+    signatures["IL13_IFNG_responder"] = "firebrick"  # orange LICHEN
+    signatures["IL13_IL17A_responder"] = "lightcoral"  # red AE
+    signatures["IL17A_IFNG_responder"] = "royalblue"  # orange LICHEN
+    signatures["IL17A_IL13_responder"] = "blueviolet"  # red AE
+
+    return signatures
