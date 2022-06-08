@@ -34,14 +34,12 @@ def save_genes(genes, output_path, title):
     df.to_excel(os.path.join(output_path, "".join([title, '.xlsx'])))
 
 
-def main(save_folder):
+def main(input_path, save_folder):
     today = date.today()
     # create output path
     output_path = os.path.join(save_folder, "Pan_ncISDgenes", str(today))
     os.makedirs(output_path, exist_ok=True)
 
-    input_path = os.path.join(save_folder, "output", "Figure_3B", str(today),
-                              "spatial", "Whole_T_cell_matrix__cdr_patient_annotation_cyto")
     df_il17a = load_files(os.path.join(input_path, "IL17A", "IL17A_glmGamPoi_DGE.csv"))
     df_il13 = load_files(os.path.join(input_path, "IL13", "IL13_glmGamPoi_DGE.csv"))
     df_ifng = load_files(os.path.join(input_path, "IFNG", "IFNG_glmGamPoi_DGE.csv"))

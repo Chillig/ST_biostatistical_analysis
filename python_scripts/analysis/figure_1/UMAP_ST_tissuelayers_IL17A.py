@@ -8,7 +8,7 @@
 """
 from python_scripts.utils import gene_lists, add_observables, get_condition_spots
 
-#import libraries
+# import libraries
 import scanpy as sc
 import numpy as np
 import os
@@ -127,13 +127,19 @@ def get_celltypes_data(adata, genes):
     return adata
 
 
-def main(save_folder, spatial_adata):
-    """Read out data for ST DGE Analysis and create UMAPs for Figure 3A
+def main(save_folder: str, spatial_adata, spatial_cluster_label: str = 'tissue_layer'):
+    """ Read out data for ST DGE Analysis and create UMAPs for Figure 1B
 
-    :return:
+    Parameters
+    ----------
+    save_folder : str
+    spatial_adata : annData
+    spatial_cluster_label : str
+
+    Returns
+    -------
+
     """
-    spatial_cluster_label = 'tissue_type'
-
     # load data
     cytokines, allinone, cytoresps_dict = gene_lists.get_publication_cyto_resps()
 
@@ -156,6 +162,7 @@ if __name__ == '__main__':
     os.makedirs(output_path, exist_ok=True)
 
     # Load data:
-    pp_st_adata = sc.read(os.path.join("..", "..", "..", 'adata_storage', '2020-12-04_Visium_Data_QC_BC_clustered.h5'))
+    pp_st_adata = sc.read(
+        os.path.join("..", "..", "..", 'adata_storage', '2022-04-08', 'st_QC_normed_BC_project_PsoADLP.h5'))
 
     main(save_folder=output_path, spatial_adata=pp_st_adata)

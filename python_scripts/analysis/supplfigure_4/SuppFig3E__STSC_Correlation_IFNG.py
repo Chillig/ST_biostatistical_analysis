@@ -21,7 +21,7 @@ from matplotlib.patches import Rectangle
 import plotly.graph_objects as go
 
 dotsize = 9
-fig_size = (8, 8)
+fig_size = (10, 8)
 xy_fontsize = 16
 xy_ticks = 12
 title_fontsize = 18
@@ -324,10 +324,10 @@ def plot_signed_ppvalues(df_st, df_sc, signature_gene, label_genes, dge__method,
                     fontstyle='italic', fontsize=text_fontsize)
     else:
         if zoom:
-            ax.set_ylim([-18, 25])
-            ax.set_xlim([-18, 48])
-            ax.text(43, log10_cut + 0.2, "5% FDR", size=8, color='k', zorder=3)
-            ax.text(log10_cut + 0.2, np.amin(df_sc[value].values), "5% FDR", size=8, color='k', zorder=3)
+            ax.set_ylim([-20, 25])
+            ax.set_xlim([-25, 65])
+            ax.text(58, log10_cut + 0.2, "5% FDR", size=8, color='k', zorder=3)
+            ax.text(log10_cut + 0.2, -19, "5% FDR", size=8, color='k', zorder=3)
         else:
             ax.text(np.amax(df_st[value].values) - 4, log10_cut + 0.5, "5% FDR", size=8, color='k', zorder=3)
             ax.text(log10_cut + 0.2, np.amin(df_sc[value].values) - 0.5, "5% FDR", size=8, color='k', zorder=3)
@@ -338,12 +338,17 @@ def plot_signed_ppvalues(df_st, df_sc, signature_gene, label_genes, dge__method,
                 fontstyle='italic', fontsize=text_fontsize)
 
     # Add legend, Labels Driver and Responder genes
+    # Shrink current axis by 20%
+    box = ax.get_position()
+    ax.set_position([box.x0, box.y0, box.width * 0.6, box.height])
     # create blank rectangle
     driver_rect = Rectangle((0, 0), 1, 1, fc="w", fill=True, edgecolor='w', linewidth=0)
     resp_rect = Rectangle((0, 0), 1, 1, fc="w", fill=False, edgecolor='w', linewidth=0)
+    # Put a legend to the right of the current axis
     leg = ax.legend([ax_sig, ax_notsig_noteffectsize, ax_notsig, driver_rect, resp_rect],
                     (r"p-value $\leq$ 0.05 and |log$_2$FC| $\geq$ 1", r"p-value $<$ 0.05 and |log$_2$FC| $<$ 1",
-                     "p-value $>$ 0.05", "Driver genes", "Responder genes"))
+                     "p-value $>$ 0.05", "Driver genes", "Responder genes"),
+                    loc='center left', bbox_to_anchor=(1, 0.5))
     leg_color = ['k', 'k', 'k', 'purple', 'mediumblue']
     for ind, text in enumerate(leg.get_texts()):
         plt.setp(text, color=leg_color[ind])
@@ -354,7 +359,7 @@ def plot_signed_ppvalues(df_st, df_sc, signature_gene, label_genes, dge__method,
     ax.spines['bottom'].set_visible(True)
     ax.spines['left'].set_visible(True)
 
-    plt.tight_layout()
+    # plt.tight_layout()
 
     if zoom:
         fig.savefig(os.path.join(save_folder, "_".join(["_".join(['Zoomed', signature_gene, value, "plot"]),

@@ -137,19 +137,26 @@ def get_tissueregions(adata, tissue_label):
     return adata
 
 
-def main(save_folder, spatial_adata):
-    """Read out data for ST and scRNA-seq DGE Analysis and create UMAPs for Figure 3A/E and Suppl. Figures 3
+def main(save_folder, spatial_adata, spatial_cluster_label: str = 'tissue_layer'):
+    """ Read out data for ST and scRNA-seq DGE Analysis and create UMAPs for Figure 3A/E and Suppl. Figures 3
 
-    :return:
+    Parameters
+    ----------
+    save_folder
+    spatial_adata
+    spatial_cluster_label
+
+    Returns
+    -------
+
     """
-    spatial_cluster_label = 'tissue_type'
 
     # load data
     cytokines, allinone, cytoresps_dict = gene_lists.get_publication_cyto_resps()
     leukocyte_markers = gene_lists.leukocyte_markers()
 
     # remove all spots without a tissue label
-    spatial_adata = spatial_adata[spatial_adata.obs[spatial_cluster_label] != 'Unknown']
+    spatial_adata = spatial_adata[spatial_adata.obs[spatial_cluster_label] != 'Unknown'].copy()
 
     # 1. get observable for cytokine genes
     spatial_adata, obs_name = add_observables.convert_variable_to_observable(
@@ -173,8 +180,8 @@ def main(save_folder, spatial_adata):
                             save_folder=save_folder)
 
     # 4. Read out all leukocyte positive spots
-    include_cytokine_dp(adata=adata_leukocytes, cytokines=cytokines, save_folder=save_folder,
-                        label=spatial_cluster_label, key='ST', paper_figure='3AC_Leukocytes')
+    # include_cytokine_dp(adata=adata_leukocytes, cytokines=cytokines, save_folder=save_folder,
+    #                     label=spatial_cluster_label, key='ST', paper_figure='3AC_Leukocytes')
 
 
 if __name__ == '__main__':
