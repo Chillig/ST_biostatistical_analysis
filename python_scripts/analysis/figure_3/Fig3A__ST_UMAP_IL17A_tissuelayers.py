@@ -59,7 +59,7 @@ def plot_tissueregions_cyto(adata, obs_name, title, save_folder, gene_colors=Non
             if gene in unique_genes:
                 gene_colors.append(signatures[gene])
 
-    cyto_adata = adata[adata.obs[obs_name] != "Others"]
+    cyto_adata = adata[adata.obs[obs_name] != "Others"].copy()
 
     fig, ax = plt.subplots(figsize=figure_size)
     sc.pl.umap(adata, color='tissue_regions', use_raw=True, ax=ax, wspace=0.4, show=False,
@@ -135,7 +135,7 @@ def get_tissueregions(adata, tissue_label):
     """
     m_epidermis = np.array(
         adata.obs[tissue_label].values)[:, np.newaxis] == np.array(
-        ['upper EPIDERMIS', 'basal EPIDERMIS', 'middle EPIDERMIS', 'INTERFACE'])[np.newaxis, :]
+        ['upper EPIDERMIS', 'basal EPIDERMIS', 'middle EPIDERMIS', 'JUNCTION'])[np.newaxis, :]
     m_epidermis = m_epidermis.sum(axis=1).astype(bool)
 
     m_dermis = np.array(
@@ -163,7 +163,7 @@ def main(save_folder, spatial_adata):
     leukocyte_markers = gene_lists.leukocyte_markers()
 
     # remove all spots without a tissue label
-    spatial_adata = spatial_adata[spatial_adata.obs[spatial_cluster_label] != 'Unknown']
+    spatial_adata = spatial_adata[spatial_adata.obs[spatial_cluster_label] != 'Unknown'].copy()
 
     # 1. get observable for cytokine genes
     spatial_adata, obs_name = add_observables.convert_variable_to_observable(
@@ -196,6 +196,7 @@ if __name__ == '__main__':
     os.makedirs(output_path, exist_ok=True)
 
     # Load data:
-    pp_st_adata = sc.read(os.path.join("..", "..", "..", 'adata_storage', '2020-12-04_Visium_Data_QC_BC_clustered.h5'))
+    pp_st_adata = sc.read(
+        os.path.join("..", "..", "..", 'adata_storage', '2022-04-08', 'st_QC_normed_BC_project_PsoADLP.h5'))
 
     main(save_folder=output_path, spatial_adata=pp_st_adata)
