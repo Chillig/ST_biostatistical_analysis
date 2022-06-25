@@ -70,27 +70,28 @@ def plot_clusters_counts(sup_adata, cyto, save_folder, obs_label, obs_counts):
             biopsy_type_temp = " & ".join(test_counts.obs['biopsy_type'].cat.categories)
             library_id_temp = "_".join(test_counts.obs['library_id'].cat.categories[0].split('_')[:-1])
 
-            fig, ax = plt.subplots(figsize=fig_size)
+            fig, ax = plt.subplots(figsize=fig_size, ncols=1, constrained_layout=True,
+                                   gridspec_kw={'width_ratios': [10]})
             # crop_coord=crops_img[ind]
             sc.pl.spatial(temp_adata, size=1.3, img_key=img_key, library_id=library_id_temp,
                           color=obs_label, groups=cell_types_unique, zorder=1, show=False,
                           legend_loc='left margin', ax=ax, alpha_img=1, crop_coord=crops_img[ind],
-                          palette=list_colors)
+                          palette=list_colors, title='')
             if cyto == "IL17A":
                 sc.pl.spatial(test_counts, size=size, img_key=img_key, library_id=library_id_temp,
-                              color=obs_counts, zorder=2, alpha_img=0, show=False,
+                              color=obs_counts, zorder=2, alpha_img=0, show=False, title='',
                               ax=ax, vmin=0, vmax=800, crop_coord=crops_img[ind])
             elif cyto == "IFNG":
                 sc.pl.spatial(test_counts, size=size, img_key=img_key, library_id=library_id_temp,
-                              color=obs_counts, zorder=2, alpha_img=0, show=False,
+                              color=obs_counts, zorder=2, alpha_img=0, show=False, title='',
                               ax=ax, vmin=0, vmax=100, crop_coord=crops_img[ind])
             elif cyto == "IL13":
                 sc.pl.spatial(test_counts, size=size, img_key=img_key, library_id=library_id_temp,
-                              color=obs_counts, zorder=2, alpha_img=0, show=False,
+                              color=obs_counts, zorder=2, alpha_img=0, show=False, title='',
                               ax=ax, vmin=0, vmax=50, crop_coord=crops_img[ind])
             else:
                 sc.pl.spatial(test_counts, size=size, img_key=img_key, library_id=library_id_temp,
-                              color=obs_counts, zorder=2, alpha_img=0, show=False,
+                              color=obs_counts, zorder=2, alpha_img=0, show=False, title='',
                               ax=ax, vmin=0, vmax=100, crop_coord=crops_img[ind])
             # Invert both axis due to flipped and mirrored images
             ax.invert_xaxis()
@@ -99,14 +100,14 @@ def plot_clusters_counts(sup_adata, cyto, save_folder, obs_label, obs_counts):
             # Colorbar label
             cbar_ax = fig.axes[-1]
             cbar_ax.get_yaxis().labelpad = 15
-            cbar_ax.set_ylabel('UMI-counts', rotation=90, fontsize=legend_fontsize)
+            cbar_ax.get_yaxis().spacing = 'proportional'
+            cbar_ax.get_yaxis().format = '%1i'
+            cbar_ax.set_ylabel('UMI-counts / spot', rotation=90, fontsize=legend_fontsize)
             cbar_ax.tick_params(labelsize=xy_ticks)
 
             # Legend: outside of axis
-            leg = ax.legend(bbox_to_anchor=(2, 0.5), ncol=1, fontsize=legend_fontsize)
+            leg = ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.05), ncol=3, fontsize=legend_fontsize)
             leg.get_frame().set_linewidth(0.0)
-
-            plt.tight_layout()
 
             # if img_key == "lowres":
             # TODO .pdf still blurry, temp fix with dpi=500
