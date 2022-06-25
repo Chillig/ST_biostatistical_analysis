@@ -105,6 +105,9 @@ def add_columns_genes(adata: anndata, genes: str, label: str, count_threshold: i
     -------
 
     """
+    # count threshold need to be at least 1, otherwise gene was not measured
+    if count_threshold < 1:
+        count_threshold = 1
 
     # name columns
     obs_counts = "_".join([label, 'counts'])
