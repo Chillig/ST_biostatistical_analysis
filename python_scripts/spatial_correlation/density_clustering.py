@@ -486,6 +486,15 @@ def data_preparation(adata, tissue_types, epidermis_layers, conditional_genes, c
         resp_label.append("_".join([cyto_resps, "Responders"]))
         adata = tools.add_columns_genes(adata=adata, genes=conditionalgenes_responders[cyto_resps],
                                         label=resp_label[ind], count_threshold=1)
+        # Calculate new cut-off using non lesion as reference
+        max_nl_counts_cytokines[resp_label[ind]] = adata.obs[
+            '{}_counts'.format(resp_label[ind])][adata.obs['biopsy_type'] == 'NON LESIONAL'].max()
+        # Overwrite detection of expression of cytokines with max detected cyto counts in non lesion skin
+        adata = tools.add_columns_genes(
+            adata=adata, genes=conditionalgenes_responders[cyto_resps], label=resp_label[ind],
+            count_threshold=max_nl_counts_cytokines[resp_label[ind]])
+
+    print(max_nl_counts_cytokines)
 
     return adata
 
