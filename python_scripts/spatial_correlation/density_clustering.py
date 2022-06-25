@@ -412,7 +412,7 @@ def run_spatialcorrelation(adata, tissue_types, cytokine_responders, save_folder
         refine_responder_genes.rank_cyto_vs_others_genes(adata, cytokine_responders, save_folder, radius=radius)
 
     # Get composition of responder counts per cytokine and per disease
-    plot_compositions.main(df_counts=df_counts, cytokine_responders=cytokine_responders, save_folder=save_folder)
+    # plot_compositions.main(df_counts=df_counts, cytokine_responders=cytokine_responders, save_folder=save_folder)
 
     # 4. Plot correlation
     # Weighted by transcripts
