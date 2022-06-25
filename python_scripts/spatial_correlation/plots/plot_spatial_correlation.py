@@ -33,18 +33,20 @@ size_multiplier = 36
 
 
 def get_correlation_stats(df, resp_name, cyto, weight_name, dict_corr):
+    df_wo_nan = df.dropna()
+
     for method in ['pearson', 'spearman']:
         if method == 'pearson':
             # Weighted Pearson Correlation (WPC)
             correlation = corr_stats.weighted_corr(
-                x=df[resp_name], y=df[cyto], w=df[weight_name])
+                x=df_wo_nan[resp_name], y=df_wo_nan[cyto], w=df_wo_nan[weight_name])
         else:
             # Weighted Spearman Correlation (WSC)
             correlation = corr_stats.calculate_weighted_spearman(
-                x=df[resp_name], y=df[cyto], w=df[weight_name])
+                x=df_wo_nan[resp_name], y=df_wo_nan[cyto], w=df_wo_nan[weight_name])
         # 1.3 Calculate p-value
         p_w = corr_stats.apply_statstest(
-            df_highcounts=df[resp_name], df_lowcounts=df[cyto], correlation_value=correlation)
+            df_highcounts=df_wo_nan[resp_name], df_lowcounts=df_wo_nan[cyto], correlation_value=correlation)
 
         # Save correlation value and p-value in dictionary
         dict_corr[method].append((cyto, correlation, p_w))
@@ -513,7 +515,7 @@ def plot__stwc_tissuelayers(df_counts, cytokine_responders, save_folder, distanc
         # weighted: plotting the confidence intervals of 1 sigma
         # ax.fill_between(xy_vals[resp_name], bound_lower, bound_upper, color='orange', alpha=0.1)
         # Plot unweighted points
-        ax.scatter(data=temp_df, x=resp_name, y=cyto, c=cyto_colorseq, s='Cluster size',
+        ax.scatter(data=temp_df, x=resp_name, y=cyto, c=cyto_colorseq, s='Cluster size', alpha=0.5,
                    cmap=ListedColormap(tissuecomb_colors.colors[np.unique(cyto_colorseq)]), zorder=2)
 
         # Axis params
@@ -539,6 +541,8 @@ def plot__stwc_tissuelayers(df_counts, cytokine_responders, save_folder, distanc
             ax.set_yticks(np.arange(0, temp_df[cyto].max() + increased_ylimit, 5))
         elif (temp_df[cyto].max() >= 50) & (temp_df[cyto].max() < 100):
             ax.set_yticks(np.arange(0, temp_df[cyto].max() + increased_ylimit, 10))
+        elif (temp_df[cyto].max() >= 100) & (temp_df[cyto].max() < 1000):
+            ax.set_yticks(np.arange(0, temp_df[cyto].max() + increased_ylimit, 100))
         else:
             ax.set_yticks(np.arange(0, temp_df[cyto].max() + increased_ylimit, 20))
 

@@ -472,12 +472,20 @@ def data_preparation(adata, tissue_types, epidermis_layers, conditional_genes, c
     # - distance between spots: 100 µm, spot diameter: 55 µm
     # - better: use index array
     resp_label = []
+    max_nl_counts_cytokines = dict()
     for cyto in conditional_genes:
-        adata = tools.add_columns_genes(adata=adata, genes=cyto, label=cyto)
+        adata = tools.add_columns_genes(adata=adata, genes=cyto, label=cyto, count_threshold=1)
+        # Calculate new cut-off using non lesion as reference
+        max_nl_counts_cytokines[cyto] = adata.obs[
+            '{}_counts'.format(cyto)][adata.obs['biopsy_type'] == 'NON LESIONAL'].max()
+        # Overwrite detection of expression of cytokines with max detected cyto counts in non lesion skin
+        adata = tools.add_columns_genes(adata=adata, genes=cyto, label=cyto,
+                                        count_threshold=max_nl_counts_cytokines[cyto])
+
     for ind, cyto_resps in enumerate(conditionalgenes_responders.keys()):
         resp_label.append("_".join([cyto_resps, "Responders"]))
         adata = tools.add_columns_genes(adata=adata, genes=conditionalgenes_responders[cyto_resps],
-                                        label=resp_label[ind])
+                                        label=resp_label[ind], count_threshold=1)
 
     return adata
 

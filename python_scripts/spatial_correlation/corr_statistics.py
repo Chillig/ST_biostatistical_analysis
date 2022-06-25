@@ -159,7 +159,7 @@ def create_ls_model(x, y, w=None, const=False):
     if const:
         x = sm.add_constant(x, prepend=False)
     if w is None:
-        est = sm.OLS(y, x)
+        est = sm.OLS(y, x, missing='drop')
     else:
         est = sm.WLS(y, x, w)
 
