@@ -17,6 +17,7 @@
 *.png
 *.txt
 *.html
+.log
 
 # Database files
 *.sql
