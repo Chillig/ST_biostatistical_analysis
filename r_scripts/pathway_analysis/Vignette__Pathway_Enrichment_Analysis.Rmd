@@ -52,8 +52,8 @@ dataset.type <- 'Leukocytes'
 # Sequencing technique
 seq.technique <- "ST"
 # Comparison
-cytokine <- 'IL17A'
-comparison <- 'IL17A_vs_Others'
+cytokine <- 'IL13'
+comparison <- paste(cytokine, '_vs_Others', sep="")
 plot_cytokine <- TRUE
 
 # Used design function:
@@ -80,10 +80,10 @@ multitest.method <-  "BH"
 ```
 ```{r}
 # Plot Parameters
-show_dotplot_categories <- 15
+show_dotplot_categories <- 5
 
 width_img <- 16
-height_img <- 8
+height_img <- 12
 ```
 Create output directory.
 ```{r}
@@ -232,7 +232,46 @@ if (!is.null(nrow(reactome.ref)))
                         method = 'REACTOME', 
                         output.dir = output.dir,
                         title = "Cytopos_REACTOME_dotplot.pdf", 
-                        width = width_img, height = height_img)
+                        width = 6, height = 4)
+    
+    
+    # TODO workflow figure ..
+    # keep only enriched pathways p.adjust <= 0.1
+    df_sebg_nl <- reactome.ref
+    df_sebg_nl <- df_sebg_nl[df_sebg_nl$p.adjust <= p.value, ]
+    # sort by p.adj
+    df_sebg_nl <- df_sebg_nl[order(df_sebg_nl$p.adjust),]
+    
+    
+    df_sebg_nl$GeneRatio <- as.numeric(sapply(df_sebg_nl$GeneRatio, function(x) eval(parse(text=x))))
+    
+    # create interval for count
+    df_sebg_nl$Count <- as.numeric(df_sebg_nl$Count)
+    breaks <- seq(min(df_sebg_nl$Count), max(df_sebg_nl$Count), 10)
+    df_sebg_nl$Counts <- cut(df_sebg_nl$Count, c(breaks, Inf), labels = breaks, include.lowest = TRUE)
+    
+    
+    # Top 15
+    df_sebg_nl <- df_sebg_nl[c(1:15), ]
+    
+    # sort by GeneRatio
+    df_sebg_nl <- df_sebg_nl[order(df_sebg_nl$p.adjust, decreasing = FALSE), ]
+    
+    # Workaround to show categoires not in aplhabetical order
+    df_sebg_nl$Description <- factor(df_sebg_nl$Description, levels=unique(df_sebg_nl$Description))
+    df_sebg_nl$Description <- factor(df_sebg_nl$Description, levels=df_sebg_nl$Description)
+    # SHow only top pathways
+    df_sebg_nl_workflow <- df_sebg_nl[c(1:show_dotplot_categories), ]
+    
+    pdf(file = file.path(output.dir, "Cytopos_REACTOME_barplot.pdf"), width = 8, height = 6)
+    p1 <- ggplot(df_sebg_nl_workflow, aes(Description, GeneRatio, fill = p.adjust)) +
+      geom_bar(stat = "identity", position = "dodge") +
+      ggplot2::theme_minimal() +
+      coord_flip() + theme(text = element_text(size=24), axis.title.y=element_blank()) +
+      scale_x_discrete(limits=rev) +
+      scale_fill_gradient(low="blue", high="red", trans = 'reverse') 
+    print(p1)
+    dev.off()
   }
 }
 
@@ -257,7 +296,7 @@ if (!is.null(nrow(reactome.ctrl)))
     fig.pathway.dotplot(pathway_res = reactome.ctrl,
                         showCategories = show_dotplot_categories,
                         method = 'REACTOME',
-                        width = width_img, height = height_img,
+                        width = 6, height = 4,
                         output.dir = output.dir, 
                         title = "Cytoneg_REACTOME_dotplot.pdf")
   }
