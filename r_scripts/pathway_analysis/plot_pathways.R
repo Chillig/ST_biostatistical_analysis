@@ -18,6 +18,13 @@ fig.pathways.REACTOME <- function(reactome_res, entrezid_log2fc, showCategories,
     {
       showCategories = nrow(reactome_res)
     }
+    
+    geneIDs <- reactome_res@result[seq(1, showCategories), 'geneID']
+    geneIDs <- paste(geneIDs, collapse = '/')
+    geneIDs <- strsplit(geneIDs, split = "/")[[1]]
+    geneIDs <- unique(geneIDs)
+    n <- length(geneIDs)
+    sorted.log2fc <- sort(entrezid_log2fc[geneIDs], partial=n-1)[n-1]
   } else 
   {
     # get intersection Pathways which are in enrichObject and in the user provided Pathway list
@@ -26,6 +33,15 @@ fig.pathways.REACTOME <- function(reactome_res, entrezid_log2fc, showCategories,
     geneIDs <- paste(geneIDs, collapse = '/')
     geneIDs <- strsplit(geneIDs, split = "/")[[1]]
     geneIDs <- unique(geneIDs)
+    
+    # Only for visualisation: set highest log2FC to second highest value 
+    n <- length(geneIDs)
+    sorted.log2fc <- sort(entrezid_log2fc[geneIDs], partial=n-1)[n-1]
+    # !Only for the plot!: set log2FC for signature cytokine to second highest value 
+    if (sig.cytokine %in% names(entrezid_log2fc)) 
+    {
+      entrezid_log2fc[sig.cytokine] <- sorted.log2fc 
+    }
   }
   
   if (all(entrezid_log2fc) < 0) 
@@ -39,14 +55,6 @@ fig.pathways.REACTOME <- function(reactome_res, entrezid_log2fc, showCategories,
     high = 'red'
   }
 
-  # Only for visualisation: set highest log2FC to second highest value 
-  n <- length(geneIDs)
-  sorted.log2fc <- sort(entrezid_log2fc[geneIDs], partial=n-1)[n-1]
-  # !Only for the plot!: set log2FC for signature cytokine to second highest value 
-  if (sig.cytokine %in% names(entrezid_log2fc)) 
-  {
-    entrezid_log2fc[sig.cytokine] <- sorted.log2fc 
-  }
   
   pdf(file = file.path(output.dir, title), width = width, height = height)
   p1 = enrichplot::cnetplot(reactome_res, showCategory = showCategories, 
@@ -84,8 +92,7 @@ fig.pathway.dotplot <- function(pathway_res, showCategories, method, title,
   } 
   
   pdf(file = file.path(output.dir, title), width = width, height = height)
-  p1 = enrichplot::dotplot(pathway_res, showCategory = showCategories, color='p.adjust') + 
-    ggtitle(paste(method, ": Pathway Enrichment Analysis", sep = " "))
+  p1 = enrichplot::dotplot(pathway_res, showCategory = showCategories, color='p.adjust') 
   cowplot::plot_grid(p1, ncol = 1, nrow = 1)
   print(p1)
   dev.off()
