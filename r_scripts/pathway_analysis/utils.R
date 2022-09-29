@@ -57,9 +57,10 @@ do_rank_genes <- function(df.dge_results)
 
 get_significantgenes <- function(df.dge_results, p_value, lfc_factor, op) 
 {
+  # Using p-adj values for cut-off
   # II. Get significantly differentially expressed genes
-  df.sig <- df.dge_results[df.dge_results$pval < p_value & 
-                             !is.na(df.dge_results$pval) & 
+  df.sig <- df.dge_results[df.dge_results$padj < p_value & 
+                             !is.na(df.dge_results$padj) & 
                              op(df.dge_results$log2fc, lfc_factor), ]
   degenes.sig <- df.sig$entrezid
   degenes.sig <- as.character(na.exclude(degenes.sig))       
