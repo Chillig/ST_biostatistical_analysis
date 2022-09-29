@@ -14,7 +14,6 @@ from python_scripts.utils import gene_lists
 import os
 from datetime import date
 import scanpy as sc
-import numpy as np
 
 
 def main(save_folder: str, adata, radius: [int, list], cond_genes: list, genes_resps: dict,
@@ -24,12 +23,12 @@ def main(save_folder: str, adata, radius: [int, list], cond_genes: list, genes_r
     epidermis_layers = ['upper EPIDERMIS', 'middle EPIDERMIS', 'basal EPIDERMIS']
     # radius = list(np.arange(0, 6, 1))  # 1 or list [1, 2, 3, ..]
 
-    counts_dict = density_clustering.main(
+    counts_dict, df_stats_responders_in_vs_outlesion_sdc, df_stats_cytokines_responders_in_sdc = density_clustering.main(
         adata=adata, save_folder=save_folder, tissue_types=tissue_layers, epidermis_layers=epidermis_layers,
         radii=radius, get_plots=get_plots, corr_method=corr_method, conditional_genes=cond_genes,
         conditionalgenes_responders=genes_resps, find_responders=find_responders)
 
-    return counts_dict
+    return counts_dict, df_stats_responders_in_vs_outlesion_sdc, df_stats_cytokines_responders_in_sdc
 
 
 if __name__ == '__main__':
@@ -48,4 +47,4 @@ if __name__ == '__main__':
     conditional_genes, _, conditionalgenes_responders = gene_lists.get_publication_cyto_resps()
 
     main(save_folder=savepath, adata=unpp_st_adata, cond_genes=conditional_genes,
-         genes_resps=conditionalgenes_responders, radius=1)
+         genes_resps=conditionalgenes_responders, radius=1, get_plots=True)
