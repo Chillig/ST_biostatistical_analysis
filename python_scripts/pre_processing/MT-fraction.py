@@ -139,8 +139,8 @@ def density_estimation(m1, m2):
 
 
 def main(save_folder):
-    adata = sc.read('/Users/christina.hillig/PycharmProjects/ST_Immune_publication/Publication_analysis/adata_storage/2021-07-29/Spatial Transcriptomics_unpp.h5')
-
+    # adata = sc.read('/Users/christina.hillig/PycharmProjects/ST_Immune_publication/Publication_analysis/adata_storage/2021-07-29/Spatial Transcriptomics_unpp.h5')
+    adata = sc.read('/Users/christina.hillig/PycharmProjects/ST_Immune_publication/Publication_analysis/adata_storage/2022-04-08/Spatial Transcriptomics_unpp_cleaned.h5')
     adata = calculate_ncounts_ngenes(adata=adata)
 
     # remove zero count spots ..
@@ -150,11 +150,12 @@ def main(save_folder):
     _, _, cyto_responders = gene_lists.get_publication_cyto_resps()
 
     # counts of cytokine (cyto_resps)
-    adata = tools.add_columns_genes(adata=adata, genes=list(cyto_responders.keys()), label='cytokines')
+    cytospot_label = 'cytokine+ spot'
+    adata = tools.add_columns_genes(adata=adata, genes=list(cyto_responders.keys()), label=cytospot_label)
 
     mask_allcuts = (adata.obs['n_counts'] < 50) | (adata.obs['mt_frac'] > 0.25) | (adata.obs['n_genes'] < 30)
     adata_cutted = adata[mask_allcuts].copy()
-    number_cytokine_removed = len(np.where(adata_cutted.obs['cytokines_label'] == 'cytokines')[0])
+    number_cytokine_removed = len(np.where(adata_cutted.obs['{}_label'.format(cytospot_label)] == 'cytokines')[0])
     print("Number of Cytokine positive spots which get filtered out by using our Threshold "
           "n_counts > 50, MT-threshold < 25%, and n_genes > 30: ", number_cytokine_removed)
 
@@ -176,11 +177,11 @@ def main(save_folder):
     ax[0].scatter(adata[mask].obs['n_counts'], adata[mask].obs['mt_frac'], c='grey', s=6, alpha=0.3, edgecolors='none',
                   label='filtered by n_counts < 50')
     # Highlight cyto+ spots
-    mask = adata.obs['cytokines_counts'] > 0
+    mask = adata.obs['{}_counts'.format(cytospot_label)] > 0
     ax[0].scatter(adata[mask].obs['n_counts'], adata[mask].obs['mt_frac'], c='darkorange', s=6, alpha=1,
-                  edgecolors='none', label='cytokines')
+                  edgecolors='none', label=cytospot_label)
     # Highlight cyto+ spots which would be removed by filtering n_counts
-    mask_cyto_removed = (adata.obs['cytokines_counts'] > 0) & (adata.obs['n_counts'] < 50)
+    mask_cyto_removed = (adata.obs['{}_counts'.format(cytospot_label)] > 0) & (adata.obs['n_counts'] < 50)
     ax[0].scatter(adata[mask_cyto_removed].obs['n_counts'], adata[mask_cyto_removed].obs['mt_frac'],
                   s=4, alpha=1, edgecolors='grey', facecolors='none', linewidth=1)
 
@@ -206,11 +207,11 @@ def main(save_folder):
     ax[1].scatter(adata[mask].obs['n_genes'], adata[mask].obs['mt_frac'], c='grey', s=4, alpha=0.3, edgecolors='none',
                   label='filtered by n_genes < 30')
     # Highlight cyto+ spots
-    mask_cyto = adata.obs['cytokines_counts'] > 0
+    mask_cyto = adata.obs['{}_counts'.format(cytospot_label)] > 0
     ax[1].scatter(adata[mask_cyto].obs['n_genes'], adata[mask_cyto].obs['mt_frac'], c='darkorange', s=6, alpha=1,
-                  edgecolors='none', label='cytokines')
+                  edgecolors='none', label=cytospot_label)
     # Highlight cyto+ spots which would be removed
-    mask_cyto_removed = (adata.obs['cytokines_counts'] > 0) & (adata.obs['n_genes'] < 30)
+    mask_cyto_removed = (adata.obs['{}_counts'.format(cytospot_label)] > 0) & (adata.obs['n_genes'] < 30)
     ax[1].scatter(adata[mask_cyto_removed].obs['n_genes'], adata[mask_cyto_removed].obs['mt_frac'],
                   s=4, alpha=1, edgecolors='grey', facecolors='none', linewidth=1)
     ax[1].axhline(y=0.25, color='darkred', linestyle='--')

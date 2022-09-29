@@ -227,6 +227,8 @@ def main(configs, adata, save_folder):
     else:
         dataset_type = "sc"
 
+    adata = adata[adata.obs['DISEASE'].str.contains('Pso|AD|PRP')].copy()
+
     # print info about sample 1
     print("\nDataset {} ".format(dataset_type))
     print("Shape of filtered data set: ", adata.shape)
@@ -463,7 +465,6 @@ if __name__ == '__main__':
         # 1. Remove all samples with no SAMPLE annotation (0)
         m_unkown_samples = (unpp_filtered_adata.obs['SAMPLE'] == 0) | (unpp_filtered_adata.obs['SAMPLE'] == '0')
         unpp_filtered_adata = unpp_filtered_adata[~m_unkown_samples].copy()  # -> removed 9746 spots -> 83627 left
-        # TODO with Alex new sample annotations: only 81705 spots left .. -> check with him
 
         # 2. Add sample ids to sample names
         unpp_filtered_adata.obs['SAMPLE'] = unpp_filtered_adata.obs['SAMPLE'].astype(str)
@@ -517,7 +518,6 @@ if __name__ == '__main__':
             ['patient', 'biopsy_type']].apply(lambda row: '_'.join(row.values.astype(str)), axis=1)
 
         # to get the actual sample id == specimen: combine capture area with patient ID
-        # TODO check with Alex if we really have 100 specimens ..
         unpp_filtered_adata.obs['specimen'] = unpp_filtered_adata.obs['sample'].astype(str)
         unpp_filtered_adata.obs['specimen'] = unpp_filtered_adata.obs[
             ['capture_area', 'patient']].apply(lambda row: '_'.join(row.values.astype(str)), axis=1)
