@@ -237,8 +237,7 @@ def main(save_folder: str, adata_folder: str, input_folder: str):
                          find_responders=True, radius=list(np.arange(0, 5, 1)), cond_genes=t_cell_cytocines,
                          genes_resps=cytokine_responders)
     # 2. Identify DEGs (python) and create Volcano plots (R script)
-    # 3. Identify new responder genes using DEGs from radii 1-5 and rerun density clustering
-    SuppFig8AC__refined_responds.main(unpp_st_adata=unpp_st_adata)
+    # 3. Identify cytokine associated genes using DEGs from optimal radii 4, 3, and 0 for IFNG, IL13 and IL17A
 
     """ Supplemental Tables """
     # Supplemental Table 2

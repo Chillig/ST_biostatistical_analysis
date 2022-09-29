@@ -205,31 +205,52 @@ def plot_venndiagram(r1_genes, r2_genes, r3_genes, cyto, save_folder):
 
 def plot_venn2(set1, set2, save_folder, cyto):
     # Second way
-    fig, ax = plt.subplots(figsize=(6, 6))
-    venn2(subsets=[set1, set2], set_labels=['Experimental', 'Computational'],
+    fig, ax = plt.subplots(figsize=(8, 4))
+    venn2(subsets=[set1, set2], set_labels=['Responder genes', 'SDC derived {}\nassociated genes'.format(cyto)],
           set_colors=('darkorange', 'r'), ax=ax)
     plt.tight_layout()
     fig.savefig(os.path.join(save_folder, 'Keras_vs_Datadriven__{}_VennDiagram.pdf'.format(cyto)))
     plt.close(fig=fig)
 
 
-def main():
-    # Load adata
-    project_folder = os.path.join("..", "..", "..")
-    adata_folder = os.path.join(project_folder, "adata_storage")
-    date_st_unpp = '2022-04-08'  # "2020-10-06" -> "st_adata_P15509_P16357_wo_4_7_unpp.h5"
-    unpp_st_adata = sc.read(os.path.join(adata_folder, date_st_unpp, "Spatial Transcriptomics_unpp_cleaned.h5"))
-    unpp_st_adata = unpp_st_adata[unpp_st_adata.obs['DISEASE'] != 'PRP'].copy()
+class SpotRadius:
+    def __init__(self, cytokine, log2fc_cutoff, padj_cutoff, input_dir, radius):
+        self.padj_cutoff = padj_cutoff
+        self.log2fc_cutoff = log2fc_cutoff
+        self.input_dir = input_dir
+        self.cytokine = cytokine
+        self.radius = radius
+        self.df = pd.DataFrame()
 
-    input_dir = '/Volumes/CH__data/ST_immune_publication/Revision/data/DGE_cyto_vs_others_Spearman'
-    output_dir = '/Volumes/CH__data/ST_immune_publication/Revision/FigS10'
+    def get_upregulated_genes(self):
+        # read data
+        self.df = pd.read_csv(
+            os.path.join(self.input_dir, self.radius, '{}_in_sdcc_wilcoxon__radius{}.csv'.format(
+                self.cytokine, self.radius)))
+
+        # Find up-regulated genes in cyto+
+        r_up_genes = list(self.df.loc[(self.df['1_logfoldchanges'] > self.log2fc_cutoff) &
+                                      (self.df['1_pvals_adj'] < self.padj_cutoff), '1_names'].values)
+
+        # drop signature cytokine
+        r_up_genes.remove(self.cytokine)
+
+        return r_up_genes
+
+
+def main(unpp_st_adata):
+    # input_dir = '/Volumes/CH__data/ST_immune_publication/Revision/data/DGE_cyto_vs_others_Spearman'
+    input_dir = '/Users/christina.hillig/PycharmProjects/ST_Immune_publication/Publication_analysis/output/reviewers/Figure_S8/2022-08-10'
+    output_dir = '/Users/christina.hillig/PycharmProjects/ST_Immune_publication/Publication_analysis/output/reviewers/Figure_S8/2022-08-10'
 
     # Adjust Cut-offs -> make more stringent than log2fc > 1 ?
     log2fc_cutoff = 1.
     padj_cutoff = 0.001
 
     # create empty dict
-    dict_newresponders = dict()
+    dict_newcytokine_associated_genes = dict()
+    df_cytokine_associated_genes = pd.DataFrame()
+    df_intersection_respondergenes_datadriven_cytokine_associated_genes = pd.DataFrame()
     # Per cytokine
     for cytokine in ['IL17A', 'IFNG', 'IL13']:
         save_folder = os.path.join(
@@ -237,51 +258,69 @@ def main():
         os.makedirs(save_folder, exist_ok=True)
 
         # Load in for radius 1-3 DEGs derived from refine_responder_genes.py and density_clustering
-        df_r1 = pd.read_csv(os.path.join(input_dir, '1', '{}_in_sdcc_wilcoxon__radius1.csv'.format(cytokine)))
-        df_r2 = pd.read_csv(os.path.join(input_dir, '2', '{}_in_sdcc_wilcoxon__radius2.csv'.format(cytokine)))
-        df_r3 = pd.read_csv(os.path.join(input_dir, '3', '{}_in_sdcc_wilcoxon__radius3.csv'.format(cytokine)))
-        df_r4 = pd.read_csv(os.path.join(input_dir, '4', '{}_in_sdcc_wilcoxon__radius4.csv'.format(cytokine)))
-        df_r5 = pd.read_csv(os.path.join(input_dir, '5', '{}_in_sdcc_wilcoxon__radius5.csv'.format(cytokine)))
+        # TODO determine min radius based on optimal radius
+        #  -> add at least two more circles to optimal radius to determine potential responder genes
+        r1_up_genes_obj = SpotRadius(cytokine, log2fc_cutoff, padj_cutoff, input_dir, radius='1')
+        r1_up_genes = r1_up_genes_obj.get_upregulated_genes()
+        r2_up_genes_obj = SpotRadius(cytokine, log2fc_cutoff, padj_cutoff, input_dir, radius='2')
+        r2_up_genes = r2_up_genes_obj.get_upregulated_genes()
+        r3_up_genes_obj = SpotRadius(cytokine, log2fc_cutoff, padj_cutoff, input_dir, radius='3')
+        r3_up_genes = r3_up_genes_obj.get_upregulated_genes()
+        r4_up_genes_obj = SpotRadius(cytokine, log2fc_cutoff, padj_cutoff, input_dir, radius='4')
+        r4_up_genes = r4_up_genes_obj.get_upregulated_genes()
+        r5_up_genes_obj = SpotRadius(cytokine, log2fc_cutoff, padj_cutoff, input_dir, radius='5')
+        r5_up_genes = r5_up_genes_obj.get_upregulated_genes()
 
-        # Find up-regulated genes in cyto+
-        r1_up_genes = list(df_r1.loc[(df_r1['1_logfoldchanges'] > log2fc_cutoff) & (df_r1['1_pvals_adj'] < padj_cutoff),
-                                     '1_names'].values)
-        r2_up_genes = list(df_r2.loc[(df_r1['1_logfoldchanges'] > log2fc_cutoff) & (df_r2['1_pvals_adj'] < padj_cutoff),
-                                     '1_names'].values)
-        r3_up_genes = list(df_r3.loc[(df_r3['1_logfoldchanges'] > log2fc_cutoff) & (df_r3['1_pvals_adj'] < padj_cutoff),
-                                     '1_names'].values)
-        r4_up_genes = list(df_r4.loc[(df_r4['1_logfoldchanges'] > log2fc_cutoff) & (df_r4['1_pvals_adj'] < padj_cutoff),
-                                     '1_names'].values)
-        r5_up_genes = list(df_r5.loc[(df_r5['1_logfoldchanges'] > log2fc_cutoff) & (df_r5['1_pvals_adj'] < padj_cutoff),
-                                     '1_names'].values)
-
-        # drop signature cytokine
-        r1_up_genes.remove(cytokine)
-        r2_up_genes.remove(cytokine)
-        r3_up_genes.remove(cytokine)
-        r4_up_genes.remove(cytokine)
-        r5_up_genes.remove(cytokine)
-
+        # Get intersection genes for VennDiagram
         subset_12 = list(np.intersect1d(r1_up_genes, r2_up_genes))
         intersect = list(np.intersect1d(subset_12, r3_up_genes))
         intersect = list(np.intersect1d(intersect, r4_up_genes))
         intersect = list(np.intersect1d(intersect, r5_up_genes))
 
+        unique_radius5_genes = list(
+            set(r5_up_genes) - set(r1_up_genes) - set(r2_up_genes) - set(r3_up_genes) - set(r4_up_genes))
+
         labels = get_labels([r1_up_genes, r2_up_genes, r3_up_genes, r4_up_genes, r5_up_genes], fill=['number'])
-        venn5(labels, names=['Radius 1', 'Radius 2', 'Radius 3', 'Radius 4', 'Radius 5'],
+        venn5(labels, names=['{}+ spot vs outside Radius 1 spots'.format(cytokine),
+                             '{}+ spot vs outside Radius 2 spots'.format(cytokine),
+                             '{}+ spot vs outside Radius 3 spots'.format(cytokine),
+                             '{}+ spot vs outside Radius 4 spots'.format(cytokine),
+                             '{}+ spot vs outside Radius 5 spots'.format(cytokine)],
               cytokine=cytokine, save_folder=save_folder)
 
         # compare to responder genes
         _, _, cyto_resps = gene_lists.get_publication_cyto_resps()
 
-        print('Intersection with old responder genes:')
-        print(cytokine, np.intersect1d(cyto_resps[cytokine], intersect))
+        # Read out log2fc and padj value
+        df_intersection = r5_up_genes_obj.df[
+            r5_up_genes_obj.df['1_names'].isin(unique_radius5_genes)][['1_names', '1_logfoldchanges', '1_pvals_adj']]
+        df_intersection.columns = df_intersection.columns.str.replace("[1]", cytokine)
+        dict_newcytokine_associated_genes[cytokine] = unique_radius5_genes
+        df_cytokine_associated_genes = pd.concat([df_cytokine_associated_genes, df_intersection], axis=1)
+
+        print('Intersection with DEGs (cyto+ vs cyto-) and literature derived responder genes:')
+        intersection_respondergenes_datadriven_cytokine_associated_genes = np.intersect1d(
+            dict_newcytokine_associated_genes[cytokine], cyto_resps[cytokine])
+        print(cytokine, intersection_respondergenes_datadriven_cytokine_associated_genes)
+        # save
+        df_intersection_respondergenes_datadriven_cytokine_associated_genes_temp = pd.DataFrame(
+            {cytokine: intersection_respondergenes_datadriven_cytokine_associated_genes})
+        df_intersection_respondergenes_datadriven_cytokine_associated_genes = pd.concat(
+            [df_intersection_respondergenes_datadriven_cytokine_associated_genes,
+             df_intersection_respondergenes_datadriven_cytokine_associated_genes_temp], axis=1)
         print('=========================================\n')
 
-        dict_newresponders[cytokine] = intersect
+        # Venndiagram responder new vs keratinocyte experiment
+        plot_venn2(
+            set1=set(cyto_resps[cytokine]), set2=set(dict_newcytokine_associated_genes[cytokine]),
+            save_folder=save_folder, cyto=cytokine)
 
-        # Venndiagarmm responder new vs keratinocyte experiment
-        plot_venn2(set1=set(cyto_resps[cytokine]), set2=set(intersect), save_folder=save_folder, cyto=cytokine)
+    # df_new_respondergenes = pd.DataFrame(dict([(k, pd.Series(v)) for k, v in dict_newresponders.items()]))
+    df_cytokine_associated_genes.to_csv(os.path.join(save_folder, 'Unique_cytokine_related_genes_radius5.csv'))
+    df_cytokine_associated_genes.to_excel(os.path.join(save_folder, 'Unique_cytokine_related_genes_radius5.xlsx'))
+
+    df_intersection_respondergenes_datadriven_cytokine_associated_genes.to_excel(
+        os.path.join(save_folder, 'Intersection_genes_DEGrespondergenes_SDCcytokineassociatedgenes.xlsx'))
 
     # try density clustering with new responder genes..
     # parameter
@@ -293,13 +332,23 @@ def main():
     radius = list(np.arange(0, 10, 1))  # 1 or list [1, 2, 3, ..]
     density_clustering.main(
         adata=unpp_st_adata, save_folder=save_folder, tissue_types=tissue_layers, epidermis_layers=epidermis_layers,
-        radii=radius, corr_method='spearman', get_plots=False, conditional_genes=list(dict_newresponders.keys()),
-        conditionalgenes_responders=dict_newresponders, find_responders=False)
+        radii=radius, corr_method='spearman', get_plots=False,
+        conditional_genes=list(df_cytokine_associated_genes.keys()),
+        conditionalgenes_responders=df_cytokine_associated_genes, find_responders=False)
 
     # TODO Run Fig 4A-C with new responder genes
 
 
 if __name__ == '__main__':
-    main()
+    # Load adata
+    project_folder = os.path.join("..", "..", "..")
+    adata_folder = os.path.join(project_folder, "adata_storage")
+    date_st_unpp = '2022-04-08'  # "2020-10-06" -> "st_adata_P15509_P16357_wo_4_7_unpp.h5"
+    adata = sc.read(os.path.join(adata_folder, date_st_unpp, "Spatial Transcriptomics_unpp_cleaned.h5"))
+    adata.obs.loc[(adata.obs['basal EPIDERMIS'] == 1) & (adata.obs['DERdepth1'] == 1),
+                  'basal EPIDERMIS'] = [0, 0, 1]
+    adata.obs.loc[(adata.obs['basal EPIDERMIS'] == 1) & (adata.obs['DERdepth1'] == 1), 'DERdepth1'] = 0
+    adata = adata[adata.obs['DISEASE'] != 'PRP'].copy()
+    main(unpp_st_adata=adata)
 
 
