@@ -320,6 +320,13 @@ def volcano_plot(df, df_keys, cytokine, label_genes, title, save_folder, adjust=
     log2fc = df_keys[0]
     pval = df_keys[1]
 
+    if 'pval' in pval:
+        y_labels = r'-log$_{10}$p-values'
+        legend_label = 'p-value'
+    else:
+        y_labels = r'-log$_{10}$FDR-corrected p-value'
+        legend_label = 'FDR'
+
     if adjust is None:
         adjust = True
 
@@ -339,13 +346,16 @@ def volcano_plot(df, df_keys, cytokine, label_genes, title, save_folder, adjust=
     ax.set_axisbelow(True)
     # Plot points
     point_plot(df=df, col_log2fc=log2fc, col_pval=pval, mask=m_sig_log2fc_pval,
-               colour='darkred', label=r"p-value $\leq$ 0.05 and |log$_2$FC| $\geq$ 1", axs=ax, order=3)
+               colour='darkred', label=r"{} $\leq$ 0.05 and |log$_2$FC| $\geq$ 1".format(legend_label), axs=ax, order=3)
     point_plot(df=df, col_log2fc=log2fc, col_pval=pval, mask=m_sig_log2fc,
-               colour='darkblue', label=r"p-value $>$ 0.05 and |log$_2$FC| $>$ 1", axs=ax, order=2, alpha=0.5)
+               colour='darkblue', label=r"{} $>$ 0.05 and |log$_2$FC| $>$ 1".format(legend_label),
+               axs=ax, order=2, alpha=0.5)
     point_plot(df=df, col_log2fc=log2fc, col_pval=pval, mask=m_sig_pval,
-               colour='darkorange', label=r"p-value $<$ 0.05 and |log$_2$FC| $<$ 1", axs=ax, order=2, alpha=0.5)
+               colour='darkorange', label=r"{} $<$ 0.05 and |log$_2$FC| $<$ 1".format(legend_label),
+               axs=ax, order=2, alpha=0.5)
     point_plot(df=df, col_log2fc=log2fc, col_pval=pval, mask=m_inbetween,
-               colour='lightgrey', label=r"p-value $>$ 0.05 and |log$_2$FC| $<$ 1", axs=ax, order=1, alpha=0.5)
+               colour='lightgrey', label=r"{} $>$ 0.05 and |log$_2$FC| $<$ 1".format(legend_label),
+               axs=ax, order=1, alpha=0.5)
 
     # draw legends
     ax.legend(loc='best', fontsize=legend_fontsize)
@@ -357,7 +367,7 @@ def volcano_plot(df, df_keys, cytokine, label_genes, title, save_folder, adjust=
 
     # Axes properties
     ax.set_xlabel(r'log$_2$(FC)', fontsize=xy_fontsize)
-    ax.set_ylabel(r'-log$_{10}$(p-value)', fontsize=xy_fontsize)
+    ax.set_ylabel(y_labels, fontsize=xy_fontsize)
     # # sub region of the original image
     ax.set_xlim(xlim)
     ax.set_ylim(ylim)
@@ -572,8 +582,8 @@ def main(dataset_type, save_folder, df_keys, log, dge_results_folder):
             allgenes_df = allgenes_df.drop(['Unnamed: 0'], axis=1)
 
             # Check if column names and row names are unique
-            print("Unique Genes Stratified Sampling:", allgenes_df['gene_symbol'].is_unique)
-            print("Unique Genes Stratified Sampling:", allgenes_df.columns.is_unique)
+            print("Unique Genes:", allgenes_df['gene_symbol'].is_unique)
+            print("Unique Genes:", allgenes_df.columns.is_unique)
             # remove duplicated rows
             allgenes_df = allgenes_df.loc[~allgenes_df['gene_symbol'].duplicated(), :]
 
@@ -593,9 +603,13 @@ def main(dataset_type, save_folder, df_keys, log, dge_results_folder):
 
             print("# ------ Volcano plot ------ #")
             # 3. Volcano plot interactive plot
+            if 'pval' in df_keys[1]:
+                y_labels = r'-log$_{10}$p-values'
+            else:
+                y_labels = r'-log$_{10}$FDR-corrected p-value'
             plotly_interactive_volcano(df=allgenes_df, df_keys=df_keys, save_folder=output_folder,
                                        key="".join([method, "_", cyto, "+", "_vs_", cyto, "-"]),
-                                       x_lab=r'log$_2$(FC)', y_lab=r'-log$_{10}$(pvalue)',
+                                       x_lab=r'log$_2$(FC)', y_lab=y_labels,
                                        log2fc_cut=1, pval_cut=0.05)
 
             volcano_plot(df=allgenes_df, df_keys=df_keys, cytokine=cyto, adjust=True,
@@ -646,7 +660,7 @@ if __name__ == '__main__':
                                 '2021-02-01_single_cell__cdr_annotation_cyto')
 
     # create output path
-    output_path = os.path.join("..", "..", "..", "output", "SupplFigure_4CD", str(today))
+    output_path = os.path.join("..", "..", "..", "output", "SupplFig_5B_SC_Volcanoplot_IFNG", str(today))
     os.makedirs(output_path, exist_ok=True)
 
     main(dataset_type=dataset, save_folder=output_path, df_keys=columns, log=log_transform,

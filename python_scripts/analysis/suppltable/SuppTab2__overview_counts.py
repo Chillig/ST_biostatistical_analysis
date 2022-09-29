@@ -27,9 +27,12 @@ def create_supptable_1(unpp_st_adata: anndata, save_folder: str):
 
             df_temp = pd.DataFrame(
                 index=['Number of spots/section', 'Total UMI count/section', 'Median UMI count/spot/section',
-                       'Number IFNg+ spots/section', 'Median IFNg UMI count/IFNg+ spot', 'Number IL13+ spots/section',
-                       'Median IL-13 UMI count/IL-13+ spot', 'Number IL17+ spots/section',
-                       'Median IL-17 UMI count/IL-17+ spot'],
+                       'Number IFNg+ spots/section', 'Min IFNg UMI count/IFNg+ spot in section',
+                       'Max IFNg UMI count/IFNg+ spot in section', 'Median IFNg UMI count/IFNg+ spot in section',
+                       'Number IL13+ spots/section', 'Min IL-13 UMI count/IL-13+ spot in section',
+                       'Max IL-13 UMI count/IL-13+ spot in section', 'Median IL-13 UMI count/IL-13+ spot in section',
+                       'Number IL17A+ spots/section', 'Min IL-17A UMI count/IL-17A+ spot in section',
+                       'Max IL-17A UMI count/IL-17A+ spot in section', 'Median IL-17A UMI count/IL-17+ spot in section'],
                 columns=list(unpp_st_adata_patient.obs['specimen'].cat.categories))
 
             for section in unpp_st_adata_patient.obs['specimen'].cat.categories:
@@ -38,21 +41,24 @@ def create_supptable_1(unpp_st_adata: anndata, save_folder: str):
                 df_temp.loc['Number of spots/section', section] = unpp_st_adata_section.shape[0]
                 df_temp.loc['Total UMI count/section', section] = unpp_st_adata_section.X.sum(0).sum()
                 df_temp.loc['Median UMI count/spot/section', section] = df_unpp_st_adata_section.sum(1).median()
+                # Get IFNG+ spots
                 df_temp.loc['Number IFNg+ spots/section', section] = np.count_nonzero(df_unpp_st_adata_section['IFNG'])
-                # Get cyto+ spots
-                median_ifng = df_unpp_st_adata_section[df_unpp_st_adata_section['IFNG'] > 0].loc[:, 'IFNG'].median(
-                    axis=0)
-                df_temp.loc['Median IFNg UMI count/IFNg+ spot', section] = median_ifng
+                umicounts_ifng = df_unpp_st_adata_section[df_unpp_st_adata_section['IFNG'] > 0].loc[:, 'IFNG']
+                df_temp.loc['Min IFNg UMI count/IFNg+ spot in section', section] = umicounts_ifng.min(axis=0)
+                df_temp.loc['Max IFNg UMI count/IFNg+ spot in section', section] = umicounts_ifng.max(axis=0)
+                df_temp.loc['Median IFNg UMI count/IFNg+ spot in section', section] = umicounts_ifng.median(axis=0)
+                # Get IL13+ spots
                 df_temp.loc['Number IL13+ spots/section', section] = np.count_nonzero(df_unpp_st_adata_section['IL13'])
-                # Get cyto+ spots
-                median_il13 = df_unpp_st_adata_section[df_unpp_st_adata_section['IL13'] > 0].loc[:, 'IL13'].median(
-                    axis=0)
-                df_temp.loc['Median IL-13 UMI count/IL-13+ spot', section] = median_il13
+                umicounts_il13 = df_unpp_st_adata_section[df_unpp_st_adata_section['IL13'] > 0].loc[:, 'IL13']
+                df_temp.loc['Min IL-13 UMI count/IL-13+ spot in section', section] = umicounts_il13.min(axis=0)
+                df_temp.loc['Max IL-13 UMI count/IL-13+ spot in section', section] = umicounts_il13.max(axis=0)
+                df_temp.loc['Median IL-13 UMI count/IL-13+ spot in section', section] = umicounts_il13.median(axis=0)
+                # Get IL17A+ spots
                 df_temp.loc['Number IL17+ spots/section', section] = np.count_nonzero(df_unpp_st_adata_section['IL17A'])
-                # Get cyto+ spots
-                median_il17a = df_unpp_st_adata_section[df_unpp_st_adata_section['IL17A'] > 0].loc[:, 'IL17A'].median(
-                    axis=0)
-                df_temp.loc['Median IL-17 UMI count/IL-17+ spot', section] = median_il17a
+                umicounts_il17a = df_unpp_st_adata_section[df_unpp_st_adata_section['IL17A'] > 0].loc[:, 'IL17A']
+                df_temp.loc['Min IL-17A UMI count/IL-17A+ spot in section', section] = umicounts_il17a.min(axis=0)
+                df_temp.loc['Max IL-17A UMI count/IL-17A+ spot in section', section] = umicounts_il17a.max(axis=0)
+                df_temp.loc['Median IL-17A UMI count/IL-17+ spot in section', section] = umicounts_il17a.median(axis=0)
 
             suppl_table[diag][patient] = df_temp
 

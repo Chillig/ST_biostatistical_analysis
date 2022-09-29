@@ -107,12 +107,14 @@ def include_cytokine_dp(adata, cytokines, label, save_folder, key, paper_figure)
 
     for cyto in cytokines:
         if "_".join(['cytokine', cyto]) in adata.obs_keys():
-            get_condition_spots.get_spots_per_condition_multiple(
-                adata=adata, observable="_".join(["cytokine", cyto]), cell_label=label, save_folder=save_folder,
-                paper_figure=paper_figure)
-            # get_condition_spots.get_spots_per_condition(
-            #     adata=adata, observable="_".join(["cytokine", cyto]), save_folder=save_folder, key=key,
-            #     paper_figure=paper_figure, cell_label=label)
+            if 'SC' in key:
+                get_condition_spots.get_spots_per_condition(
+                    adata=adata, observable="_".join(["cytokine", cyto]), save_folder=save_folder, key=key,
+                    paper_figure=paper_figure, cell_label=label)
+            else:
+                get_condition_spots.get_spots_per_condition_multiple(
+                    adata=adata, observable="_".join(["cytokine", cyto]), cell_label=label, save_folder=save_folder,
+                    paper_figure=paper_figure)
 
 
 def exclude_cytokine_dp(adata, cytoresps_dict):

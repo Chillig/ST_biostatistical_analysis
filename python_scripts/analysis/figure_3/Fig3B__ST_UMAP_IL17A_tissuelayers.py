@@ -156,7 +156,7 @@ def main(save_folder, spatial_adata):
 
     :return:
     """
-    spatial_cluster_label = 'tissue_layer'
+    spatial_cluster_label = 'tissue_layer'  # TODO correct for spot_type ..
 
     # load data
     cytokines, allinone, cytoresps_dict = gene_lists.get_publication_cyto_resps()
@@ -184,9 +184,9 @@ def main(save_folder, spatial_adata):
     plot_tissueregions_cyto(adata=adata_leukocytes, obs_name='cytokine_IL17A', title='Leukocytes_IL17A',
                             save_folder=save_folder)
 
-    # 4. Read out all leukocyte psotive spots
+    # 4. Read out all leukocyte positive spots
     include_cytokine_dp(adata=adata_leukocytes, cytokines=cytokines, save_folder=save_folder,
-                        label=spatial_cluster_label, key='ST', paper_figure='3A_Leukocytes')
+                        label=spatial_cluster_label, key='ST', paper_figure='3D_Leukocytes')
 
 
 if __name__ == '__main__':

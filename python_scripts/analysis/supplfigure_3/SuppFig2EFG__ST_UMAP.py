@@ -152,7 +152,7 @@ def get_tissueregions(adata, tissue_label):
     """
     m_epidermis = np.array(
         adata.obs[tissue_label].values)[:, np.newaxis] == np.array(
-        ['upper EPIDERMIS', 'basal EPIDERMIS', 'middle EPIDERMIS', 'INTERFACE'])[np.newaxis, :]
+        ['upper EPIDERMIS', 'basal EPIDERMIS', 'middle EPIDERMIS', 'JUNCTION'])[np.newaxis, :]
     m_epidermis = m_epidermis.sum(axis=1).astype(bool)
 
     m_dermis = np.array(
@@ -168,20 +168,26 @@ def get_tissueregions(adata, tissue_label):
     return adata
 
 
-def main(save_folder, spatial_adata):
-    """
-    Read out data for ST and scRNA-seq DGE Analysis and create UMAPs for Figure 3A/E and Suppl. Figures 3
+def main(save_folder, spatial_adata, spatial_cluster_label: str = 'tissue_layer'):
+    """ Read out data for ST and create UMAPs for Suppl. Figures 2E/F/G
 
-    :return:
+    Parameters
+    ----------
+    save_folder
+    spatial_adata
+    spatial_cluster_label
+
+    Returns
+    -------
+
     """
-    spatial_cluster_label = 'tissue_type'
 
     # 1. load gene lists
     cytokines, allinone, cytoresps_dict = gene_lists.get_publication_cyto_resps()
     leukocyte_markers = gene_lists.leukocyte_markers()
 
-    # 2. remove all spots without a tissue label
-    spatial_adata = spatial_adata[spatial_adata.obs[spatial_cluster_label] != 'Unknown']
+    # 2. Read out only lesional spots
+    spatial_adata = spatial_adata[spatial_adata.obs['biopsy_type'] == 'LESIONAL'].copy()
 
     # 3. get observable for cytokine genes and leukocyte markers
     spatial_adata, obs_name = add_observables.convert_variable_to_observable(
@@ -198,47 +204,30 @@ def main(save_folder, spatial_adata):
 
     # keys: 'patient', 'biopsy_type', 'disease', 'tissue_type'
     # Suppl Figure 2A
-    visualise_clusters(adata=spatial_adata, save_folder=save_folder, key='healthy_disease', title="Diagnoses")
+    visualise_clusters(adata=spatial_adata, save_folder=save_folder, key='healthy_disease', title="LESIONAL_Diagnoses")
     # Suppl. Figure 2C
-    visualise_clusters(adata=adata_leukocytes, save_folder=save_folder, key='tissue_type',
-                       title="Leukocytes_tissuelayers")
+    visualise_clusters(adata=adata_leukocytes, save_folder=save_folder, key='tissue_layer',
+                       title="LESIONAL_Leukocytes_tissuelayers")
+    # Suppl. Figure 2D
+    visualise_clusters(adata=adata_leukocytes, save_folder=save_folder, key='spot_type',
+                       title="LESIONAL_Leukocytes_tissuelayers")
 
-    # 5. Read out spots which either have IL17A, IL13 or INFG genes
+    # 6. Read out spots which either have IL17A, IL13 or INFG genes
     adata_leukocytes, obs_name = exclude_cytokine_dp(adata=adata_leukocytes, cytoresps_dict=cytoresps_dict)
 
-    # 6. Merge layers of epidermis and save it as epidermis and merge dermis depths and save it as dermis
+    # 7. Merge layers of epidermis and save it as epidermis and merge dermis depths and save it as dermis
     adata_leukocytes = get_tissueregions(adata=adata_leukocytes, tissue_label=spatial_cluster_label)
 
-    # 7. Read out spots which express either IL17A, IL13 and/or IFNG
-    adata_cytos = adata_leukocytes[adata_leukocytes.obs['cytokines_others'] != 'Others', :].copy()
-    # 8. Generate heatmap of signature and other cytokines
-    # adata_cytos = add_observables.convert_variable_to_observable(
-    #     adata=adata_cytos, gene_names=gene_lists.interesting_cytokines(), task='annotate_cells',
-    #     label='coexpressed_cytos', condition=[np.all, np.all, np.all, np.all, np.all, np.all, np.all, np.all, np.all])
-
-    # get intersection genes
-    coexpressed_cytos = list(set(adata_cytos.var_names) & set(gene_lists.interesting_cytokines().values()))
-
-    # Matrixplot shows the mean expression of a gene in a group by category as a heatmap
-    # Scale data to unit variance and zero mean == zscores : sc.pp.scale(adata_cytos)
-    sc.pl.matrixplot(adata_cytos, coexpressed_cytos, groupby='cytokines_others',  layer='counts',
-                     dendrogram=True, figsize=(10, 6))
-    plt.savefig(os.path.join(save_folder, 'Matrixplot_meanexpression.png'))
-    plt.close()
-    # Heatmpas do not collaps cells; each cell is shown in a row
-    sc.pl.heatmap(adata_cytos, coexpressed_cytos, groupby='cytokines_others', layer='counts',
-                  figsize=(10, 6), dendrogram=True)
-    plt.savefig(os.path.join(save_folder, 'Heatmap_rawcounts.png'))
-    plt.close()
-
-    # ax = sc.pl.tracksplot(adata_cytos, coexpressed_cytos, groupby='cytokines_others', layer='counts', figsize=(12, 6))
-    # sc.pl.rank_genes_groups_heatmap(adata_cytos, n_genes=3, standard_scale='var', groups='cytokines_others')
+    # Suppl. Figure 2B
+    plot_tissueregions_cyto(adata=adata_leukocytes, obs_name=obs_name, title='LESIONAL_Leukocytes_Cytokines',
+                            save_folder=save_folder, gene_colors=["#ff7f00", "#e41a1c", 'darkgoldenrod', 'purple',
+                                                                  "#377eb8", 'deeppink'])
 
 
 if __name__ == '__main__':
     today = date.today()
     # create saving folder
-    output_path = os.path.join("..", "..", "..", "output", "SupplFigure_2D", str(today))
+    output_path = os.path.join("..", "..", "..", "output", "SupplFigure_2EFG", str(today))
     os.makedirs(output_path, exist_ok=True)
 
     # Load data:

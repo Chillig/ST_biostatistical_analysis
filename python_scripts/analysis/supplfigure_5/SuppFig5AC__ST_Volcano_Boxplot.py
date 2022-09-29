@@ -276,7 +276,7 @@ def set_axislimits(cytokine):
 
     """
     if cytokine == 'IFNG':
-        xlim = [-36, 10]  # [-15, 35]
+        xlim = [-40, 40]  # [-15, 35]
         ylim = [0, 65]
     elif cytokine == 'IL13':
         xlim = [-36, 10]  # [-15, 30]
@@ -636,9 +636,13 @@ def main(adata, save_folder, df_keys, log, dge_results_folder):
 
                 print("# ------ Volcano plot ------ #")
                 # 3. Volcano plot interactive plot
+                if 'pval' in df_keys[1]:
+                    y_labels = r'-log$_{10}$p-values'
+                else:
+                    y_labels = r'-log$_{10}$FDR-corrected p-value'
                 plotly_interactive_volcano(df=allgenes_df, df_keys=df_keys, save_folder=output_folder,
                                            key="".join([method, "_", cyto, "+", "_vs_", cyto, "-"]),
-                                           x_lab=r'log$_2$(FC)', y_lab=r'-log$_{10}$(p-adjusted value)',
+                                           x_lab=r'log$_2$(FC)', y_lab=y_labels,
                                            log2fc_cut=1, pval_cut=0.05)
 
                 volcano_plot(df=allgenes_df, df_keys=df_keys, cytokine=cyto, adjust=True,

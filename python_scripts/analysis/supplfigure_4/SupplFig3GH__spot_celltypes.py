@@ -90,6 +90,7 @@ def merge_labels(df_map):
         # df_map_celltypes.loc['Treg', col] = df_map.loc[df_map.index.str.contains('Treg'), col].sum()
         # df_map_celltypes.loc['moDC', col] = df_map.loc[df_map.index.str.contains('moDC'), col].sum()
 
+        # TODO norm by number of sub cell types included in a main cell type?
         df_map_celltypes.loc['APC', col] = df_map.loc[
             df_map.index.str.contains('DC[0-9]|Inf_mac|LC_[0-9]|Macro|Mast_cell|MigDC|Mono_mac|moDC'), col].sum()
         df_map_celltypes.loc['Innate cells', col] = df_map.loc[
@@ -109,12 +110,12 @@ def merge_labels(df_map):
 
 
 def get_cropped_sampleimg(img_key):
-    samples = ['P15509_1004', 'P16357_1003',  'P16357_1020']
+    samples = ['P15509_1001']
     if img_key == 'lowres':
-        crops_img = [(49, 349, 510, 100), (80, 380, 510, 100), (150, 450, 530, 120)]
+        crops_img = [(49, 349, 580, 170)]
     else:
         res_proportion = 2000 / 600
-        crops_img = [(49, 349, 510, 100), (80, 380, 510, 100), (150, 450, 530, 120)]
+        crops_img = [(49, 349, 480, 70)]
         crops_img = (np.asarray(crops_img) * res_proportion).round()
 
     return samples, crops_img
@@ -187,22 +188,22 @@ def plot_sorted_byoccurence_bargraph(df_bar_celltypes, sample_name, df_colors, p
     plt.close(fig=fig)
 
 
-def plot_he_celltype_piecharts(st_adata, st_adata_cyto, sample_name, ind_sample, df_map_celltypes, save_folder):
+def plot_he_celltype_piecharts(st_adata, sample_name, ind_sample, df_map_celltypes, save_folder):
     scale_factor = st_adata.uns['spatial'][sample_name]['scalefactors']['tissue_hires_scalef']
     samples, crops_img = get_cropped_sampleimg(img_key='hires')
     fig, ax = plt.subplots(figsize=(8, 10))
     sc.pl.spatial(st_adata, color='tissue_layer', alpha=0.0, ax=ax, s=1,
                   show=False, crop_coord=crops_img[ind_sample])
     # -- for loop: piecharts
-    for ind_drawpie in range(0, st_adata_cyto.shape[0], 1):
+    for ind_drawpie in range(0, st_adata.shape[0], 1):
         ax.pie(df_map_celltypes[ind_drawpie].values.astype(float),
                colors=df_map_celltypes['colors'],
-               center=(int(st_adata_cyto.obsm['spatial'][ind_drawpie][0] * scale_factor),
-                       int(st_adata_cyto.obsm['spatial'][ind_drawpie][1] * scale_factor)),
+               center=(int(st_adata.obsm['spatial'][ind_drawpie][0] * scale_factor),
+                       int(st_adata.obsm['spatial'][ind_drawpie][1] * scale_factor)),
                radius=10)
         # Add point number to spots / pichart
-        ax.annotate(ind_drawpie, (int(st_adata_cyto.obsm['spatial'][ind_drawpie][0] * scale_factor) + 10,
-                                  int(st_adata_cyto.obsm['spatial'][ind_drawpie][1] * scale_factor) + 10),
+        ax.annotate(ind_drawpie, (int(st_adata.obsm['spatial'][ind_drawpie][0] * scale_factor) + 10,
+                                  int(st_adata.obsm['spatial'][ind_drawpie][1] * scale_factor) + 10),
                     fontsize=5, rotation=180)
     ax.set_xlim(crops_img[ind_sample][0:2])
     ax.set_ylim(crops_img[ind_sample][2:4])
@@ -221,15 +222,14 @@ def plot_he_celltype_piecharts(st_adata, st_adata_cyto, sample_name, ind_sample,
 
 def main(save_folder):
     # Labels
-    labels = ['DC1', 'DC2', 'Differentiated_KC', 'Differentiated_KC*', 'F1', 'F2', 'F3', 'ILC1_3', 'ILC2', 'Inf_mac',
-              'LC_1', 'LC_2', 'LC_3', 'LC_4', 'LE1', 'LE2', 'Macro_1', 'Macro_2', 'Mast_cell', 'Melanocyte', 'MigDC',
-              'Mono_mac', 'NK', 'Pericyte_1', 'Pericyte_2', 'Plasma', 'Proliferating_KC', 'Schwann_1', 'Schwann_2',
-              'Tc', 'Tc_IL13_IL22', 'Th', 'Treg', 'Undifferentiated_KC', 'VE1', 'VE2', 'VE3',
-              'moDC_1', 'moDC_2', 'moDC_3']
-    samples = ['P15509_1004', 'P16357_1003', 'P16357_1020']
-    samples_folder = {'P15509_1004': 'S4', 'P16357_1003': 'S7', 'P16357_1020': 'S24'}
-    cytokine = {'P15509_1004': 'il17a', 'P16357_1003': 'il13', 'P16357_1020': 'ifng'}
-    input_dir = '/Users/christina.hillig/PycharmProjects/ST_Immune_publication/Publication_analysis/adata_storage/2022-05-13'
+    # labels = ['DC1', 'DC2', 'Differentiated_KC', 'Differentiated_KC*', 'F1', 'F2', 'F3', 'ILC1_3', 'ILC2', 'Inf_mac',
+    #           'LC_1', 'LC_2', 'LC_3', 'LC_4', 'LE1', 'LE2', 'Macro_1', 'Macro_2', 'Mast_cell', 'Melanocyte', 'MigDC',
+    #           'Mono_mac', 'NK', 'Pericyte_1', 'Pericyte_2', 'Plasma', 'Proliferating_KC', 'Schwann_1', 'Schwann_2',
+    #           'Tc', 'Tc_IL13_IL22', 'Th', 'Treg', 'Undifferentiated_KC', 'VE1', 'VE2', 'VE3',
+    #           'moDC_1', 'moDC_2', 'moDC_3']
+    samples = ['P15509_1001']
+    samples_folder = {'P15509_1001': 'S1'}
+    input_dir = '/Volumes/CH__data/ST_immune_publication/Revision/adata/2022-07-26'
 
     for ind_sample, sample_name in enumerate(samples):
         # Mapping object - cell type probabilities are stored in .X
@@ -241,44 +241,74 @@ def main(save_folder):
         for annotation in list(adata_mapping.obs['subclass_label'].cat.categories):
             st_adata.obs[annotation] = st_adata.obsm['tangram_ct_pred'][annotation].copy()
 
+        df_test = st_adata.obsm['tangram_ct_pred']
+        pd.DataFrame({'Cell type spot': df_test.columns[
+            np.argmax(np.asarray(df_test), axis=1)]})['Cell type spot'].value_counts().hist()
+        df_occurency = pd.DataFrame(pd.DataFrame({'Cell type spot': df_test.columns[np.argmax(np.asarray(df_test), axis=1)]})[
+            'Cell type spot'].value_counts())
+        df_occurency = df_occurency.reset_index()
+        df_occurency.columns = ['Cell type', 'Frequency']
+        fig, ax = plt.subplots(figsize=(8, 6))
+        sns.barplot(data=df_occurency, x=df_occurency['Cell type'],  y=df_occurency['Frequency'], ax=ax)
+        ax.set_xticklabels(df_occurency['Cell type'].values, rotation=90, ha='right')
+        plt.tight_layout()
+        plt.savefig(os.path.join(save_folder, '{}__Most_occuring_celltype_in_spot.png'.format(sample_name)))
+        plt.close(fig=fig)
+
         # Add info of cyto+ spots
         st_adata, obs_name = add_observables.convert_variable_to_observable(
             adata=st_adata, gene_names=['il17a', 'ifng', 'il13'], task='cell_gene', label='celltype', condition=None)
 
-        # Keep only cyto+ spots
-        cyto_columns = list(st_adata.obs.columns[
-                                st_adata.obs.columns.str.contains('_{}'.format(cytokine[sample_name]))])
-        mask = st_adata.obs[cyto_columns].values == cytokine[sample_name]
-        st_adata_cyto = st_adata[mask].copy()
-        st_mapping_cyto = adata_mapping[:, mask].copy()
-
         # Calculate percentage for each cell type
-        max_value = st_mapping_cyto.X.sum(axis=0)
-        st_mapping_cytoper = st_mapping_cyto.X / max_value
+        max_value = adata_mapping.X.sum(axis=0)
+        # norm by maximum value to retriev percentage for each cell type to be in a spot
+        st_mapping_cytoper = (adata_mapping.X - np.min(adata_mapping.X, axis=0)) / (
+                max_value - np.min(adata_mapping.X, axis=0))
+        # store as dataframe
         df_map = pd.DataFrame.from_dict(data=st_mapping_cytoper)
-        df_map.index = list(st_mapping_cyto.obs['subclass_label'].cat.categories)
-
-        labels = list(adata_mapping.obs['subclass_label'].cat.categories)
-        df_sample = pd.melt(st_adata_cyto.obs, id_vars=['spot_type'], value_vars=labels)
-
-        # Overall composition
-        result = df_sample.groupby(["variable"])['value'].aggregate(np.mean).reset_index().sort_values('value')
-        result = result.sort_values('value', ascending=False)
+        # rename index
+        df_map.index = list(adata_mapping.obs['subclass_label'].values)
+        # get labels
+        labels = list(adata_mapping.obs['subclass_label'].values)
+        df_sample = pd.melt(st_adata.obs, id_vars=['spot_type'], value_vars=labels)
 
         # Plot cell type composition per cyto+ spot
         fig, ax = plt.subplots(figsize=(8, 6))
-        sns.barplot(data=df_sample, x="variable", y="value", order=result['variable'], log=True, hue='spot_type', ax=ax)
-        ax.set_xticklabels(result['variable'], rotation=90, ha='right')
+        sns.barplot(data=df_sample, x="variable", y="value", order=labels, log=True, hue='spot_type', ax=ax)
+        ax.set_xticklabels(labels, rotation=90, ha='right')
         plt.tight_layout()
         plt.savefig(os.path.join(save_folder, '{}__cytospots_composition.png'.format(sample_name)))
         plt.close(fig=fig)
 
         # Merge sub-cell types
         df_map_celltypes = merge_labels(df_map=df_map)
+        df_occurency = pd.DataFrame(
+            {'Cell type spot': df_map_celltypes.index[np.argmax(np.asarray(df_map_celltypes), axis=0)]})[
+            'Cell type spot'].value_counts()
+        df_occurency = df_occurency.reset_index()
+        df_occurency.columns = ['Cell type', 'Frequency']
+        fig, ax = plt.subplots(figsize=(8, 6))
+        sns.barplot(data=df_occurency, x=df_occurency['Cell type'], y=df_occurency['Frequency'], ax=ax)
+        ax.set_xticklabels(df_occurency['Cell type'].values, rotation=90, ha='right')
+        plt.tight_layout()
+        plt.savefig(os.path.join(save_folder, '{}__Majoritycelltype__Most_occuring_celltype_in_spot.png'.format(sample_name)))
+        plt.close(fig=fig)
+        # adata_mapping.obs.iloc[np.argmax(adata_mapping.X, axis=0)]
+        # Can only be created per spot
+        ax = df_map_celltypes[0].plot.bar(rot=45, stacked=True)
+        ax.set_ylabel('Frequency')
+        ax.spines['right'].set_visible(False)
+        ax.spines['top'].set_visible(False)
+        ax.spines['left'].set_visible(True)
+        ax.spines['bottom'].set_visible(True)
+        plt.tight_layout()
+        plt.savefig(os.path.join(
+            save_folder, '{}__Majoritycelltype__Frequecny_celltypes_spot_{}.png'.format(sample_name, 0)))
+        plt.close('all')
 
         # Plot H&E image + Pie charts
         patches = plot_he_celltype_piecharts(
-            st_adata=st_adata, st_adata_cyto=st_adata_cyto, sample_name=sample_name, ind_sample=ind_sample,
+            st_adata=st_adata, sample_name=sample_name, ind_sample=ind_sample,
             df_map_celltypes=df_map_celltypes, save_folder=save_folder)
 
         print('Plot Barplot')
@@ -312,7 +342,7 @@ def main(save_folder):
 
         # Save cell type composition per spot for a specimen
         df_bar_celltypes.to_excel(
-            os.path.join(save_folder, 'Tangram_{}_sample{}.xlsx'.format(cytokine[sample_name], sample_name)))
+            os.path.join(save_folder, 'Tangram_NL_sample{}.xlsx'.format(sample_name)))
 
         # TODO check composition in nn spots
         # TODO check composition in others
@@ -322,7 +352,7 @@ def main(save_folder):
 if __name__ == '__main__':
     today = date.today()
     # create saving folder
-    output_path = os.path.join("..", "..", "..", "output", "SupplFig8A", str(today))
+    output_path = os.path.join("..", "..", "..", "output", "SupplFig3GH", str(today))
     os.makedirs(output_path, exist_ok=True)
 
     main(save_folder=output_path)
