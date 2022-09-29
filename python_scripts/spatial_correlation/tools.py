@@ -175,7 +175,7 @@ def add_columns_genes(adata: anndata, genes: str, label: str, count_threshold: i
 
 
 def mark_spotsincluster(adata: anndata, sub_adata: anndata, spot_indices: [int, list], obs_conditional_gene_counts: str,
-                        gene: str):
+                        gene: str, radius: [int, str]):
     """Marking spots either as "Other" (0), "cyto- nn spots" (2) or "cyto+ spots" (1)
         - others label = 0
         - responder label = 2
@@ -188,6 +188,7 @@ def mark_spotsincluster(adata: anndata, sub_adata: anndata, spot_indices: [int, 
     spot_indices: int, list
     obs_conditional_gene_counts: str
     gene : str
+    radius: int, str
 
     Returns
     -------
@@ -204,14 +205,10 @@ def mark_spotsincluster(adata: anndata, sub_adata: anndata, spot_indices: [int, 
             sub_adata.obs.iloc[spot_indices].index == adata.obs.iloc[spot_indices_sample].index):
         print("You do not read out the correct spots!! ", np.unique(sub_adata.obs['specimen']))
 
-    adata.obs['{}_in_sdcc'.format(gene)] = adata.obs['{}_in_sdcc'.format(gene)].astype(str)
-    adata.obs['{}_in_sdcc'.format(gene)].iloc[spot_indices_sample] = 2
+    adata.obs['{}_in_sdcc_r{}'.format(gene, radius)].iloc[spot_indices_sample] = 2
     # conditional gene of interest -> label = 1
     m_cg = adata.obs[obs_conditional_gene_counts].iloc[spot_indices_sample].values > 0
     if np.any(m_cg):
-        adata.obs['{}_in_sdcc'.format(gene)].iloc[spot_indices_sample[m_cg]] = 1
-
-    # Convert to type category
-    adata.obs['{}_in_sdcc'.format(gene)] = adata.obs['{}_in_sdcc'.format(gene)].astype('category')
+        adata.obs['{}_in_sdcc_r{}'.format(gene, radius)].iloc[spot_indices_sample[m_cg]] = 1
 
     return adata
