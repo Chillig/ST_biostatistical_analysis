@@ -13,11 +13,14 @@ from python_scripts.spatial_correlation.plots import plot_clusters, plot_count_d
     plot_spatial_correlation, plot_compositions
 from python_scripts.spatial_correlation import helper_functions
 
+import scanpy as sc
 import numpy as np
 import pandas as pd
 import os
 from collections import OrderedDict
 import itertools
+
+import matplotlib.pyplot as plt
 
 
 # -------------------------------------------------------------------------------------------------------------------- #
@@ -186,7 +189,7 @@ def get_cluster_counts(adata, tissue_types, cytokine_responders, save_folder, di
     for gen in cytokine_responders.keys():
         # Add obs to adata stating whether a spot belongs to a cluster or not
         # init with assumption: no spots are in a cluster
-        adata.obs['{}_in_sdcc'.format(gen)] = 0  # pd.Categorical(np.zeros(adata.shape[0]), categories=[0, 1, 2])
+        adata.obs['{}_in_sdcc_r{}'.format(gen, distance)] = 0  # pd.Categorical(np.zeros(adata.shape[0]), categories=[0, 1, 2])
 
         col_names_resps.extend(["".join([gen, '+ responder+ spot']), "".join([gen, '- responder+ spot'])])
         # save colnames for df_counts
@@ -283,7 +286,7 @@ def get_cluster_counts(adata, tissue_types, cytokine_responders, save_folder, di
                     for resp_gene in responder_genes:
                         if resp_gene in sub_adata.var_names:
                             if find_responders and ("counts" in sub_adata.layers.keys()):
-                                counts_respgene = np.copy(adata.layers["counts"])[:, np.where(adata.var.index == resp_gene)[0]]
+                                counts_respgene = np.copy(sub_adata.layers["counts"])[:, np.where(sub_adata.var.index == resp_gene)[0]]
                                 # create mask
                                 m_respgene_cytopos = counts_respgene > 0
                                 df_counts.at[index_counter, resp_gene] = np.divide(
@@ -315,6 +318,7 @@ def get_cluster_counts(adata, tissue_types, cytokine_responders, save_folder, di
                     df_counts.at[index_counter, 'Cluster_num_spots'] = len(list(indices_spots))
                     df_counts.at[index_counter, 'tissue_layer'] = "_".join(np.unique(cluster_obs['tissue_layer']))
                     df_counts.at[index_counter, 'Specimen'] = specimen
+                    df_counts.at[index_counter, 'Patient'] = np.unique(sub_adata.obs['patient'])[0]
 
                     # Read out responder counts in cyto+ spots and cyto- spots in the clusters
                     df_counts_responders = get_responder_cytoposneg_counts(
@@ -327,7 +331,7 @@ def get_cluster_counts(adata, tissue_types, cytokine_responders, save_folder, di
                 # TODO make save all genes in close proximity of cyto+ spots
                 adata = tools.mark_spotsincluster(
                     adata=adata, sub_adata=sub_adata, spot_indices=included_spots,
-                    obs_conditional_gene_counts=obs_cyto_counts, gene=cyto)
+                    obs_conditional_gene_counts=obs_cyto_counts, gene=cyto, radius=distance)
 
                 if get_plots:
                     # plot_count_distributions.plot_counts(
@@ -420,6 +424,14 @@ def run_spatialcorrelation(adata, tissue_types, cytokine_responders, save_folder
         df_counts=df_counts, cytokine_responders=cytokine_responders, save_folder=save_folder, distance=radius,
         corr_method=corr_method)
     sig.append(figs4_wtcorr_pval)
+    _ = plot_spatial_correlation.plot__stwc_patients(
+        df_counts=df_counts, cytokine_responders=cytokine_responders, save_folder=save_folder,
+        distance=radius, corr_method=corr_method)
+
+    # Plot Workflow figure 1G
+    if radius == 1:
+        plot_spatial_correlation.plot__stwc_tissuelayers_figure1G(
+            df_counts=df_counts, save_folder=save_folder, distance=radius, corr_method=corr_method)
 
     # # 5.1 Plot distribution of responder spot counts which a excluded in the analysis
     # plot_count_distributions.plot_excluded_responder_spots(
@@ -442,7 +454,7 @@ def run_spatialcorrelation(adata, tissue_types, cytokine_responders, save_folder
     #     adata=adata, df_included_responder=df_included_spots, df_excluded_responder=df_excluded_spot_counts,
     #     t_cell_cytocines=cytokine_responders.keys(), save_folder=save_folder)
 
-    return sig, df_counts
+    return sig, df_counts, adata
 
 
 def data_preparation(adata, tissue_types, epidermis_layers, conditional_genes, conditionalgenes_responders):
@@ -478,9 +490,9 @@ def data_preparation(adata, tissue_types, epidermis_layers, conditional_genes, c
         # Calculate new cut-off using non lesion as reference
         max_nl_counts_cytokines[cyto] = adata.obs[
             '{}_counts'.format(cyto)][adata.obs['biopsy_type'] == 'NON LESIONAL'].max()
-        # Overwrite detection of expression of cytokines with max detected cyto counts in non lesion skin
-        adata = tools.add_columns_genes(adata=adata, genes=cyto, label=cyto,
-                                        count_threshold=max_nl_counts_cytokines[cyto])
+        # TODO Overwrite detection of expression of cytokines with max detected cyto counts in non lesion skin
+        # adata = tools.add_columns_genes(adata=adata, genes=cyto, label=cyto,
+        #                                 count_threshold=max_nl_counts_cytokines[cyto])
 
     for ind, cyto_resps in enumerate(conditionalgenes_responders.keys()):
         resp_label.append("_".join([cyto_resps, "Responders"]))
@@ -489,10 +501,11 @@ def data_preparation(adata, tissue_types, epidermis_layers, conditional_genes, c
         # Calculate new cut-off using non lesion as reference
         max_nl_counts_cytokines[resp_label[ind]] = adata.obs[
             '{}_counts'.format(resp_label[ind])][adata.obs['biopsy_type'] == 'NON LESIONAL'].max()
-        # Overwrite detection of expression of cytokines with max detected cyto counts in non lesion skin
-        adata = tools.add_columns_genes(
-            adata=adata, genes=conditionalgenes_responders[cyto_resps], label=resp_label[ind],
-            count_threshold=max_nl_counts_cytokines[resp_label[ind]])
+        # TODO Overwrite detection of expression of cytokines with max detected cyto counts in non lesion skin
+        # adata = tools.add_columns_genes(
+        #     adata=adata, genes=conditionalgenes_responders[cyto_resps], label=resp_label[ind],
+        #     count_threshold=1)
+        # max_nl_counts_cytokines[resp_label[ind]]
 
     print(max_nl_counts_cytokines)
 
@@ -530,17 +543,55 @@ def main(adata, save_folder, tissue_types, epidermis_layers, radii, corr_method,
     counts_dict = dict()
     if isinstance(radii, list):
         for radius in radii:
-            sig, df_counts = run_spatialcorrelation(
+            sig, df_counts, adata = run_spatialcorrelation(
                 adata=adata, tissue_types=tissue_types, cytokine_responders=conditionalgenes_responders,
                 save_folder=save_folder, radius=radius, sig=sig, get_plots=get_plots, corr_method=corr_method,
                 find_responders=find_responders)
             counts_dict[radius] = df_counts
     else:
-        sig, df_counts = run_spatialcorrelation(
+        sig, df_counts, adata = run_spatialcorrelation(
             adata=adata, tissue_types=tissue_types, cytokine_responders=conditionalgenes_responders,
             save_folder=save_folder, radius=radii, sig=sig, get_plots=get_plots, corr_method=corr_method,
             find_responders=find_responders)
         counts_dict[radii] = df_counts
+
+    # Boxplot of optimal radius of responder genes in density clusters (2 & LESIONAL) vs NL (0 & NON LESIONAL)
+    # plot_evaluations.plot_responder_in_sdc_outside_nl_tissue(
+    #     adata=adata, conditionalgenes_responders=conditionalgenes_responders, save_folder=save_folder)
+    # Boxplot of optimal radius of responder genes in density clusters (2 & LESIONAL) vs L (1 & LESIONAL)
+    df_stats_responders_in_vs_outlesion_sdc = plot_evaluations.plot_responder_in_sdc_outside_l_tissue(
+        adata=adata, conditionalgenes_responders=conditionalgenes_responders, save_folder=save_folder)
+    df_stats_cytokines_responders_in_sdc = plot_evaluations.plot_in_sdc_cytokine_vs_responder(
+        adata=adata, conditionalgenes_responders=conditionalgenes_responders, save_folder=save_folder)
+
+    # --------------------------------------
+    # H&E image for workflow Fig 1 # TODO
+    adata.obs['IL17A_Responders_label'] = adata.obs['IL17A_Responders_clusters'].copy()
+    adata.obs['IL17A_Responders_label'] = adata.obs['IL17A_Responders_label'].astype(str)
+    adata.obs['IL17A_Responders_label'][adata.obs['IL17A_clusters'] == 'IL17A'] = 'IL17A'
+    adata.obs['IL17A_Responders_label'] = adata.obs['IL17A_Responders_label'].astype('category')
+    fig, ax = plt.subplots(figsize=(8, 6))
+    sc.pl.spatial(adata[adata.obs['sample'] == 'P15509_1004'], color='IL17A_Responders_label', size=1,
+                  library_id='P15509_1004', ax=ax, palette=['#377eb8', '#B8860B'],
+                  add_outline=True, alpha=1, outline_width=(8, 0.05), show=False)
+    plt.tight_layout()
+    fig.savefig(os.path.join(save_folder, 'Workflow_Fig1E.pdf'))
+    plt.close(fig=fig)
+
+    adata.obs['IL17A_in_sdcc_r1'] = adata.obs['IL17A_in_sdcc_r1'].astype('category')
+    fig, ax = plt.subplots(figsize=(8, 6))
+    sc.pl.spatial(adata[(adata.obs['sample'] == 'P15509_1004') & (adata.obs['IL17A_in_sdcc_r1'] != 0)],
+                  color='IL17A_in_sdcc_r1', size=1, library_id='P15509_1004', ax=ax, palette=['#377eb8', '#B8860B'],
+                  add_outline=True, alpha=1, outline_width=(10, 0.05), show=False)
+    plt.tight_layout()
+    fig.savefig(os.path.join(save_folder, 'Workflow_Fig1F.pdf'))
+    plt.close(fig=fig)
+
+    # ------------------------------------
+
+    if ('counts' in adata.layers) & (find_responders is True):
+        # Save adata obj for DGE analysis to identify cytokine related genes Fig. S8
+        sc.write(os.path.join(save_folder, 'SDC_adata.h5'), adata)
 
     if len(sig) > 1:
         # 6. Evaluate distance via elbow plot
@@ -552,4 +603,4 @@ def main(adata, save_folder, tissue_types, epidermis_layers, radii, corr_method,
             counts_dict=counts_dict, conditionalgenes_responders=conditionalgenes_responders,
             radii=radii, save_folder=save_folder)
 
-    return counts_dict
+    return counts_dict, df_stats_responders_in_vs_outlesion_sdc, df_stats_cytokines_responders_in_sdc
