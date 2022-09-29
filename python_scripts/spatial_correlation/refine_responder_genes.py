@@ -83,14 +83,15 @@ def rank_densitycluster_genes(adata, cytokine_responders, save_folder, radius):
 
 def rank_cyto_vs_others_genes(adata, cytokine_responders, save_folder, radius):
     for cyto in cytokine_responders.keys():
-        adata.obs['{}_in_sdcc'.format(cyto)] = adata.obs['{}_in_sdcc'.format(cyto)].astype(str).astype('category')
+        adata.obs['{}_in_sdcc_r{}'.format(cyto, radius)] = adata.obs[
+            '{}_in_sdcc_r{}'.format(cyto, radius)].astype(str).astype('category')
         # remove nn spots
-        adata_wonn = adata[adata.obs['{}_in_sdcc'.format(cyto)] != 2].copy()
-        sc.tl.rank_genes_groups(adata_wonn, '{}_in_sdcc'.format(cyto), method='wilcoxon',
-                                key_added="{}_in_sdcc_wilcoxon".format(cyto),
+        adata_wonn = adata[~adata.obs['{}_in_sdcc_r{}'.format(cyto, radius)].str.contains('2')].copy()
+        sc.tl.rank_genes_groups(adata_wonn, '{}_in_sdcc_r{}'.format(cyto, radius), method='wilcoxon',
+                                key_added="{}_in_sdcc_r{}_wilcoxon".format(cyto, radius),
                                 use_raw=True, n_genes=adata_wonn.shape[1], corr_method='benjamini-hochberg')
         # save as pandas dataframe with p-values
-        cluster_algo = '{}_in_sdcc'.format(cyto)
+        cluster_algo = '{}_in_sdcc_r{}'.format(cyto, radius)
         ranked_genes_list = adata_wonn.uns[cluster_algo + '_wilcoxon']
         name_csv_file = os.path.join(save_folder, cluster_algo + '_clustered_gene_list.csv')
         groups = ranked_genes_list['names'].dtype.names
@@ -114,4 +115,4 @@ def rank_cyto_vs_others_genes(adata, cytokine_responders, save_folder, radius):
         # Volcano plot -> R
         # Save df
         gene_p_value_df.to_csv(os.path.join(save_folder, '{}_in_sdcc_wilcoxon__radius{}.csv'.format(cyto, radius)))
-        sc.write(os.path.join(save_folder, '{}_in_sdcc__radius{}.h5'.format(cyto, radius)), adata)
+        # sc.write(os.path.join(save_folder, '{}_in_sdcc__radius{}.h5'.format(cyto, radius)), adata)
