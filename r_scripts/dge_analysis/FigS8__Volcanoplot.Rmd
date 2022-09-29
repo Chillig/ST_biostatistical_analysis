@@ -1,0 +1,466 @@
+---
+title: "Figure_S8_Volcanoplot"
+author: "Christina Hillig"
+date: "9/13/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, echo=FALSE}
+rm(list = ls(all=TRUE))
+# Set seed before loading packages 
+set.seed(1)
+
+library('BiocGenerics', lib.loc="/Users/christina.hillig/R_studio/DGE_Analysis/renv/library/R-4.1/x86_64-apple-darwin17.0") 
+library(ggplot2)
+library(ggsignif)
+library(ggrepel)
+
+library(tidyverse)
+library(plyr)
+library(dplyr)
+
+# Overview:
+# 1. Read in DEG list
+# 2. Highlight genes in Volcano plot - show top 20 highly significant genes 
+# 3. Plot Volcano plots
+
+```
+
+```{r, echo=FALSE}
+#' @description Creates a Volcano plot labeling significantly expressed genes and with the option to instead label custom genes
+#' 
+#' @param df.data : Dataframe with columns log2FoldChange, pvalue, padj
+#' @param log2fc.cut : Threshold for log2FC
+#' @param add.labels : (optional) Names of predefined gene names
+def.get.volcanoplot <- function(df.data, log2fc.cut, add.labels=NULL) 
+{
+  # 1.Mark diff expressed genes
+  df.data <- df.data[order(df.data$padj), ]
+  # add a column of NAs
+  df.data$diffexpressed <- "Not Sig"
+  # if log2Foldchange > 1 and padj < 0.05, set as "Up" 
+  df.data$diffexpressed[df.data$log2FoldChange > log2fc.cut & df.data$padj < 0.001] <- "Up"
+  # if log2Foldchange < -1 and padj < 0.05, set as "Down"
+  df.data$diffexpressed[df.data$log2FoldChange < -log2fc.cut & df.data$padj < 0.001] <- "Down"
+  df.data$diffexpressed <- as.factor(df.data$diffexpressed)
+  df.data$diffexpressed <- factor(df.data$diffexpressed , levels = c("Not Sig", "Up", "Down"))
+  
+  # 2. Add labels to genes
+  df.data <- def.getlabels(func_df.data=df.data, add.labels=NULL) 
+  
+  # 2.1 DOWN: split into two columns if label length > 20
+  mask.down <- !is.na(df.data$label) & df.data$diffexpressed == "Down"
+  # mask.down <- mask.down | df.data$label %in% add.labels
+  ind.temp.down <- rownames(df.data[mask.down, ])
+  second.col.down <- df.data$label[mask.down]
+  second.half.down <- ceiling(length(second.col.down) / 2)
+  if (length(second.col.down) %% 2 == 0 & length(second.col.down) > 1) 
+  {
+    second.half.down <- second.half.down + 1
+  }
+  first.half.down <- length(second.col.down) - second.half.down
+
+  # 2.2 UP: split into two columns if label length > 20
+  mask.up <- !is.na(df.data$label) & df.data$diffexpressed == "Up"
+  # mask.up <- mask.up | df.data$label %in% add.labels 
+  ind.temp.up <-  rownames(df.data[mask.up, ])
+  second.col.up <- df.data$label[mask.up]
+  second.half.up <- ceiling(length(second.col.up) / 2)
+  first.half.up <- length(second.col.up) - second.half.up
+  if (length(second.col.up) %% 2 == 0 & length(second.col.up) > 1) 
+  {
+    second.half.up <- second.half.up + 1
+  }
+
+ 
+  # 2.3 responder genes - exclude them from labels and set to NaN again
+  df.data$resp_label <- NA
+  # Add custom labels -> Todo check in CEBPB
+  ind.labels <- match(add.labels, df.data$hgnc_symbol)
+  # remove NAs
+  ind.labels <- ind.labels[!is.na(ind.labels)]
+  # in label set again to NA
+  df.data$label[ind.labels] <- NA
+  # add labels to resp_label
+  df.data$resp_label[ind.labels] <- df.data$hgnc_symbol[ind.labels]
+  
+  ##   split by up and down:
+  # 2.3.1 Down responder genes
+  mask.resps.down <- df.data$resp_label %in% add.labels & df.data$diffexpressed == "Down"
+  ind.temp.resp.down <-  rownames(df.data[mask.resps.down, ])
+  second.col.resps.down <- df.data$resp_label[mask.resps.down]
+  second.half.resps.down <- ceiling(length(second.col.resps.down) / 2)
+  first.half.resps.down <- length(second.col.resps.down) - second.half.resps.down
+  # To avoid that labels occur twice if second.col.resps.down is even
+  if (length(second.col.resps.down) %% 2 == 0 & length(second.col.resps.down) > 1) 
+  {
+    second.half.resps.down <- second.half.resps.down + 1
+  }
+
+  # 2.3.2 UP responder genes
+  mask.resps.up <- df.data$resp_label %in% add.labels & df.data$diffexpressed == "Up"
+  ind.temp.resp.up <-  rownames(df.data[mask.resps.up, ])
+  second.col.resps.up <- df.data$resp_label[mask.resps.up]
+  second.half.resps.up <- ceiling(length(second.col.resps.up) / 2)
+  first.half.resps.up <- length(second.col.resps.up) - second.half.resps.up
+  # To avoid that labels occur twice if second.col.resps.down is even
+  if (length(second.col.resps.up) %% 2 == 0 & length(second.col.resps.up) > 1) 
+  {
+    second.half.resps.up <- second.half.resps.up + 1
+  }
+  
+  # 2.3.3 inbetween responder genes, negative log2FC
+  mask.resps.inbe.neg <- df.data$resp_label %in% add.labels & 
+    df.data$diffexpressed == "Not Sig" & df.data$log2FoldChange < 0
+  ind.temp.resp.inbe.neg <-  rownames(df.data[mask.resps.inbe.neg, ])
+  
+  # 2.3.3 inbetween responder genes, negative log2FC
+  mask.resps.inbe.pos <- df.data$resp_label %in% add.labels & 
+    df.data$diffexpressed == "Not Sig" & df.data$log2FoldChange > 0
+  ind.temp.resp.inbe.pos <-  rownames(df.data[mask.resps.inbe.pos, ])
+
+  
+  # 3. set parameters
+  # 3.1 find xaxis max limit
+  xmax = max(abs(df.data$log2FoldChange[
+    !is.na(df.data$log2FoldChange) & (!is.infinite(df.data$log2FoldChange))]))
+  xlim_magnitude = floor(log10(xmax))
+  # 3.2 Get second largest y-value
+  y = -log10(df.data$padj)
+  ymax = max(y)
+  ymax_second = sort(y)[length(y) - 1]  
+  ylim_magnitude = floor(log10(max(-log10(df.data$padj))))
+  # 3.3 Point and label size
+  size.annot <- 2.5
+  point.size <- 1
+  fontsize <- 1
+  segment.size <- 0.1
+  box.padding <- 0.1
+    
+  # 4. Create Volcano plot
+  func.volcanoplot <- ggplot2::ggplot(
+    data=df.data %>% plyr::arrange(diffexpressed), 
+    ggplot2::aes(x=log2FoldChange, y=-log10(padj), color=diffexpressed, label=label)) +
+      ggplot2::geom_point(size=point.size) + 
+      ggplot2::theme_minimal() +
+    ggplot2::scale_x_continuous(
+      limits = c(-xmax - 8.5 * 10**xlim_magnitude, xmax + 8.5 * 10**xlim_magnitude)) 
+  
+  # 4.1 Split data into two columns
+  # Annotate resp genes
+  # Down regulated responder genes
+  if (length(ind.temp.resp.down) > 0) 
+  {
+      func.volcanoplot <- func.volcanoplot + ggrepel::geom_label_repel(
+        data=df.data[ind.temp.resp.down[1:first.half.resps.down], ], 
+        ggplot2::aes(label=df.data[ind.temp.resp.down[1:first.half.resps.down], 'resp_label'],
+                     fontsize=fontsize, size=6),
+        fill = "white", color = 'darkgoldenrod',
+        xlim = c(-xmax - 6*10**xlim_magnitude, -xmax - 6.4*10**xlim_magnitude),
+        ylim = c(min(-log10(df.data$padj)), max(-log10(df.data$padj))),
+        size=size.annot,  max.overlaps = Inf, 
+        direction    = "y",
+        hjust        = 0,
+        segment.size = segment.size,
+        size = fontsize, 
+        box.padding  = box.padding, 
+        show.legend  = FALSE) 
+    if (length(second.col.resps.down) > 1) 
+    {
+      func.volcanoplot <- func.volcanoplot + ggrepel::geom_label_repel(
+        data=df.data[ind.temp.resp.down[second.half.resps.down:length(second.col.resps.down)], ], 
+        ggplot2::aes(label=df.data[
+          ind.temp.resp.down[second.half.resps.down:length(second.col.resps.down)], 'resp_label'],
+          fontsize=fontsize, size=fontsize), 
+        fill = "white", color = 'darkgoldenrod',
+        xlim = c(-xmax - 8.4*10**xlim_magnitude, -xmax - 8.8*10**xlim_magnitude),
+        ylim = c(min(-log10(df.data$padj)), max(-log10(df.data$padj))),
+        size=size.annot,  max.overlaps = Inf, 
+        direction    = "y",
+        hjust        = 0,
+        segment.size = segment.size,
+        box.padding  = box.padding, 
+        show.legend  = FALSE)
+    } 
+  }
+  if (length(ind.temp.resp.up) > 0) 
+  {
+    # UP regulated responder genes
+    func.volcanoplot <- func.volcanoplot + ggrepel::geom_label_repel(
+        data=df.data[ind.temp.resp.up[1:first.half.resps.up], ],
+        ggplot2::aes(label=df.data[ind.temp.resp.up[1:first.half.resps.up], 'resp_label'], size=fontsize),
+        fill = "white", color = 'darkgoldenrod',
+        xlim = c(xmax + 6*10**xlim_magnitude - 4*10**(xlim_magnitude-1), xmax + 6.4*10**xlim_magnitude),
+        ylim = c(min(-log10(df.data$padj)), max(-log10(df.data$padj))),
+        size=size.annot,  max.overlaps = Inf, 
+        direction    = "y",
+        hjust        = 0,
+        segment.size = segment.size,
+        size = fontsize,
+        box.padding  = box.padding, show.legend  = FALSE)
+    if (length(second.col.resps.up) > 1) 
+    {
+      func.volcanoplot <- func.volcanoplot + ggrepel::geom_label_repel(
+        data=df.data[ind.temp.resp.up[second.half.resps.up:length(second.col.resps.up)], ], 
+        ggplot2::aes(label=df.data[ind.temp.resp.up[second.half.resps.up:length(second.col.resps.up)],
+                                   'resp_label'], fontsize=5), 
+        fill = "white", color = 'darkgoldenrod',
+        xlim = c(xmax + 8.4*10**xlim_magnitude - 4*10**(xlim_magnitude-1), xmax + 8.8*10**xlim_magnitude),
+        ylim = c(min(-log10(df.data$padj)), max(-log10(df.data$padj))),
+        size=size.annot,  max.overlaps = Inf, direction    = "y", size = fontsize, 
+        hjust        = 0, segment.size = segment.size, box.padding  = box.padding, cex.lab=1.5,
+        show.legend  = FALSE) 
+    } 
+  }
+  if (length(ind.temp.resp.inbe.neg) > 0) 
+  {
+    # Inbetween Not sig responder genes
+    func.volcanoplot <- func.volcanoplot + ggrepel::geom_label_repel(
+        data=df.data[ind.temp.resp.inbe.neg, ],
+        ggplot2::aes(label=df.data[ind.temp.resp.inbe.neg, 'resp_label'], 
+                     fontsize=fontsize, size=fontsize),
+        fill = "white", color = 'grey',
+        xlim = c(-xmax,  -xmax + 0.01*10**xlim_magnitude),
+        # ylim = c(ymax_second + 3*10**(ylim_magnitude -1), ymax - 3*10**(ylim_magnitude -1)),
+        size=size.annot,  max.overlaps = Inf, 
+        direction    = "y",
+        hjust        = 0,
+        segment.size = segment.size,
+        size = fontsize, 
+        box.padding  = box.padding, cex.lab=1.5, show.legend  = FALSE) 
+  }
+  if (length(ind.temp.resp.inbe.pos) > 0) 
+  {
+    func.volcanoplot <- func.volcanoplot + ggrepel::geom_label_repel(
+        data=df.data[ind.temp.resp.inbe.pos, ], 
+        ggplot2::aes(label=df.data[ind.temp.resp.inbe.pos, 'resp_label'], 
+                     fontsize=fontsize, size=fontsize), 
+        fill = "white", color = 'grey',
+        xlim = c(xmax, xmax + 0.01*10**xlim_magnitude),
+        # ylim = c(ymax_second + 3*10**(ylim_magnitude -1), ymax - 3*10**(ylim_magnitude -1)),
+        size=size.annot,  max.overlaps = Inf, direction    = "y", size = fontsize, 
+        hjust        = 0, segment.size = segment.size, box.padding  = box.padding, cex.lab=1.5,
+        show.legend  = FALSE)
+  }
+
+  
+  # Split into 20 each; use different nudges
+  # Anotate top diff expressed genes
+  # Donw regulated genes
+  func.volcanoplot <- func.volcanoplot + ggrepel::geom_label_repel(
+    data=df.data[ind.temp.down[1:first.half.down], ], 
+    fill = "white",  color = 'darkblue',
+    xlim = c(-xmax - 4.*10**xlim_magnitude + 4*10**(xlim_magnitude-1), -xmax - 4.4*10**xlim_magnitude),
+    ylim = c(min(-log10(df.data$padj)), max(-log10(df.data$padj))),
+    size=size.annot,  max.overlaps = Inf, 
+    direction    = "y",
+    hjust        = 0,
+    segment.size = segment.size,
+    size = fontsize, aes(fontsize=fontsize, size=fontsize),
+    box.padding  = box.padding, cex.lab=1.5, show.legend  = FALSE)
+  if (length(second.col.down) > 1) 
+  {
+    func.volcanoplot <- func.volcanoplot + ggrepel::geom_label_repel(
+      data=df.data[ind.temp.down[second.half.down:length(second.col.down)], ], 
+      fill = "white", color = 'darkblue',
+      xlim = c(-xmax - 1*10**xlim_magnitude + 4*10**(xlim_magnitude-1), 
+               -xmax - 0.8*10**xlim_magnitude),
+      ylim = c(min(-log10(df.data$padj)), max(-log10(df.data$padj))),
+      size=size.annot,  max.overlaps = Inf, 
+      direction    = "y",
+      hjust        = 0,
+      segment.size = segment.size,
+      size = fontsize, aes(fontsize=fontsize, size=fontsize), 
+      box.padding  = box.padding, cex.lab=1.5, show.legend  = FALSE)
+  } 
+  
+  # Up regulated genes
+  func.volcanoplot <- func.volcanoplot + ggrepel::geom_label_repel(
+        data=df.data[ind.temp.up[1:first.half.up], ], 
+        fill = "white",  color = 'darkred',
+        xlim = c(xmax + 1*10**xlim_magnitude - 4*10**(xlim_magnitude-1), 
+                 xmax + 0.8*10**xlim_magnitude),
+        size=size.annot,  max.overlaps = Inf,
+        direction    = "y",
+        hjust        = 0,
+        segment.size = 0.1,
+        size = fontsize, aes(fontsize=fontsize, size=fontsize),
+        box.padding  = box.padding, cex.lab=1.5, show.legend  = FALSE)
+  if (length(second.col.up) > 1) 
+  {
+      func.volcanoplot <- func.volcanoplot +  ggrepel::geom_label_repel(
+        data=df.data[ind.temp.up[second.half.up:length(second.col.up)], ], 
+        fill = "white",  color = 'darkred',
+        xlim = c(xmax + 4*10**xlim_magnitude - 4*10**(xlim_magnitude-1), 
+                 xmax + 4.4*10**xlim_magnitude),
+        size=size.annot,  max.overlaps = Inf,
+        direction    = "y",
+        hjust        = 0,
+        segment.size = segment.size,
+        size = fontsize, aes(fontsize=fontsize, size=fontsize),
+        box.padding  = box.padding, show.legend  = FALSE)
+  }
+  
+  # Legend 
+  func.volcanoplot <- func.volcanoplot + 
+    ggplot2::labs(color = "Genes", x = bquote(log[2] ~ "FC"), y=bquote(log[10] ~ "p-adj value")) +
+    ggplot2::scale_color_manual(
+      values=c('Not Sig' = "grey", 'Down' = "darkblue", "Up" = "darkred"), 
+      labels = c("Not Sig.", "Down", "Up")) 
+    
+  return(func.volcanoplot)
+}
+
+
+def.getlabels <- function(func_df.data, add.labels) 
+{
+  if (!is.null(add.labels)) 
+  {
+    func_df.data$label <- NA
+    # Add custom labels -> Todo check in CEBPB
+    ind.labels <- match(add.labels, func_df.data$hgnc_symbol)
+    # remove NAs
+    ind.labels <- ind.labels[!is.na(ind.labels)]
+    func_df.data$label[ind.labels] <- func_df.data$hgnc_symbol[ind.labels]
+    
+    # add top 10 DEGs annotations
+    top_genes <- 10
+    mask.sig <- func_df.data$diffexpressed == "Up"
+    max_ele <- top_genes + 1  # sum(mask.sig, na.rm = TRUE)
+    func_df.data$label[mask.sig][1:max_ele] <- func_df.data$hgnc_symbol[mask.sig][1:max_ele]
+    
+    mask.sig <- func_df.data$diffexpressed == "Down"
+    func_df.data$label[mask.sig][1:max_ele] <- func_df.data$hgnc_symbol[mask.sig][1:max_ele]
+  
+  } else 
+  {
+    # Create a new column "label", contains the name of DEx genes (NA in case they are not)
+    func_df.data$label <- NA
+    # mask.sig <- func_df.data$diffexpressed != "Not Sig"
+    # func_df.data$label[mask.sig] <- func_df.data$hgnc_symbol[mask.sig]
+    
+        # add top 10 DEGs annotations
+    top_genes <- 10
+    mask.sig <- func_df.data$diffexpressed == "Up"
+    max_ele <- top_genes + 1  # sum(mask.sig, na.rm = TRUE)
+    func_df.data$label[mask.sig][1:max_ele] <- func_df.data$hgnc_symbol[mask.sig][1:max_ele]
+    
+    mask.sig <- func_df.data$diffexpressed == "Down"
+    func_df.data$label[mask.sig][1:max_ele] <- func_df.data$hgnc_symbol[mask.sig][1:max_ele]
+  }
+  
+  # sort by label 
+  func_df.data <- func_df.data[order(func_df.data$label), ]
+  return(func_df.data)
+}
+```
+
+```{r, echo=FALSE}
+library(hash)
+dict <- hash::hash()
+dict$IL17A <- c("SPRR2B", "LCN2", "IL19", "CXCL6", "SPRR2E", "IGF2", "SPRR2A", "SPRR2F",
+                 "SPRR2D","DEFB4A", "PI3", "S100A7A", "SERPINB3", "IL36G", "SERPINB4", "RHCG", 
+                 "SLC6A14", "ZC3H12A", "DEFB103B", "PRSS22", "PLAT")
+dict$IL13 <- c("CCL26", "NTRK1", "HSD3B1", "BET3L", "SERPINB13", "CH25H","EML5", "P2RY1",
+               "LOXL4", "FAM26D", "THBS1", "CCL2", "C1QTNF1", "CISH")
+dict$IFNG <- c("UBD", "CXCL9", "CXCL10", "CXCL11", "IL32", "ICAM1",
+                 "BATF2", "GBP5", "GBP4", "CCL8", "IRF1", "IRF1", "RSAD2", "MUC1",
+                 "CCL5", "IL4I1", "CCL4", "MEI1", "CD70", "SAMD9L", "CSF2",
+                 "EBI3", "APOBEC3G", "TNFSF13B", "NR4A3", "TNFRSF9", "BATF3", "KLHDC7B", "ADAM19",
+                 "SP140", "ZBP1", "IDO1", "IFI30", "MUC16", "LAYN", "BCL2L14")
+```
+
+```{r}
+# 1. Load data 
+# input.dir <- '/Users/christina.hillig/PycharmProjects/ST_Immune_publication/Publication_analysis/output/reviewers/Weighted_Spearman_ppadata'
+# input.dir <- '/Volumes/CH__data/ST_immune_publication/Revision/data'
+# comparison <- 'DGE_cyto_vs_others_Spearman'
+input.dir <- '/Users/christina.hillig/PycharmProjects/ST_Immune_publication/Publication_analysis/output/reviewers'
+comparison <- 'Figure_S8'
+# use optimal radius for each cytokine
+radius <- c(4, 0, 3)
+date <- '2022-08-10'
+cytokines <- c('IFNG', 'IL17A', 'IL13')
+
+# Create output directory
+save.dir <- file.path(input.dir, comparison)
+dir.create(save.dir, showWarnings = FALSE)
+
+log2fc.cutoff <- 1
+
+for (ind in seq(length(cytokines))) 
+{
+  df <- read.csv(file.path(input.dir, comparison, date, radius[ind],
+                       paste0(cytokines[ind], '_in_sdcc_wilcoxon__radius', radius[ind], '.csv')))
+  # df <- read.csv(file.path(input.dir, comparison, radius[ind],
+  #                          paste0(cytokines[ind], '_in_sdcc_wilcoxon.csv')))
+  df$X <- NULL
+  df.temp_dds.temp <- df[, c('X1_ensemblID', "X1_names", "X1_scores", 
+                             "X1_logfoldchanges", "X1_pvals", "X1_pvals_adj")]
+  # rename columns
+  df.temp_dds.temp <- df.temp_dds.temp %>%
+    dplyr::rename(
+      ensemblID = X1_ensemblID,
+      hgnc_symbol = X1_names,
+      scores = X1_scores,
+      log2FoldChange = X1_logfoldchanges,
+      pvalue = X1_pvals,
+      padj = X1_pvals_adj
+      )
+  # df.temp_dds.temp <- df.temp_dds.temp %>% 
+  #   dplyr::rename(
+  #     ensemblID = X0_ensemblID,
+  #     hgnc_symbol = X0_names,
+  #     scores = X0_scores,
+  #     log2FoldChange = X0_logfoldchanges,
+  #     pvalue = X0_pvals,
+  #     padj = X0_pvals_adj
+  #     )
+  
+  # density clusters of IL13 vs others:
+  #            ensemblID hgnc_symbol    scores log2FoldChange       pvalue         padj
+  # 319  ENSG00000143546      S100A8 10.356063             NA 3.927993e-25 2.538173e-23
+  # 1253 ENSG00000163220      S100A9  9.162406             NA 5.075299e-20 8.349332e-19
+  #            ensemblID hgnc_symbol    scores log2FoldChange       pvalue         padj
+  # 4    ENSG00000186832       KRT16 13.055657            Inf 5.899880e-39 3.040355e-35
+  # 9    ENSG00000205420       KRT6A 12.407773            Inf 2.371571e-35 5.431689e-32
+  # 14   ENSG00000186847       KRT14 12.128201            Inf 7.487688e-34 1.102455e-30
+  # 1572 ENSG00000143556      S100A7  8.883941            Inf 6.453298e-19 8.461948e-18
+  # 4452 ENSG00000186395       KRT10  6.779237            Inf 1.208123e-11 5.593677e-11
+  # 5522 ENSG00000167768        KRT1  6.020455            Inf 1.739274e-09 6.492512e-09
+  df.temp_dds.temp <- df.temp_dds.temp[!is.na(df.temp_dds.temp$log2FoldChange), ] 
+  df.temp_dds.temp <- df.temp_dds.temp[!is.infinite(df.temp_dds.temp$log2FoldChange), ] 
+  
+  gene.labels <- unique(dict[[cytokines[ind]]])
+  
+  # Create Volcano Plot
+  save.dir.temp <- file.path(save.dir, date, radius[ind], Sys.Date())
+  dir.create(save.dir.temp, showWarnings = FALSE)
+  pdf(file = file.path(save.dir.temp, paste0(cytokines[ind], '_Volcanoplot', '.pdf')),
+    width = 9, height = 6)
+  print(def.get.volcanoplot(df.data=df.temp_dds.temp, log2fc.cut=log2fc.cutoff, add.labels=gene.labels))
+  dev.off()
+}
+
+```
+
+```{r , echo=FALSE}
+# TODO highlight responder und receptor genes in Volcano plot together with top 20 DEGs
+# TODO adjust x and y limits by percentage of max value in plots 
+
+def.get.volcanoplot(df.data=df.temp_dds.temp, log2fc.cut=1, add.labels=gene.labels) 
+```
+
+```{r , echo=FALSE}
+# # TODO highlight responder und receptor genes in Volcano plot together with top 20 DEGs
+# 
+# pdf(file = file.path(input.dir, comparison, radius, paste0(cytokine, '_Volcanoplot', '.pdf')),
+#   width = 6, height = 6)
+# print(def.get.volcanoplot(df.data=df.temp_dds.temp, log2fc.cut=1, add.labels=gene.labels))
+# dev.off()
+```
+
