@@ -69,7 +69,7 @@ def calculate_weighted_spearman(x, y, w):
     return weighted_corr(x=_wrank(x=x, w=w), y=_wrank(x=y, w=w), w=w)
 
 
-def check_data_normaldist(df_highcounts, df_lowcounts):
+def check_data_normaldistributed(df_highcounts, df_lowcounts):
     """Check with Shapiro test if count data is normal distributed
 
     Parameters
@@ -79,10 +79,13 @@ def check_data_normaldist(df_highcounts, df_lowcounts):
 
     Returns
     -------
+    w_hc :
     ps_hc : float
         p-value for high counts distribution
+    w_lc :
     ps_lc: float
         p-value for low counts distribution
+
 
     """
     # check if data is normal distributed
@@ -112,15 +115,24 @@ def apply_wilcoxontest(df_highcounts, df_lowcounts):
     # plt.title("Lower Counts Q-Q Plot")
 
     # check if data is normal distributed
-    w_hc, ps_hc, w_lc, ps_lc = check_data_normaldist(df_highcounts, df_lowcounts)
+    w_hc, ps_hc, w_lc, ps_lc = check_data_normaldistributed(df_highcounts, df_lowcounts)
 
     # if p-value < 0.05 -> variable violates the assumption of normality => Use Wilcoxon signed rank test
-    if (ps_hc <= 0.05) & (ps_lc <= 0.05):
-        t, prob = stats.wilcoxon(df_highcounts, df_lowcounts)
-        print(prob)
-        return prob
+    if (ps_hc <= 0.05) | (ps_lc <= 0.05):
+        if len(df_highcounts) == len(df_lowcounts):
+            t, prob = stats.wilcoxon(df_highcounts, df_lowcounts)
+        else:
+            u, prob = stats.mannwhitneyu(df_highcounts, df_lowcounts)
     else:
-        return None
+        stat_value, p = stats.levene(df_highcounts, df_lowcounts)
+        if p < 0.05:
+            # Data has not equal variance -> Welch's t-test
+            w, prob = stats.ttest_ind(df_highcounts, df_lowcounts, equal_var=False)
+        else:
+            t, prob = stats.ttest_ind(df_highcounts, df_lowcounts)
+
+    print(prob)
+    return prob
 
 
 def apply_statstest(df_highcounts, df_lowcounts, correlation_value):
@@ -139,7 +151,7 @@ def apply_statstest(df_highcounts, df_lowcounts, correlation_value):
 
     """
     # check if data is normal distributed
-    w_hc, ps_hc, w_lc, ps_lc = check_data_normaldist(df_highcounts, df_lowcounts)
+    w_hc, ps_hc, w_lc, ps_lc = check_data_normaldistributed(df_highcounts, df_lowcounts)
 
     # if p-value < 0.05 -> variable violates the assumption of normality => Use test
     if (ps_hc <= 0.05) & (ps_lc <= 0.05):
