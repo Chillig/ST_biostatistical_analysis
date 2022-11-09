@@ -7,33 +7,30 @@ You can find the preprint version of the manuscript here: <br>
 
 
 ## Abstract
-Chronic inflammatory diseases are characterized by tissue infiltration of abundant and polyclonal T cells. 
-It remains challenging to distinguish disease-driving from bystander immune cells. Here, we used spatial transcriptomics 
-to investigate 52,000 human cutaneous transcriptomes of non-communicable inflammatory skin diseases (ncISD), including 
-psoriasis, atopic dermatitis, and lichen planus. <br>
-Despite the expected T cell infiltration, per spatial spot we observed only 1-10 transcripts for T cell cytokines 
-central for the pathogenic reaction. We confirmed these findings in independent patient cohorts using in 
-situ hybridization, bulk and single-cell sequencing, and in vitro T cell stimulation assays. 
-Expression of cytokine transcripts was limited to lesional skin and presented in a disease-specific pattern, 
-indicating functional relevance. In fact, we identified responder signatures in the direct proximity of cytokines, 
-and showed that single cytokine transcripts initiate amplification cascades of thousands of specific responder 
-transcripts forming localized inflammatory microenvironments. <br>
-Thus, within the abundant and polyclonal T cell infiltrates of ncISD, a few T cells drive disease by initiating an 
-inflammatory amplification cascade in their local microenvironment. Specifically targeting these T cells could form the 
-basis of causative and individualized therapies of ncISD. <br>
+Abundant heterogeneous immune cells infiltrate chronic inflammatory diseases and characterization of these cells is 
+needed to distinguish disease-driving from bystander immune cells. Here, we investigated the landscape of 
+non-communicable inflammatory skin diseases (ncISD) by spatial transcriptomics resulting in a large repository 
+of 62,000 spatially defined human cutaneous transcriptomes of 31 patients. <br>
+Despite the expected immune cell infiltration, we observe rather low numbers of pathogenic disease driving cytokine 
+transcripts (IFNG, IL13 and IL17A), i.e. >125 times less compared to the mean expression of all other genes over 
+lesional skin sections. Nevertheless, cytokine expression is limited to lesional skin and presented in a 
+disease-specific pattern. Leveraging a density-based spatial clustering method, we identify specific 
+responder gene signatures in direct proximity of cytokines, and confirm that detected cytokine transcripts initiate 
+amplification cascades up to thousands of specific responder transcripts forming localized epidermal clusters. 
+Thus, within the abundant and heterogeneous infiltrates of ncISD, only a few cytokine transcripts drive disease by 
+initiating an inflammatory amplification cascade in their local microenvironment. 
 
-*key words*: Spatial transcriptomics, chronic inflammatory skin diseases, immunological disorders, 
-immunopathogenesis, adaptive immunity <br>
+*key words*: Spatial transcriptomics, chronic inflammatory skin diseases, psoriasis, atopic dermatits, 
+lichen planus, immune response, cytokines <br>
 
 
 ## Lets get started!
 The source code used to generate the results and figures are in the py_scripts and r_scripts folder. 
-Further, the developed *conditional density clustering algorithm* can be found in folder 
-python_scripts/spatial_correlation. <br> 
+Further, our *condition-based density clustering algorithm* can be found in the folder 
+python_scripts/spatial_correlation. By running the **main.py** script you can either create figure 5F-H 
+or read out information for the DGE analysis to create supplemental figure 8. <br> 
 All preprocessing steps and analysis are run in python. Solely the differential gene expression (DGE) analysis and 
-pathway enrichment analysis are run in R. <br> 
-A processed example data is provided in [to be added soon](https://..??) and by running the pipeline the generated 
-results will be saved in the output folder. <br>
+pathway enrichment analysis performed using R. <br> 
 You can clone the repository by typing in the terminal the command: 
 ```{bash}
 git clone https://github.com/Chillig/ST_biostatistical_analysis.git
