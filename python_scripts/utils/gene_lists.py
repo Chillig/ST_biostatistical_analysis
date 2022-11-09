@@ -36,7 +36,6 @@ def highlight_genes():
     highlighting_genes['IFNG'] = OrderedDict()
     highlighting_genes['IL13'] = OrderedDict()
 
-    # TODO check with Steffi if we should remove also PPARD
     highlighting_genes['IL17A']['Driver_genes'] = ["IL17F", 'IL26', 'IL22', 'CCL3', 'CD274', 'PPARD', 'RAB27A']
     highlighting_genes['IL17A']["Responder_genes"] = ['NOS2', 'IL19', 'CCL20', 'LCN2', 'SPPRR2F', 'SPPRR2D', 'SPPRR2B',
                                                       'DEFB4A', 'S100A7A', 'IL36G', 'VNN3', 'CXCL8', 'CXCL1']
@@ -59,41 +58,34 @@ def get_publication_cyto_resps():
     :return: list, list, dict
     """
     cytoresps_dict = OrderedDict()
-    # # Type 1 LICHEN
-    # cytoresps_dict["IFNG"] = ["UBD", "CXCL9", "CXCL10", "CXCL11", "IL32", "ICAM1",
-    #                           "BATF2", "GBP5", "GBP4", "CCL8", "IRF1", "IRF1", "RSAD2", "MUC1"]
-    # # Type 2 AE
-    # cytoresps_dict["IL13"] = ["CCL26", "NTRK1", "HSD3B1", "BET3L", "SERPINB13", "CH25H",
-    #                           "EML5", "P2RY1", "LOXL4", "FAM26D", "THBS1"]
-    # # Type 3 PSO
-    # cytoresps_dict["IL17A"] = ["SPRR2B", "LCN2", "IL19", "CXCL6", "SPRR2E",
-    #                            "IGF2", "SPRR2A", "SPRR2F", "SPRR2D", "DEFB4A"]
 
     # Type 1 LICHEN
-    cytoresps_dict["IFNG"] = list(np.unique(["UBD", "CXCL9", "CXCL10", "CXCL11", "IL32", "ICAM1",
-                              "BATF2", "GBP5", "GBP4", "CCL8", "IRF1", "IRF1", "RSAD2", "MUC1",
-                              "CCL5", "IL4I1", "CCL4", "MEI1", "CD70", "SAMD9L", "CSF2",
-                              "EBI3", "APOBEC3G", "TNFSF13B", "NR4A3", "TNFRSF9", "BATF3", "KLHDC7B", "ADAM19",
-                              "SP140", "ZBP1", "IDO1", "IFI30", "MUC16", "LAYN", "BCL2L14"]))
+    cytoresps_dict["IFNG"] = list(
+        np.unique(["UBD", "CXCL9", "CXCL10", "CXCL11", "IL32", "ICAM1", "BATF2", "GBP5", "GBP4", "CCL8", "IRF1",
+                   "RSAD2", "MUC1", "CCL5", "IL4I1", "CCL4", "MEI1", "CD70", "SAMD9L", "CSF2",
+                   "EBI3", "APOBEC3G", "TNFSF13B", "NR4A3", "TNFRSF9", "BATF3", "KLHDC7B", "ADAM19",
+                   "SP140", "ZBP1", "IDO1", "IFI30", "MUC16", "LAYN", "BCL2L14"]))
 
     # Type 2 AE
-    cytoresps_dict["IL13"] = list(np.unique(["CCL26", "NTRK1", "HSD3B1", "BET3L", "SERPINB13", "CH25H",
-                              "EML5", "P2RY1", "LOXL4", "FAM26D", "THBS1", "CCL2", "C1QTNF1", "CISH"]))
+    cytoresps_dict["IL13"] = list(
+        np.unique(["CCL26", "NTRK1", "HSD3B1", "BET3L", "SERPINB13", "CH25H",
+                   "EML5", "P2RY1", "LOXL4", "FAM26D", "THBS1", "CCL2", "C1QTNF1", "CISH"]))
 
     # Type 3 PSO
-    cytoresps_dict["IL17A"] = list(np.unique(["SPRR2B", "LCN2", "IL19", "CXCL6", "SPRR2E",
-                               "IGF2", "SPRR2A", "SPRR2F", "SPRR2D", "DEFB4A", "PI3", "S100A7A", "SERPINB3",
-                               "IL36G", "SERPINB4", "RHCG", "SLC6A14", "ZC3H12A", "DEFB103B", "PRSS22", "PLAT"]))
+    cytoresps_dict["IL17A"] = list(
+        np.unique(["SPRR2B", "LCN2", "IL19", "CXCL6", "SPRR2E", "IGF2", "SPRR2A", "SPRR2F", "SPRR2D", "DEFB4A", "PI3",
+                   "S100A7A", "SERPINB3", "IL36G", "SERPINB4", "RHCG", "SLC6A14", "ZC3H12A", "DEFB103B",
+                   "PRSS22", "PLAT"]))
 
     cytokines = list(cytoresps_dict.keys())
 
     allinone = ["IFNG", "UBD", "CXCL9", "CXCL10", "CXCL11", "IL32", "ICAM1",
-                              "BATF2", "GBP5", "GBP4", "CCL8", "IRF1", "IRF1", "RSAD2", "MUC1",
-                              "CCL5", "IL4I1", "CCL4", "MEI1", "CD70", "SAMD9L", "CSF2",
-                              "EBI3", "APOBEC3G", "TNFSF13B", "NR4A3", "TNFRSF9", "BATF3", "KLHDC7B", "ADAM19",
-                              "SP140", "ZBP1", "IDO1", "IFI30", "MUC16", "LAYN", "BCL2L14",
+                               "BATF2", "GBP5", "GBP4", "CCL8", "IRF1", "IRF1", "RSAD2", "MUC1",
+                               "CCL5", "IL4I1", "CCL4", "MEI1", "CD70", "SAMD9L", "CSF2",
+                               "EBI3", "APOBEC3G", "TNFSF13B", "NR4A3", "TNFRSF9", "BATF3", "KLHDC7B", "ADAM19",
+                               "SP140", "ZBP1", "IDO1", "IFI30", "MUC16", "LAYN", "BCL2L14",
                 "IL13", "CCL26", "NTRK1", "HSD3B1", "BET3L", "SERPINB13", "CH25H",
-                              "EML5", "P2RY1", "LOXL4", "FAM26D", "THBS1", "CCL2", "C1QTNF1", "CISH",
+                               "EML5", "P2RY1", "LOXL4", "FAM26D", "THBS1", "CCL2", "C1QTNF1", "CISH",
                 "IL17A", "SPRR2B", "LCN2", "IL19", "CXCL6", "SPRR2E",
                                "IGF2", "SPRR2A", "SPRR2F", "SPRR2D", "DEFB4A", "PI3", "S100A7A", "SERPINB3",
                                "IL36G", "SERPINB4", "RHCG", "SLC6A14", "ZC3H12A", "DEFB103B", "PRSS22", "PLAT"]
@@ -155,69 +147,6 @@ def cyto_asdict():
     return cytokines
 
 
-def get_permuted_respondergenes_log2fc1():
-    """Get cytokines and their responder genes from the human Keratinocyte experiment
-
-    Returns
-    -------
-    cytokines : list
-    cytoresps_dict : dict
-
-    """
-    cytoresps_dict = OrderedDict()
-    # Type 1 LICHEN
-    cytoresps_dict["IFNG"] = ["UBD", "CXCL9", "CXCL10", "CXCL11", "IL32", "ICAM1",
-                              "BATF2", "GBP5", "GBP4", "CCL8", "IRF1", "IRF1", "RSAD2", "MUC1",
-                              "CCL5", "IL4I1", "CCL4", "MEI1", "CD70", "SAMD9L", "CSF2",
-                              "EBI3", "APOBEC3G", "TNFSF13B", "NR4A3", "TNFRSF9", "BATF3", "KLHDC7B", "ADAM19",
-                              "SP140", "ZBP1", "IDO1", "IFI30", "MUC16", "LAYN", "BCL2L14",
-                              'UBD', 'IL32', 'ICAM1', 'CXCL11', 'CXCL10', 'CXCL9', 'SLC15A3', 'TNFAIP6', 'CCL4', 'MMP9',
-                              'IL4I1', 'RSAD2', 'HAPLN3', 'ISG20', 'EBI3', 'IL15', 'TRAF1', 'CD74', 'SAMD9L', 'CCL8',
-                              'CCL7', 'CCL5', 'CMPK2',  'GBP4', 'AIM2', 'IFI35', 'CIITA', 'GLIPR2', 'CSF2', 'MEI1',
-                              'APOL1', 'GBP5', 'CD70', 'EPSTI1', 'CD83', 'IL7R', 'PSMB9', 'SOCS1', 'IRF1', 'IFIT3',
-                              'MX2', 'IL18BP', 'CD38', 'TNFRSF9', 'CD40', 'IFITM1', 'MMP25', 'G0S2', 'APOBEC3G', 'LAP3',
-                              'SECTM1', 'TNFRSF8', 'CTSS', 'BATF3', 'VEGFC', 'TBX21', 'SLC16A3', 'HSH2D',  'CX3CL1',
-                              'GBP1', 'TNFSF13B', 'JAK3', 'MMP1', 'IFIT2', 'IFI44L', 'MARCKSL1', 'IFI30', 'CCL19',
-                              'LCP1', 'LAMP3', 'IL2RG', 'LTB', 'SLC2A6', 'NR4A3', 'CRIP1', 'BCL2L14', 'PDCD1LG2',
-                              'PTHLH', 'SRGN', 'LAMC2', 'ITGA4', 'EXOC3L4', 'LYPD1', 'FZD2', 'FLT3LG', 'BCL2A1',
-                              'SAMHD1', 'P2RY6', 'DRAM1', 'CLIC2', 'EGFL6', 'CCL21', 'IL3RA', 'CARD11', 'SERPINB9',
-                              'NCEH1', 'TGM2', 'TMEM132A', 'LAYN', 'SNX10', 'EMILIN2', 'RUNX3', 'ZBP1', 'ARL4C',
-                              'FMNL1', 'MICB', 'TNFRSF1B', 'STARD8', 'IGFLR1', 'NLRP3', 'SP140', 'IDO1', 'ICAM2',
-                              'MUC16', 'CD68', 'GIMAP2', 'STAT4', 'ADAM19', 'FCGR3A', 'IL2RB', 'CHST11', 'CXCR4', 'C2',
-                              'SLAMF8', 'PRDM8', 'GZMB', 'KLHDC7B', 'HMSD', 'CLIC5', 'TNC', 'UCP2', 'IL10RA', 'ETS1',
-                              'TNFAIP8L2', 'MYO1G', 'GALM', 'SPINK6']
-
-    # Type 2 AE
-    cytoresps_dict["IL13"] = ["CCL26", "NTRK1", "HSD3B1", "BET3L", "SERPINB13", "CH25H",
-                              "EML5", "P2RY1", "LOXL4", "FAM26D", "THBS1", "CCL2", "C1QTNF1", "CISH"]
-
-    # Type 3 PSO
-    cytoresps_dict["IL17A"] = ["SPRR2B", "LCN2", "IL19", "CXCL6", "SPRR2E",
-                               "IGF2", "SPRR2A", "SPRR2F", "SPRR2D", "DEFB4A",
-                               "DEFB4A", "PDZK1IP1", "S100A7", "SPRR2B", "PI3", "RHCG", "S100A12", "S100A8", "SERPINB3",
-                               "S100A9", "LCN2", "SERPINB4", "IL36G", "ZC3H12A", "C15orf48", "S100A7A", "SPRR2G",
-                               "IL19", "DEFB103B", "SPRR2A", "SPRR2D", "SPRR2F", "NAMPT", "STEAP4", "CFB", "SPRR2E",
-                               "PRSS22", "SLC6A14", "PLAT", "IRAK2"]
-
-    # permuted cytokines and responders
-    cytoresps_dict["IFNG_IL13_responder"] = cytoresps_dict["IL13"]
-    cytoresps_dict["IFNG_IL17A_responder"] = cytoresps_dict["IL17A"]
-
-    cytoresps_dict["IL13_IFNG_responder"] = cytoresps_dict["IFNG"]
-    cytoresps_dict["IL13_IL17A_responder"] = cytoresps_dict["IL17A"]
-
-    cytoresps_dict["IL17A_IFNG_responder"] = cytoresps_dict["IFNG"]
-    cytoresps_dict["IL17A_IL13_responder"] = cytoresps_dict["IL13"]
-
-    cytoresps_dict.pop('IFNG', None)
-    cytoresps_dict.pop('IL13', None)
-    cytoresps_dict.pop('IL17A', None)
-
-    cytokines = list(cytoresps_dict.keys())
-
-    return cytokines, cytoresps_dict
-
-
 def get_permuted_respondergenes_log2fc1_5():
     """Get cytokines and their responder genes from the human Keratinocyte experiment
 
@@ -229,20 +158,22 @@ def get_permuted_respondergenes_log2fc1_5():
     """
     cytoresps_dict = OrderedDict()
     # Type 1 LICHEN
-    cytoresps_dict["IFNG"] = list(np.unique(["UBD", "CXCL9", "CXCL10", "CXCL11", "IL32", "ICAM1",
-                              "BATF2", "GBP5", "GBP4", "CCL8", "IRF1", "IRF1", "RSAD2", "MUC1",
-                              "CCL5", "IL4I1", "CCL4", "MEI1", "CD70", "SAMD9L", "CSF2",
-                              "EBI3", "APOBEC3G", "TNFSF13B", "NR4A3", "TNFRSF9", "BATF3", "KLHDC7B", "ADAM19",
-                              "SP140", "ZBP1", "IDO1", "IFI30", "MUC16", "LAYN", "BCL2L14"]))
+    cytoresps_dict["IFNG"] = list(
+        np.unique(["UBD", "CXCL9", "CXCL10", "CXCL11", "IL32", "ICAM1", "BATF2", "GBP5", "GBP4", "CCL8", "IRF1",
+                   "IRF1", "RSAD2", "MUC1", "CCL5", "IL4I1", "CCL4", "MEI1", "CD70", "SAMD9L", "CSF2",
+                   "EBI3", "APOBEC3G", "TNFSF13B", "NR4A3", "TNFRSF9", "BATF3", "KLHDC7B", "ADAM19",
+                   "SP140", "ZBP1", "IDO1", "IFI30", "MUC16", "LAYN", "BCL2L14"]))
 
     # Type 2 AE
-    cytoresps_dict["IL13"] = list(np.unique(["CCL26", "NTRK1", "HSD3B1", "BET3L", "SERPINB13", "CH25H",
-                              "EML5", "P2RY1", "LOXL4", "FAM26D", "THBS1", "CCL2", "C1QTNF1", "CISH"]))
+    cytoresps_dict["IL13"] = list(
+        np.unique(["CCL26", "NTRK1", "HSD3B1", "BET3L", "SERPINB13", "CH25H",
+                   "EML5", "P2RY1", "LOXL4", "FAM26D", "THBS1", "CCL2", "C1QTNF1", "CISH"]))
 
     # Type 3 PSO
-    cytoresps_dict["IL17A"] = list(np.unique(["SPRR2B", "LCN2", "IL19", "CXCL6", "SPRR2E",
-                               "IGF2", "SPRR2A", "SPRR2F", "SPRR2D", "DEFB4A", "PI3", "S100A7A", "SERPINB3",
-                               "IL36G", "SERPINB4", "RHCG", "SLC6A14", "ZC3H12A", "DEFB103B", "PRSS22", "PLAT"]))
+    cytoresps_dict["IL17A"] = list(
+        np.unique(["SPRR2B", "LCN2", "IL19", "CXCL6", "SPRR2E", "IGF2", "SPRR2A", "SPRR2F", "SPRR2D", "DEFB4A",
+                   "PI3", "S100A7A", "SERPINB3", "IL36G", "SERPINB4", "RHCG", "SLC6A14", "ZC3H12A", "DEFB103B",
+                   "PRSS22", "PLAT"]))
 
     # permuted cytokines and responders
     cytoresps_dict["IFNG_IFNG_responder"] = cytoresps_dict["IFNG"]
@@ -256,50 +187,6 @@ def get_permuted_respondergenes_log2fc1_5():
     cytoresps_dict["IL17A_IL17A_responder"] = cytoresps_dict["IL17A"]
     cytoresps_dict["IL17A_IFNG_responder"] = cytoresps_dict["IFNG"]
     cytoresps_dict["IL17A_IL13_responder"] = cytoresps_dict["IL13"]
-
-    # cytoresps_dict.pop('IFNG', None)
-    # cytoresps_dict.pop('IL13', None)
-    # cytoresps_dict.pop('IL17A', None)
-
-    cytokines = list(cytoresps_dict.keys())
-
-    return cytokines, cytoresps_dict
-
-
-def get_permuted_respondergenes_refined_log2fc1_5():
-    """Get cytokines and their responder genes from the human Keratinocyte experiment
-
-    # TODO check cross comparison !!!
-    Returns
-    -------
-    cytokines : list
-    cytoresps_dict : dict
-
-    """
-    cytoresps_dict = OrderedDict()
-    # Type 1 LICHEN
-    cytoresps_dict["IFNG"] = ['UBD', 'CXCL9', 'CXCL10', 'CXCL11', 'CCL5', 'KLHDC7B', 'IFI30', 'MUC16']
-
-    # Type 2 AE
-    cytoresps_dict["IL13"] = ['CCL26', 'CISH', 'DUOX', 'C1QTNF1', 'NTRK1', 'HSD3B1']
-
-    # Type 3 PSO
-    cytoresps_dict["IL17A"] = ['DEFB4A', 'IL36G', 'LCN2', 'PI3', 'RHCG', 'S100A7A', 'SERPINB3', 'SERPINB4', 'SPRR2A',
-                               'SPRR2B', 'SPRR2D', 'SPRR2E', 'SPRR2F']
-
-    # permuted cytokines and responders
-    cytoresps_dict["IFNG_IL13_responder"] = cytoresps_dict["IL13"]
-    cytoresps_dict["IFNG_IL17A_responder"] = cytoresps_dict["IL17A"]
-
-    cytoresps_dict["IL13_IFNG_responder"] = cytoresps_dict["IFNG"]
-    cytoresps_dict["IL13_IL17A_responder"] = cytoresps_dict["IL17A"]
-
-    cytoresps_dict["IL17A_IFNG_responder"] = cytoresps_dict["IFNG"]
-    cytoresps_dict["IL17A_IL13_responder"] = cytoresps_dict["IL13"]
-
-    cytoresps_dict.pop('IFNG', None)
-    cytoresps_dict.pop('IL13', None)
-    cytoresps_dict.pop('IL17A', None)
 
     cytokines = list(cytoresps_dict.keys())
 
@@ -321,7 +208,6 @@ def highlight_genes_receptors():
     highlighting_genes['IFNG'] = OrderedDict()
     highlighting_genes['IL13'] = OrderedDict()
 
-    # TODO check with Steffi if we should remove also PPARD
     highlighting_genes['IL17A']['Driver_genes'] = ["IL17F", 'IL26', 'IL22', 'CCL3', 'CD274', 'PPARD', 'RAB27A']
     highlighting_genes['IL17A']["Responder_genes"] = ['NOS2', 'IL19', 'CCL20', 'LCN2', 'SPPRR2F', 'SPPRR2D', 'SPPRR2B',
                                                       'DEFB4A', 'S100A7A', 'IL36G', 'VNN3', 'CXCL8', 'CXCL1']
