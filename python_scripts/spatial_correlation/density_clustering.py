@@ -145,7 +145,7 @@ def get_responder_cytoposneg_counts(adata_obs, obervable_cyto, obervable_resps, 
     -------
 
     """
- 
+
     # create column name
     col_respcytpos = ''.join([cytokine, "+ responder+ spot"])
     col_respcytneg = ''.join([cytokine, "- responder+ spot"])
@@ -429,7 +429,7 @@ def run_spatialcorrelation(adata, tissue_types, cytokine_responders, save_folder
 
     # Plot Workflow figure 1G
     if radius == 1:
-        plot_spatial_correlation.plot__stwc_tissuelayers_figure1G(
+        plot_spatial_correlation.plot__stwc_tissuelayers_figure1g(
             df_counts=df_counts, save_folder=save_folder, distance=radius, corr_method=corr_method)
 
     return sig, df_counts, adata
