@@ -46,88 +46,33 @@ def plot_evaluate_distance(significance, cytokines, min_radius, save_folder):
     """
     # Evaluate distance via elbow plot
     significance = np.array(significance).T
-    sig_pearson = []
     sig_spearman = []
     for val in significance:
-        sig_pearson.append(val['pearson'])
         sig_spearman.append(val['spearman'])
 
-    sig_pearson = np.array(sig_pearson)
-
+    # Correlation p-values
     sig_spearman = np.array(sig_spearman)
 
     # load cytokine to color
     cyto_color = helper_functions.get_color_signaturegenes()
 
     if min_radius > 0:
-        x_vals = np.arange(min_radius, sig_pearson.shape[0] + 1)
+        x_vals = np.arange(min_radius, sig_spearman.shape[0] + 1)
     else:
-        x_vals = np.arange(min_radius, sig_pearson.shape[0])
-
-    if sig_pearson.T[1:].astype('float').min() < 0:
-        ymin_p = -1
-    else:
-        ymin_p = 0
+        x_vals = np.arange(min_radius, sig_spearman.shape[0])
 
     if sig_spearman.T[1:].astype('float').min() < 0:
         ymin_s = -1
     else:
         ymin_s = 0
 
-    fig_pval, ax_pval = plt.subplots(figsize=fig_size)
-    # ax_pval.grid(False)
-    fig_corr, ax_corr = plt.subplots(figsize=fig_size)
-    ax_corr.set_ylim([ymin_p, 1])
-    # ax_corr.grid(False)
-    for ind, cyto in enumerate(cytokines):  # KeyError: 'IFNG_IL13_responder'
-        mask = sig_pearson.T[:, ind, :].T[:, 2].astype('float') < 0.05
-        ind_notsigpval = np.where(mask == False)[0]
-        ind_sigpval = np.where(mask == True)[0]
-
-        ax_pval.plot(x_vals, -np.log10(sig_pearson.T[:, ind, :].T[:, 2].astype('float')),
-                     linestyle='-', c=cyto_color[cyto], label=cyto)
-        # Highlight significant markers with triangle and non significant ones with unfilled circle
-        if len(ind_sigpval) > 0:
-            ax_pval.scatter(x_vals[mask], -np.log10(sig_pearson.T[:, ind, :].T[:, 2].astype('float'))[mask],
-                            linestyle='-', marker='^', c=cyto_color[cyto])
-        if len(ind_notsigpval) > 0:
-            ax_pval.scatter(x_vals[~mask], -np.log10(sig_pearson.T[:, ind, :].T[:, 2].astype('float'))[~mask],
-                            linestyle='-', marker='o', c=cyto_color[cyto], facecolors='none')
-        ax_pval.set_xlabel('Radius', fontsize=axis_label_fontsize)
-        ax_pval.set_ylabel(r'-log$_{10}$(p-values)', fontsize=axis_label_fontsize)
-        ax_pval.set_xticks(x_vals)
-        sns.despine(ax=ax_pval)
-
-        # Plot correlation vs radius
-        ax_corr.plot(x_vals, sig_pearson.T[:, ind, :].T[:, 1].astype('float'),
-                     linestyle='-', c=cyto_color[cyto], label=cyto)
-        # Highlight significant markers with triangle and non significant ones with unfilled circle
-        if len(ind_sigpval) > 0:
-            ax_corr.scatter(x_vals[mask], sig_pearson.T[:, ind, :].T[:, 1].astype('float')[mask],
-                            linestyle='-', marker='^', c=cyto_color[cyto])
-        if len(ind_notsigpval) > 0:
-            ax_corr.scatter(x_vals[~mask], sig_pearson.T[:, ind, :].T[:, 1].astype('float')[~mask],
-                            linestyle='-', marker='o', c=cyto_color[cyto], facecolor='white')
-        ax_corr.set_xlabel('Radius', fontsize=axis_label_fontsize)
-        ax_corr.set_ylabel(r'Correlation value', fontsize=axis_label_fontsize)
-        ax_corr.set_xticks(x_vals)
-        sns.despine(ax=ax_corr)
-
-    # ax_pval.legend()
-    # fig_pval.savefig(os.path.join(save_folder, "_".join(['PearsonPval_vs_Radius_Evaluation_wogrid', fileformat])))
-    # plt.close(fig=fig_pval)
-    # ax_corr.legend()
-    # fig_corr.savefig(os.path.join(save_folder, "_".join(['PearsonCorr_vs_Radius_Evaluation_wogrid', fileformat])))
-    # plt.close(fig=fig_corr)
-
-    leg = ax_pval.legend(loc='upper center', bbox_to_anchor=(0.5, -0.15), ncol=3, fancybox=True, shadow=False)
-    fig_pval.savefig(os.path.join(save_folder, "_".join(['PearsonPval_vs_Radius_Evaluation', fileformat])),
-                     bbox_inches='tight',  bbox_extra_artists=(leg,))
-    plt.close(fig=fig_pval)
-    leg = ax_corr.legend(loc='upper center', bbox_to_anchor=(0.5, -0.15), ncol=3, fancybox=True, shadow=False)
-    fig_corr.savefig(os.path.join(save_folder, "_".join(['PearsonCorr_vs_Radius_Evaluation', fileformat])),
-                     bbox_inches='tight',  bbox_extra_artists=(leg,))
-    plt.close(fig=fig_corr)
+    # Store p-values and radius in dataframe
+    df_colnames = ['radius']
+    cyto_correlation_colnames = ['correlation ' + x for x in cytokines]
+    cyto_pvalue_colnames = ['-log10(pvalue) ' + x for x in cytokines]
+    df_colnames.extend(cyto_correlation_colnames + cyto_pvalue_colnames)
+    df_spearman = pd.DataFrame(columns=df_colnames)
+    df_spearman['radius'] = x_vals
 
     fig_pval, ax_pval = plt.subplots(figsize=fig_size)
     # ax_pval.grid(False)
@@ -138,6 +83,10 @@ def plot_evaluate_distance(significance, cytokines, min_radius, save_folder):
         mask = sig_spearman.T[:, ind, :].T[:, 2].astype('float') < 0.05
         ind_notsigpval = np.where(mask == False)[0]
         ind_sigpval = np.where(mask == True)[0]
+
+        # Save Correlation values to dataframe
+        df_spearman["correlation {}".format(cyto)] = sig_spearman.T[:, ind, :].T[:, 1].astype('float')
+        df_spearman["-log10(pvalue) {}".format(cyto)] = -np.log10(sig_spearman.T[:, ind, :].T[:, 2].astype('float'))
 
         ax_pval.plot(x_vals, -np.log10(sig_spearman.T[:, ind, :].T[:, 2].astype('float')),
                      linestyle='-', c=cyto_color[cyto], label=cyto)
@@ -168,13 +117,6 @@ def plot_evaluate_distance(significance, cytokines, min_radius, save_folder):
         ax_corr.set_xticks(x_vals)
         sns.despine(ax=ax_corr)
 
-    # ax_pval.legend()
-    # fig_pval.savefig(os.path.join(save_folder, "_".join(['SpearmanPval_vs_Radius_Evaluation_wogrid', fileformat])))
-    # plt.close(fig=fig_pval)
-    # ax_corr.legend()
-    # fig_corr.savefig(os.path.join(save_folder, "_".join(['SpearmanCorr_vs_Radius_Evaluation_wogrid', fileformat])))
-    # plt.close(fig=fig_corr)
-
     leg = ax_pval.legend(loc='upper center', bbox_to_anchor=(0.5, -0.15), ncol=3, fancybox=True, shadow=False)
     fig_pval.savefig(os.path.join(save_folder, "_".join(['SpearmanPval_vs_Radius_Evaluation', fileformat])),
                      bbox_inches='tight',  bbox_extra_artists=(leg,))
@@ -183,6 +125,8 @@ def plot_evaluate_distance(significance, cytokines, min_radius, save_folder):
     fig_corr.savefig(os.path.join(save_folder, "_".join(['SpearmanCorr_vs_Radius_Evaluation', fileformat])),
                      bbox_inches='tight',  bbox_extra_artists=(leg,))
     plt.close(fig=fig_corr)
+
+    return df_spearman
 
 
 def plot_responder_vs_radius(counts_dict: dict, conditionalgenes_responders: dict, radii: list, save_folder: str):
