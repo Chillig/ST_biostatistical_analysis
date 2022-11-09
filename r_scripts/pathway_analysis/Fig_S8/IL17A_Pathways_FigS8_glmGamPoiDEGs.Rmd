@@ -1,0 +1,219 @@
+---
+title: "Pathways of potential responder genes"
+author: "Christina Hillig"
+date: "7/25/2022"
+output: 
+  pdf_document: default
+  html_document
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(eval = TRUE)
+```
+
+# Introduction
+The following section describes the pathway enrichment analysis of up-regulated genes in the IL17A transcript positive and negative group in Leukocytes in the ST data set. 
+
+# Initialisation
+Load required R and Bioconductor packages:
+```{r, message=FALSE}
+# R packages
+rlibs <- c("dplyr", "gtools", "hash", "kableExtra", "knitr", 'GOplot',
+           "stringr", "tibble", "xlsx", "hash", "Hmisc", 'qdapTools', 'msigdbr')
+invisible(lapply(rlibs, require, character.only = TRUE))
+# Bioconductor packages
+bioclibs <- c("ReactomePA", "pathview",  "enrichplot", "org.Hs.eg.db", "DOSE")
+invisible(lapply(bioclibs, require, character.only = TRUE))
+
+getwd()
+environment()
+
+# Set seed for reproduceability 
+set.seed(42)
+
+# Source R-scripts
+source(file.path("..", "..", "..", "r_scripts", "pathway_analysis", 'init.R'))
+source(file.path("..", "..", "..", "r_scripts", "pathway_analysis", 'load_data.R'))
+source(file.path("..", "..", "..", "r_scripts", "pathway_analysis",'utils.R'))
+# R-script to import immune Pathways which shall be highlighted in the publication
+source(file.path("..", "..", "..", "r_scripts", "pathway_analysis", 'pathway_lists.R'))
+# R-script to plot the Pathway enrichment result
+source(file.path("..", "..", "..", "r_scripts", "pathway_analysis", "plot_pathways.R"))
+```
+
+Define input directory.
+```{r}
+## Input 
+# Input directory 
+# TODO change to relative path
+# input.folder <- file.path("..", "..", "input", "pathway_analysis")
+input.folder <- file.path("/Users/christina.hillig/PycharmProjects/ST_Immune_publication/Publication_analysis/output/reviewers/Figure_S8/glmGamPoi_DEGs")
+# Date
+date <- "2022-09-16"
+
+cytokine <- 'IL17A'
+
+input.dir <- file.path(input.folder, date, cytokine)
+```
+Determine cut-parameters to identify differential expressed genes and enriched pathways.
+```{r}
+# Cut parameter
+l2fc.factor <- 1
+fdr.value <- 0.05
+pval.cut <- 0.05
+p.value <- 0.05
+minGSSize <- 10
+# Multi-test method Benjamini-Hochberg (BH)
+multitest.method <-  "BH"
+```
+```{r}
+# Plot Parameters
+show_dotplot_categories <- 15
+
+width_img <- 16
+height_img <- 8
+```
+Create output directory.
+```{r}
+## Output
+# General output directory
+output.dir <- file.path("/Users/christina.hillig/PycharmProjects/ST_Immune_publication/Publication_analysis/output/reviewers/Figure_S8/REACTOME_pathways", Sys.Date(), cytokine)
+dir.create(output.dir, showWarnings = FALSE, recursive = TRUE)
+
+# print(output.dir)
+```
+Load DGE analysis results and prepare dataframe for further analysis steps.
+```{r}
+# 1. Get all DGE .csv files in subfolders
+all_filenames <- list.files(path = input.dir, pattern = ("*.csv"), recursive = TRUE)
+# 2.1 remove metaData from list
+dge_filename <- all_filenames[!grepl("metaData*", all_filenames)]
+# 2.2 read out cytokine .csv file
+dge_filename <- all_filenames[grepl(cytokine, all_filenames)]
+# 3. Load DGE Analysis result file with colnames: 
+# "X" "gene_symbol" "gene_name" "entrezid" "pval" "padj" "log2fc" "hkg"
+df.dge_res <- load_files(path_name_file = file.path(input.dir,  dge_filename))
+df.dge_res$X <- NULL
+
+print.data.frame(df.dge_res[1:10, ], digits = 4)
+```
+
+# Pathway enrichment analysis
+The pathway enrichment analysis included the following steps:
+1. Identify significant and background genes 
+1. Run PA analysis
+1. Plot Save PA analysis results  
+
+In a first step, we convert the gene symbol to entrezID. That is needed to use the later the ReactomePA::enrichPathway function. In best case use always the esemblID.
+```{r}
+df.dge_res <- rename_genetoentrezid(df.dge_results = df.dge_res)
+```
+
+
+## Get significantly DEx genes and background genes
+Now we can start with idetifying differential expressed genes with our manually set cut parameters.
+```{r}
+# I. Define significant DEx genes and background genes
+# I.a) sort genes into groups belonging either to reference or test (control) condition
+df.ref_degenes <- get_significantgenes(df.dge_results = df.dge_res, p_value = p.value,
+                              lfc_factor = l2fc.factor, op = `>`) 
+df.ref <- df.ref_degenes[[1]]
+# I. Rank genes based on their fold change
+ranked_genes.ref <- do_rank_genes(df.dge_results = df.ref)
+
+df.ctrl_degenes <- get_significantgenes(df.dge_results = df.dge_res, p_value = p.value,
+                                       lfc_factor = -l2fc.factor, op = `<`) 
+df.ctrl <- df.ctrl_degenes[[1]]
+
+# I. Rank  genes based on their fold change
+ranked_genes.ctrl <- do_rank_genes(df.dge_results = df.ctrl)
+
+# I.b) Background genes are all genes from our (sup-) data set
+bg_genes <- as.character(df.dge_res$entrezid)
+```
+
+
+## Identify enriched pathways using ReactomePA
+```{r}
+# II.a) Find enriched Pathways for reference condition
+reactome_object.ref <- ReactomePA::enrichPathway(
+  gene = df.ref_degenes[[2]], # a vector of entrezID
+  universe = bg_genes, organism = 'human', 
+  qvalueCutoff = fdr.value, pvalueCutoff = pval.cut,  pAdjustMethod = multitest.method, 
+  minGSSize = minGSSize, maxGSSize = 500, readable = T)
+```
+
+In order to plot gene names instead of entrezIDs they have to be converted. For this use the function "*DOSE::setReadable*" to convert entrezIDs to gene symbol.
+```{r}
+################### ---> convert gene ID to Symbol <--- ################### 
+reactome.ref <- setreadable_pa(paenrich_object = reactome_object.ref)
+print("Pathways associated with cytokine-positive group")
+print.data.frame(reactome.ref[1:3, ], digits = 4)
+```
+
+
+## Save and Plot Pathwyas
+```{r}
+#############################################################################
+################### ---> Save results to csv file <--- ###################### 
+#############################################################################
+# Attention: 
+# ctrl (= negative log2FC) and ref (= positive log2FC) are switched for Immune publication
+save_enrichobject_as_csv(paenrich_object = reactome.ref, condition = cytokine, 
+                         pa_database = 'REACTOME', output_path = output.dir) 
+```
+
+Visualise Pathways in a cnet- and dotplot.
+First, we plot the enriched pathways of the *IL17A*-positive group and save the plots as .pdf.
+```{r,  fig.width=width_img, dpi = 300 , fig.height=height_img}
+# III.b) Reference Condition
+# If a gene is associated with two or more enriched PAs 
+# but less than those are shown than this results in a bug 
+# ==> the log2FC of that gene is not correctly shown
+if (!is.null(nrow(reactome.ref)))
+{
+  if (nrow(reactome.ref) > 1)
+  {
+    # Cnetplots to visualise enriched pathways
+    fig.pathways.REACTOME(reactome_res = reactome.ref,
+                          entrezid_log2fc = ranked_genes.ref,
+                          showCategories = 3, 
+                          sig.cytokine = cytokine,
+                          output.dir = output.dir,
+                          title = paste(
+                            cytokine, "_REACTOME_Pathway_Enrichment_Analysis.pdf", sep=''), 
+                          width = 12, height = 6)
+
+    # Dotplot to visualise enriched pathways
+    fig.pathway.dotplot(pathway_res = reactome.ref,
+                        showCategories = 10,
+                        method = 'REACTOME', 
+                        output.dir = output.dir,
+                        title = paste(cytokine, "_REACTOME_dotplot.pdf", sep=''), 
+                        width = 6, height = 6)
+  }
+}
+
+```
+
+
+# zscore=(up−down) / sqrt(count)
+
+# References
+Cite used Bioconductor packages: 
+```{r}
+citation("ReactomePA")
+citation("DOSE")
+citation("org.Hs.eg.db")
+citation("enrichplot")
+citation("pathview")
+```
+
+```{r}
+sessionInfo()
+```
+
+
+
