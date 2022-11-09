@@ -6,7 +6,7 @@
     Date last modified: 4/29/2021
     Python Version: 3.7
 """
-from python_scripts.utils import gene_lists, add_observables as ctools, rename_observables
+from python_scripts.utils import gene_lists, rename_observables
 
 import scanpy as sc
 import numpy as np
@@ -246,14 +246,13 @@ def main(save_folder, adata):
     t_cell_cytocines, cyto_resps_list, cytokine_responders = gene_lists.get_publication_cyto_resps()
 
     # 4. Use only tissue tyoes of interest
-    # 4.1 Add tissue types
-    adata = ctools.add_tissue_obs(adata)
-    # 4.2 Subset adata to tissue_types of interest: upper EPIDERMIS', 'middle EPIDERMIS', 'basal EPIDERMIS'
+    # 4.1 Subset adata to tissue_types of interest: upper EPIDERMIS', 'middle EPIDERMIS', 'basal EPIDERMIS'
     bool_col = adata.obs[tissue_layers] == 1
     merged = bool_col.sum(axis=1)
-    adata = adata[merged == 1]
-    # Rename tissue region 'INTERFACE' to basal EPIDERMIS because some spots got both labels
-    rename_observables.interface_to_epidermis(adata=adata, tissue_layers='tissue_type')
+    adata = adata[merged == 1].copy()
+    # 4.2 Rename tissue region 'JUNCTION' to basal EPIDERMIS because some spots got both labels
+    adata = rename_observables.interface_to_epidermis(
+        adata, tissue_layers_obsname='tissue_layer', skin_layers=tissue_layers)
 
     """Paper Figure 4D: Highlight cytokine and responder genes containing spots and UMI-counts in the EPIDERMIS """
     convert_categories_cytokines_responders_others(adata, cyto_responder_genes=cytokine_responders,
