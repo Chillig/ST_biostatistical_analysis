@@ -28,6 +28,9 @@ from datetime import date
 import scanpy as sc
 import numpy as np
 import pandas as pd
+from operator import itemgetter
+
+import matplotlib.pyplot as plt
 
 
 def get_deg_files(input_dir, cytokine):
@@ -73,7 +76,7 @@ def load_spatial_data(adata_folder):
 
 
 def load_singlecell_data(adata_folder):
-    unpp_adata = sc.read(os.path.join(adata_folder, '2020-11-30', 'sc_adata_unpp.h5'))
+    unpp_adata = sc.read(os.path.join(adata_folder, 'single_cell', '2020-11-30', 'sc_adata_unpp.h5'))
     pp_adata = sc.read(os.path.join(adata_folder, '2020-12-04_SC_Data_QC_clustered.h5'))
 
     return unpp_adata, pp_adata
@@ -93,7 +96,6 @@ def load_bulk_data(data_folder):
 def main(save_folder: str, adata_folder: str, input_folder: str):
     # Data
     # --> Spatial Transcriptomics data
-    st_adata_folder = os.path.join(project_folder, "adata_storage")
     unpp_st_adata, pp_st_adata = load_spatial_data(adata_folder)
     # --> Single cell RNAseq data
     sc_adata_folder = '/Users/christina.hillig/Documents/Projects/annData_objects'
@@ -116,7 +118,7 @@ def main(save_folder: str, adata_folder: str, input_folder: str):
         input_folder, 'dge_analysis', '2022-04-08_spatial__cdr_project_patient_annotation_cyto')
 
     # Spatial Correlation
-    radius = list(np.arange(0, 5, 1))
+    radius = list(np.arange(0, 10, 1))
     corr_method = 'spearman'
     t_cell_cytocines, cyto_resps_list, cytokine_responders = gene_lists.get_publication_cyto_resps()
 
@@ -170,20 +172,68 @@ def main(save_folder: str, adata_folder: str, input_folder: str):
         log=False, dge_results_folder=sc_path_il17a)
 
     """ Figure 5 """
-    save_folder = '/Volumes/CH__data/ST_immune_publication/Revision/Fig5'
-    save_folder_fig5ac = os.path.join(save_folder, 'Bulk_Weighted_Spearman', 'Unweighted_fit', str(date.today()))
+    save_folder_fig5 = '/Volumes/CH__data/ST_immune_publication/Revision/Fig5'
+    save_folder_fig5ac = os.path.join(save_folder_fig5, 'Bulk_Weighted_Spearman', 'Unweighted_fit', str(date.today()))
     os.makedirs(save_folder_fig5ac, exist_ok=True)
     # Run Weighted correlation by cytokine+ spots in epidermis for pseudo-bulk approach
     fig5__dict_weighted_transcripts_corr, df_bulk = Fig5AC__ST_pseudobulk_aggregation_Correlation.main(
         save_folder=save_folder_fig5ac, adata=unpp_st_adata, corr_method=corr_method)
+    # Read out correlation values for each cytokine
+    data = list(itemgetter(*[0, 4, 8])(fig5__dict_weighted_transcripts_corr['spearman']))
+    df_fig5ac = pd.DataFrame(data, columns=['Cytokine', 'Responders', 'Spearman Correlation', 'P-value'])
 
-    # Create figure 5D-G - if get_plots is set to True, otherwise it will only create the plots for 5E-G
+    # Create figure 5D-H - if get_plots is set to True, otherwise it will only create the plots for 5E-H
     save_folder_fig5eg = os.path.join(save_folder, 'Weighted_Spearman_unppadata', 'Unweighted_fit', str(date.today()))
     os.makedirs(save_folder_fig5eg, exist_ok=True)
-    counts_dict, df_stats_responders_in_vs_outlesion_sdc, df_stats_cytokines_responders_in_sdc = csdcc.main(
+    adata, counts_dict, df_stats_responders_in_vs_outlesion_sdc, \
+    df_stats_cytokines_responders_in_sdc, df_radius_vs_spearman = csdcc.main(
         save_folder=save_folder_fig5eg, adata=unpp_st_adata, corr_method=corr_method, get_plots=False,
         find_responders=False, radius=radius,
         cond_genes=t_cell_cytocines, genes_resps=cytokine_responders)
+    max_corr_value = df_radius_vs_spearman[
+        df_radius_vs_spearman.columns[df_radius_vs_spearman.columns.str.contains('correlation')]].idxmax(axis=0)
+
+    # Read out counts and correlation values
+    list_fig5eh_counts = list(itemgetter(*max_corr_value)(counts_dict))
+    df_fig5eh_counts = pd.concat(
+        [pd.DataFrame(list_fig5eh_counts[0]), pd.DataFrame(list_fig5eh_counts[1]), pd.DataFrame(list_fig5eh_counts[2])],
+        axis=0, keys=[str(max_corr_value.values[0]), str(max_corr_value.values[1]), str(max_corr_value.values[2])])
+    df_fig5eh_correlation = df_radius_vs_spearman.iloc[max_corr_value]
+
+    writer = pd.ExcelWriter(os.path.join(save_folder_fig5eg, 'Figure_5.xlsx'), engine='xlsxwriter')
+    df_fig5ac.to_excel(writer, sheet_name='AC_correlation')
+    df_bulk.to_excel(writer, sheet_name='AC_counts')
+    df_radius_vs_spearman.to_excel(writer, sheet_name='E__radius_vs_correlation')
+    df_fig5eh_correlation.to_excel(writer, sheet_name='FH_correlation')
+    df_fig5eh_counts.to_excel(writer, sheet_name='FH_counts')
+    writer.save()
+    writer.close()
+
+    """ --- Workflow Figure 1EF --- """
+    # Have to run Correlation analysis before
+    # H&E image for workflow Fig 1
+    adata.obs['IL17A_Responders_label'] = adata.obs['IL17A_Responders_clusters'].copy()
+    adata.obs['IL17A_Responders_label'] = adata.obs['IL17A_Responders_label'].astype(str)
+    adata.obs['IL17A_Responders_label'][adata.obs['IL17A_clusters'] == 'IL17A'] = 'IL17A'
+    adata.obs['IL17A_Responders_label'] = adata.obs['IL17A_Responders_label'].astype('category')
+    fig, ax = plt.subplots(figsize=(8, 6))
+    sc.pl.spatial(adata[adata.obs['sample'] == 'P15509_1004'], color='IL17A_Responders_label', size=1,
+                  library_id='P15509_1004', ax=ax, palette=['#377eb8', '#B8860B'],
+                  add_outline=True, alpha=1, outline_width=(8, 0.05), show=False)
+    plt.tight_layout()
+    fig.savefig(os.path.join(save_folder, 'Workflow_Fig1E.pdf'))
+    plt.close(fig=fig)
+
+    adata.obs['IL17A_in_sdcc_r1'] = adata.obs['IL17A_in_sdcc_r1'].astype('category')
+    fig, ax = plt.subplots(figsize=(8, 6))
+    sc.pl.spatial(adata[(adata.obs['sample'] == 'P15509_1004') & (adata.obs['IL17A_in_sdcc_r1'] != 0)],
+                  color='IL17A_in_sdcc_r1', size=1, library_id='P15509_1004', ax=ax, palette=['#377eb8', '#B8860B'],
+                  add_outline=True, alpha=1, outline_width=(10, 0.05), show=False)
+    plt.tight_layout()
+    fig.savefig(os.path.join(save_folder, 'Workflow_Fig1F.pdf'))
+    plt.close(fig=fig)
+
+    # ------------------------------------
 
     """ ----  Supplemental Figures  ---- """
     """ Figure S1: NcISD are characterized by low cytokine UMI counts in skin """
@@ -199,7 +249,7 @@ def main(save_folder: str, adata_folder: str, input_folder: str):
     SuppFig3ABC__ST_UMAP.main(
         save_folder=save_folder_sfig3, spatial_adata=pp_st_adata, spatial_cluster_label='tissue_layer')
 
-    """ Figure S4: Tangram analysis of cytokine-transcript positive spatial spots reveals heterogeneous 
+    """ Figure S4: Tangram analysis of cytokine-transcript positive spatial spots reveals heterogeneous
     cellular composition """
     save_folder_sfig4 = os.path.join(save_folder, 'SFig4')
     os.makedirs(save_folder_sfig4, exist_ok=True)
