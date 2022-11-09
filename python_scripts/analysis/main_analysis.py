@@ -17,7 +17,6 @@ from python_scripts.analysis.supplfigure_4 import SupplFig4AF__spot_celltypes
 from python_scripts.analysis.supplfigure_5 import SuppFig5AC__ST_Volcano_Boxplot
 from python_scripts.analysis.supplfigure_6 import SuppFig6A__SC_UMAP_IFNG, SuppFig6B__SC_Volcano_IFNG
 from python_scripts.analysis.supplfigure_7 import SuppFig7H__cytokines_vs_responders
-from python_scripts.analysis.supplfigure_8 import SuppFig8AC__refined_responds
 
 from python_scripts.analysis.suppltable import SuppTab2__overview_counts
 
@@ -188,7 +187,7 @@ def main(save_folder: str, adata_folder: str, input_folder: str):
     adata, counts_dict, df_stats_responders_in_vs_outlesion_sdc, \
     df_stats_cytokines_responders_in_sdc, df_radius_vs_spearman = csdcc.main(
         save_folder=save_folder_fig5eg, adata=unpp_st_adata, corr_method=corr_method, get_plots=False,
-        find_responders=False, radius=radius,
+        find_associated_genes=False, radius=radius,
         cond_genes=t_cell_cytocines, genes_resps=cytokine_responders)
     max_corr_value = df_radius_vs_spearman[
         df_radius_vs_spearman.columns[df_radius_vs_spearman.columns.str.contains('correlation')]].idxmax(axis=0)
@@ -284,7 +283,7 @@ def main(save_folder: str, adata_folder: str, input_folder: str):
     os.makedirs(save_folder_sfig8, exist_ok=True)
     # 1. Run with preprocessed (QC, normed, bc) data density clustering
     _, _, _ = csdcc.main(save_folder=save_folder_sfig8, adata=pp_st_adata, corr_method=corr_method, get_plots=False,
-                         find_responders=True, radius=list(np.arange(0, 5, 1)), cond_genes=t_cell_cytocines,
+                         find_associated_genes=True, radius=list(np.arange(0, 5, 1)), cond_genes=t_cell_cytocines,
                          genes_resps=cytokine_responders)
     # 2. Identify DEGs (python) and create Volcano plots (R script)
     # 3. Identify cytokine associated genes using DEGs from optimal radii 4, 3, and 0 for IFNG, IL13 and IL17A
