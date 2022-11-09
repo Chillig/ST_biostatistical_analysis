@@ -23,12 +23,14 @@ def main(save_folder: str, adata, radius: [int, list], cond_genes: list, genes_r
     epidermis_layers = ['upper EPIDERMIS', 'middle EPIDERMIS', 'basal EPIDERMIS']
     # radius = list(np.arange(0, 6, 1))  # 1 or list [1, 2, 3, ..]
 
-    counts_dict, df_stats_responders_in_vs_outlesion_sdc, df_stats_cytokines_responders_in_sdc = density_clustering.main(
+    adata, counts_dict, df_stats_responders_in_vs_outlesion_sdc, \
+    df_stats_cytokines_responders_in_sdc, df_radius_vs_spearman = density_clustering.main(
         adata=adata, save_folder=save_folder, tissue_types=tissue_layers, epidermis_layers=epidermis_layers,
         radii=radius, get_plots=get_plots, corr_method=corr_method, conditional_genes=cond_genes,
         conditionalgenes_responders=genes_resps, find_responders=find_responders)
 
-    return counts_dict, df_stats_responders_in_vs_outlesion_sdc, df_stats_cytokines_responders_in_sdc
+    return adata, counts_dict, df_stats_responders_in_vs_outlesion_sdc, \
+           df_stats_cytokines_responders_in_sdc, df_radius_vs_spearman
 
 
 if __name__ == '__main__':
