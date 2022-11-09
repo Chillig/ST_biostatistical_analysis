@@ -24,6 +24,42 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 
 
+def get_boxplot_describtions(df):
+    bp = plt.boxplot([df['Others'], df['Cytokines'].dropna()])
+    plt.close()
+
+    whiskers = [round(item.get_ydata()[0], 1) for item in bp['whiskers']]
+    medians = [round(item.get_ydata()[0], 1) for item in bp['medians']]
+    means = [df['Others'].mean(), df['Cytokines'].dropna().mean()]
+    minimums = [round(item.get_ydata()[0], 1) for item in bp['caps']][::2]
+    maximums = [round(item.get_ydata()[0], 1) for item in bp['caps']][1::2]
+    q1 = [round(min(item.get_ydata()), 1) for item in bp['boxes']]
+    q3 = [round(max(item.get_ydata()), 1) for item in bp['boxes']]
+    fliers = [item.get_ydata() for item in bp['fliers']]
+    lower_outliers = []
+    upper_outliers = []
+    for i in range(len(fliers)):
+        lower_outliers_by_box = []
+        upper_outliers_by_box = []
+        for outlier in fliers[i]:
+            if outlier < q1[i]:
+                lower_outliers_by_box.append(round(outlier, 1))
+            else:
+                upper_outliers_by_box.append(round(outlier, 1))
+        lower_outliers.append(lower_outliers_by_box)
+        upper_outliers.append(upper_outliers_by_box)
+
+    stats_values = [medians, means, minimums, maximums, q1, q3, whiskers, lower_outliers, upper_outliers]
+    stats_names = ['Median', 'Mean', 'Minimum', 'Maximum', 'Q1', 'Q3', 'Whiskers', 'Lower outliers', 'Upper outliers']
+    categories = ['Others', 'Cytokines']  # to be updated
+    for i in range(len(categories)):
+        print(f'\033[1m{categories[i]}\033[0m')
+        for j in range(len(stats_values)):
+            if not isinstance(stats_values[j][i], list):
+                print('{}: {:.2E}'.format(stats_names[j], stats_values[j][i]))
+        print('\n')
+
+
 def main(save_folder: str, pp_st_adata: anndata.AnnData):
     # Read out lesion skin
     pp_st_adata = pp_st_adata[pp_st_adata.obs['biopsy_type'] == 'LESIONAL'].copy()
@@ -67,6 +103,8 @@ def main(save_folder: str, pp_st_adata: anndata.AnnData):
     # df_cytokines = pd.DataFrame({'Cytokines': data_cytokines})
     # df_others = pd.DataFrame({'Others': data_responders})
     df_data = pd.concat([df_others, df_cytokines], axis=1)
+    # Get boxplot infos
+    get_boxplot_describtions(df=df_data)
     # Reformat dataframe
     df_data = df_data.melt()
     df_data = df_data[~df_data['value'].isna()]
@@ -85,7 +123,8 @@ def main(save_folder: str, pp_st_adata: anndata.AnnData):
     print("\np-value:", p)
     # The p-value of 0.003 suggests that the groups do not have equal variances
     # 3. Apply non-parametric version of t-test for two samples -> Mann-Whitney test
-    res = stats.mannwhitneyu(cytokines_mean_samples_mean_specimen, responders_mean_samples_mean_specimen)
+    res = stats.mannwhitneyu(cytokines_mean_samples_mean_specimen, responders_mean_samples_mean_specimen,
+                             alternative='two-sided')
     print("Null Hypothesis that two related paired groups come from the same distribution is rejected: ", res)
 
     # 4. Calculate Log2FC

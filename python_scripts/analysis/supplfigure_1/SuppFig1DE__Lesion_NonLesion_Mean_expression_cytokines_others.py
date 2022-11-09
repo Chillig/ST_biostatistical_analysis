@@ -40,6 +40,42 @@ def split_mean_expression_group(adata, mean_geneexpression_perspecimen):
     return mean_geneexpression_cytokines, mean_geneexpression_others
 
 
+def get_boxplot_describtions(df):
+    bp = plt.boxplot([df['Others'], df['Cytokines'].dropna()])
+    plt.close()
+
+    whiskers = [round(item.get_ydata()[0], 1) for item in bp['whiskers']]
+    medians = [round(item.get_ydata()[0], 1) for item in bp['medians']]
+    means = [df['Others'].mean(), df['Cytokines'].dropna().mean()]
+    minimums = [round(item.get_ydata()[0], 1) for item in bp['caps']][::2]
+    maximums = [round(item.get_ydata()[0], 1) for item in bp['caps']][1::2]
+    q1 = [round(min(item.get_ydata()), 1) for item in bp['boxes']]
+    q3 = [round(max(item.get_ydata()), 1) for item in bp['boxes']]
+    fliers = [item.get_ydata() for item in bp['fliers']]
+    lower_outliers = []
+    upper_outliers = []
+    for i in range(len(fliers)):
+        lower_outliers_by_box = []
+        upper_outliers_by_box = []
+        for outlier in fliers[i]:
+            if outlier < q1[i]:
+                lower_outliers_by_box.append(round(outlier, 1))
+            else:
+                upper_outliers_by_box.append(round(outlier, 1))
+        lower_outliers.append(lower_outliers_by_box)
+        upper_outliers.append(upper_outliers_by_box)
+
+    stats_values = [medians, means, minimums, maximums, q1, q3, whiskers, lower_outliers, upper_outliers]
+    stats_names = ['Median', 'Mean', 'Minimum', 'Maximum', 'Q1', 'Q3', 'Whiskers', 'Lower outliers', 'Upper outliers']
+    categories = ['Others', 'Cytokines']  # to be updated
+    for i in range(len(categories)):
+        print(f'\033[1m{categories[i]}\033[0m')
+        for j in range(len(stats_values)):
+            if not isinstance(stats_values[j][i], list):
+                print('{}: {:.2E}'.format(stats_names[j], stats_values[j][i]))
+        print('\n')
+
+
 def main(save_folder: str, pp_st_adata: anndata.AnnData):
     biopsy_types = ['LESIONAL', 'NON LESIONAL']
 
@@ -88,6 +124,9 @@ def main(save_folder: str, pp_st_adata: anndata.AnnData):
         # df_cytokines = pd.DataFrame({'Cytokines': data_cytokines})
         # df_others = pd.DataFrame({'Others': data_others})
         df_data = pd.concat([df_others, df_cytokines], axis=1)
+        # Get infos of boxplot
+        get_boxplot_describtions(df=df_data)
+
         # Reformat dataframe
         df_data = df_data.melt()
         df_data = df_data[~df_data['value'].isna()]
@@ -106,7 +145,8 @@ def main(save_folder: str, pp_st_adata: anndata.AnnData):
         print("p-value:", p)
         # The p-value of above 0.05 suggests that the groups have equal variances
         # 3. Apply non-parametric version of t-test for two samples -> Mann-Whitney test
-        res = stats.mannwhitneyu(cytokines_mean_samples_mean_specimen, others_mean_samples_mean_specimen)
+        res = stats.mannwhitneyu(
+            cytokines_mean_samples_mean_specimen, others_mean_samples_mean_specimen, alternative='two-sided')
         print("\nNull Hypothesis that two related paired groups come from the same distribution is rejected: ", res)
 
         # Draw Boxplots comparing the mean expression of cytokines against all ohther genes
@@ -114,7 +154,7 @@ def main(save_folder: str, pp_st_adata: anndata.AnnData):
         y, h, col = df_data['value'].max() + 1000, 1000, 'k'
         fig, ax = plt.subplots(figsize=(6, 6))
         ax.grid(zorder=0)
-        sns.boxplot(data=df_data, y='value',  x='variable', ax=ax, zorder=3)
+        ax = sns.boxplot(data=df_data, y='value',  x='variable', ax=ax, zorder=3)
         # Add significance asterix
         ax.plot([x1, x1, x2, x2], [y, y+h, y+h, y], linewidth=1, color='k')
         ax.text((x1 + x2) * .5, y + h, "p-value = {:.2E}, Log2FC = {:.2f}".format(res.pvalue, log2fc),
