@@ -315,11 +315,11 @@ def main(save_folder, adata, corr_method):
     # 3. Get counts of cyotkines and their responders in the EPIDERMIS
     df_correlation = get_bulk_cytoresp_counts(adata=adata, genes_dict=cytokine_responders, tissue_types=tissue_types)
     # Weighted by transcripts - goes into publication
-    fig4__dict_weighted_transcripts_corr, df_counts_cytoresps = weighted_transcripts_correlation_plot(
+    fig5__dict_weighted_transcripts_corr, df_counts_cytoresps = weighted_transcripts_correlation_plot(
         df_counts_cytoresps=df_correlation, genes_dict=cytokine_responders, save_folder=save_folder,
         corr_method=corr_method)
 
-    return fig4__dict_weighted_transcripts_corr, df_counts_cytoresps
+    return fig5__dict_weighted_transcripts_corr, df_counts_cytoresps
 
 
 if __name__ == '__main__':
