@@ -9,7 +9,6 @@
 # import scripts
 from python_scripts.spatial_correlation import helper_functions
 from python_scripts.spatial_correlation import corr_statistics
-from python_scripts.utils import gene_lists
 
 # Plotting packages
 import matplotlib.pyplot as plt
@@ -175,60 +174,6 @@ def plot_responder_vs_radius(counts_dict: dict, conditionalgenes_responders: dic
         plt.close(fig=fig)
 
 
-def plot_responder_in_sdc_outside_nl_tissue(adata, conditionalgenes_responders, save_folder):
-    # statistical annotation
-    x1, x2 = 0, 1  # columns 'SDC' and 'NL'
-    for cyto, r in zip(conditionalgenes_responders.keys(), ('4', '3', '0')):
-        mask_2L = (adata.obs['{}_in_sdcc_r{}'.format(cyto, r)] != 0)  # & (adata.obs['biopsy_type'] == 'LESIONAL')
-        # If we want to compare SCD vs NL, non clustered:
-        mask_0NL = (adata.obs['{}_in_sdcc_r{}'.format(cyto, r)] == 0) & (adata.obs['biopsy_type'] == 'NON LESIONAL')
-
-        # Get responder genes of signature cytokine
-        mask_genes = adata.var_names.isin(conditionalgenes_responders[cyto])
-        adata_respondergenes = adata[:, mask_genes].copy()
-
-        df_boxplot = pd.DataFrame(columns=['NL'])
-        if 'counts' not in adata_respondergenes.layers:
-            df_boxplot['NL'] = adata_respondergenes.X[mask_0NL].sum(axis=1)
-            df_scd = pd.DataFrame({'SDC': adata_respondergenes.X[mask_2L].sum(axis=1)})
-            df_boxplot = pd.concat([df_boxplot, df_scd], axis=1)
-        else:
-            df_boxplot['NL'] = adata_respondergenes.layers['counts'][mask_0NL].sum(axis=1)
-            df_scd = pd.DataFrame({'SDC': adata_respondergenes.layers['counts'][mask_2L].sum(axis=1)})
-            df_boxplot = pd.concat([df_boxplot, df_scd], axis=1)
-
-        df_melted = pd.melt(df_boxplot)
-        df_melted['value'] = df_melted['value'].astype('float')
-        y, h, col = df_melted['value'].max() + 20000, 20000, 'k'
-
-        # Calculate statistical test
-        p = corr_statistics.apply_wilcoxontest(
-            df_highcounts=df_boxplot[~df_boxplot['SDC'].isna()]['SDC'], df_lowcounts=df_boxplot['NL'])
-
-        fig, ax = plt.subplots(figsize=(6, 6))
-        ax.grid(False)
-        sns.boxplot(x="variable", y="value", data=df_melted, ax=ax)
-        # sns.stripplot(x='variable', y='value', data=df_melted)
-        ax.set_yscale('log', basey=2)
-        ax.set_ylabel('Responder gene counts')
-        ax.set_xlabel('')
-        # remove upper and right edge lines in plot
-        sns.despine(ax=ax)
-        # Add significance
-        plt.plot([x1, x1, x2, x2], [y, y + h, y + h, y], lw=1.5, c=col)
-        if p < 0.05:
-            plt.text((x1 + x2) * .5, y + h, "{:.2E}".format(p), ha='center', va='bottom', color=col)
-        else:
-            plt.text((x1 + x2) * .5, y + h, "ns", ha='center', va='bottom', color=col)
-        fig.savefig(os.path.join(save_folder, 'Boxplot_{}_r{}_SDC_LNL__vs__NL.pdf'.format(cyto, r)))
-        plt.close(fig=fig)
-        # Calculate log2FC
-        # IFNG: SDC L vs NL 6.5302477; SCD NL L vs NL: 6.5308247 (sum), 5.209404 (mean)
-        # IL13 SCD NL L vs NL:  2.1261375 (sum), 2.841602 (mean)
-        # IL17A SCD NL L vs NL:  3.5287004 (sum), 6.784201 (mean)
-        print("{}: ".format(cyto), np.log2(np.nanmean(df_boxplot['SDC']) / np.nanmean(df_boxplot['NL'])))
-
-
 def plot_responder_in_sdc_outside_l_tissue(adata, conditionalgenes_responders, save_folder):
     #  Transcript of responder genes: SCD vs L, non clustered boxplots
     df_statistics = pd.DataFrame(
@@ -254,7 +199,8 @@ def plot_responder_in_sdc_outside_l_tissue(adata, conditionalgenes_responders, s
             df_boxplot = pd.concat([df_boxplot, df_scd], axis=1)
         else:
             df_boxplot['L'] = adata_respondergenes.layers['counts'][mask_0L].sum(axis=1)
-            df_scd = pd.DataFrame({'SDC of {}'.format(cyto): adata_respondergenes.layers['counts'][mask_2L].sum(axis=1)})
+            df_scd = pd.DataFrame({
+                'SDC of {}'.format(cyto): adata_respondergenes.layers['counts'][mask_2L].sum(axis=1)})
             df_boxplot = pd.concat([df_boxplot, df_scd], axis=1)
 
         df_melted = pd.melt(df_boxplot)
@@ -318,7 +264,6 @@ def plot_responder_in_sdc_outside_l_tissue(adata, conditionalgenes_responders, s
 
 
 def plot_in_sdc_cytokine_vs_responder(adata, conditionalgenes_responders, save_folder):
-    # TODO FoldChange of cytokine vs responder genes inside clusters
     df_statistics = pd.DataFrame(
         columns=['p-value', 'Log2FC', 'FoldChange', 'Mean_cytokine_in_SDC', 'Mean_cytokine_responders_in_SDC'],
         index=list(conditionalgenes_responders.keys()))
@@ -342,8 +287,8 @@ def plot_in_sdc_cytokine_vs_responder(adata, conditionalgenes_responders, save_f
             df_boxplot = pd.concat([df_boxplot, df_scd], axis=1)
         else:
             df_boxplot[cyto] = adata_cytokine.layers['counts'][mask_1L].sum(axis=1)
-            df_scd = pd.DataFrame({'Responder genes of {}'.format(cyto):
-                                       adata_respondergenes.layers['counts'][mask_2L].sum(axis=1)})
+            df_scd = pd.DataFrame({
+                'Responder genes of {}'.format(cyto): adata_respondergenes.layers['counts'][mask_2L].sum(axis=1)})
             df_boxplot = pd.concat([df_boxplot, df_scd], axis=1)
 
         df_melted = pd.melt(df_boxplot)
