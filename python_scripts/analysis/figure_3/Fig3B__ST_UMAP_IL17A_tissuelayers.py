@@ -14,6 +14,7 @@ import os
 from datetime import date
 from collections import OrderedDict
 import matplotlib.pyplot as plt
+import pandas as pd
 
 
 signatures = OrderedDict()
@@ -185,14 +186,21 @@ def main(save_folder, spatial_adata):
                             save_folder=save_folder)
 
     # 4. Read out all leukocyte positive spots
-    include_cytokine_dp(adata=adata_leukocytes, cytokines=cytokines, save_folder=save_folder,
-                        label=spatial_cluster_label, key='ST', paper_figure='3D_Leukocytes')
+    # include_cytokine_dp(adata=adata_leukocytes, cytokines=cytokines, save_folder=save_folder,
+    #                     label=spatial_cluster_label, key='ST', paper_figure='3D_Leukocytes')
+
+    # Save coordinates and annotation to .xlsx
+    df = pd.DataFrame.from_dict({'UMAP1': adata_leukocytes.obsm['X_umap'][:, 0],
+                                 'UMAP2': adata_leukocytes.obsm['X_umap'][:, 1],
+                                 'tissue_regions': adata_leukocytes.obs['tissue_regions'].values,
+                                 'cytokine_IL17A': adata_leukocytes.obs['cytokine_IL17A'].values})
+    df.to_excel(os.path.join(save_folder, 'Plot_infos.xlsx'))
 
 
 if __name__ == '__main__':
     today = date.today()
     # create saving folder
-    output_path = os.path.join("..", "..", "..", "output", "Figure_3A", str(today))
+    output_path = os.path.join("..", "..", "..", "output", "Figure_3B", str(today))
     os.makedirs(output_path, exist_ok=True)
 
     # Load data:

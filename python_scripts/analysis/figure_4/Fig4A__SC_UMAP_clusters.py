@@ -13,6 +13,7 @@ import os
 from datetime import date
 from collections import OrderedDict
 import numpy as np
+import pandas as pd
 from sklearn.metrics import silhouette_score
 import matplotlib.pyplot as plt
 
@@ -128,26 +129,34 @@ def main(save_folder, pp_adata, cluster_algorithm):
     pp_adata, _ = add_observables.convert_variable_to_observable(
         adata=pp_adata, gene_names=cytokines, task='cell_gene', label='celltype', condition=None)
 
-    # 3. Apply cluster algorithm
-    pp_adata, key = apply_clusteralgo(adata=pp_adata, algorithm=cluster_algorithm, resolution=0.1)
+    if any(pp_adata.obs.columns.str.contains(cluster_algorithm)):
+        # 3. Apply cluster algorithm
+        pp_adata, key = apply_clusteralgo(adata=pp_adata, algorithm=cluster_algorithm, resolution=0.1)
 
-    # 4. Annotate clusters with expert opinion - prior step, the best resolution r=0.1 was identified
-    pp_adata = annotate_cluster(adata=pp_adata, cluster_algorithm=cluster_algorithm, resolution=0.1)
+        # 4. Annotate clusters with expert opinion - prior step, the best resolution r=0.1 was identified
+        pp_adata = annotate_cluster(adata=pp_adata, cluster_algorithm=cluster_algorithm, resolution=0.1)
 
     # 5. Plot UMAP scRNAseq data
     visualise_clusters(adata=pp_adata, save_folder=save_folder, key='cluster_labels', title="SC")
+
+    # Save coordinates and annotation to .xlsx
+    df = pd.DataFrame.from_dict({'UMAP1': pp_adata.obsm['X_umap'][:, 0],
+                                 'UMAP2': pp_adata.obsm['X_umap'][:, 1],
+                                 'cluster_labels': pp_adata.obs['cluster_labels'].values})
+    df.to_excel(os.path.join(save_folder, 'Plot_infos.xlsx'))
 
 
 if __name__ == '__main__':
     today = date.today()
     # create saving folder
-    output_path = os.path.join("..", "..", "..", "output", "SupplFigure_4A", str(today))
+    output_path = os.path.join("..", "..", "..", "output", "Figure_4A", str(today))
     os.makedirs(output_path, exist_ok=True)
 
     # Load data:
     # Use merged scRNAseq samples for publication
-    pp_adata_sc = sc.read(os.path.join("..", "..", "..", 'adata_storage', '2020-10-19',
-                                       'sc_adata_minumi_600_maxumi_25000_mg_500_mc_20_mt_0_25.h5'))
+    pp_adata_sc = sc.read(os.path.join(
+        "/Users/christina.hillig/Documents/Projects/annData_objects", '2020-12-04_SC_Data_QC_clustered.h5'))
+    # /Users/christina.hillig/Documents/Projects/annData_objects/single_cell/2020-10-19/sc_adata_minumi_600_maxumi_25000_mg_500_mc_20_mt_0_25.h5
 
     unsupvised_cluster_algo = 'leiden'
 

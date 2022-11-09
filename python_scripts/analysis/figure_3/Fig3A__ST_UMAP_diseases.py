@@ -15,6 +15,8 @@ from datetime import date
 from collections import OrderedDict
 import matplotlib.pyplot as plt
 
+import pandas as pd
+
 
 signatures = OrderedDict()
 # publication
@@ -51,9 +53,13 @@ def plot_disease(adata, obs_name, title, save_folder):
 
     """
 
+    adata.obs[obs_name] = adata.obs[obs_name].astype('category')
+    adata.obs[obs_name] = adata.obs[obs_name].cat.reorder_categories(['LP', 'AD', 'Pso'])
+    palette = ['#ff7f00', '#e41a1c', '#377eb8']
+
     fig, ax = plt.subplots(figsize=figure_size)
     sc.pl.umap(adata, color=obs_name, use_raw=True, ax=ax, wspace=0.4, show=False,
-               size=20, frameon=True, facecolor='white', palette=['#ff7f00', '#e41a1c', '#377eb8'],
+               size=20, frameon=True, facecolor='white', palette=palette,
                title="")
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
@@ -140,6 +146,11 @@ def main(save_folder, spatial_adata):
 
     # 3. Highlight diseases
     plot_disease(adata=adata_leukocytes, obs_name='DISEASE', title='Leukocytes_IL17A', save_folder=save_folder)
+    # Save coordinates and annotation to .xlsx
+    df = pd.DataFrame.from_dict({'UMAP1': adata_leukocytes.obsm['X_umap'][:, 0],
+                                 'UMAP2': adata_leukocytes.obsm['X_umap'][:, 1],
+                                 'DISEASE': adata_leukocytes.obs['DISEASE'].values})
+    df.to_excel(os.path.join(save_folder, 'Plot_infos.xlsx'))
 
 
 if __name__ == '__main__':

@@ -12,6 +12,7 @@ from datetime import date
 import scanpy as sc
 import numpy as np
 import os
+import pandas as pd
 from collections import OrderedDict
 
 import matplotlib.pyplot as plt
@@ -200,8 +201,8 @@ def main(save_folder, adata):
     adata_leukocytes = get_celltypes_data(adata, genes=leukocyte_markers)
 
     # 3.3 Read out all leukocyte cells
-    include_cytokine_dp(adata=adata_leukocytes, cytokines=cytokines, save_folder=save_folder,
-                        label=sc_cluster_obs, key='SC_merged', paper_figure='SC')
+    # include_cytokine_dp(adata=adata_leukocytes, cytokines=cytokines, save_folder=save_folder,
+    #                     label=sc_cluster_obs, key='SC_merged', paper_figure='SC')
 
     # 3.4 Add IL17A label to adata
     adata_leukocytes = add_observables.add_columns_genes(adata=adata_leukocytes, genes='IL17A', label='IL17A')
@@ -210,15 +211,22 @@ def main(save_folder, adata):
     plot_annotated_cells(adata=adata_leukocytes, color='IL17A_label', paper_figure='D', save_folder=save_folder,
                          key='SC', title='Leukocytes_IL17A', xpos=0.02, ypos=0.95)
 
+    # Save coordinates and annotation to .xlsx
+    df = pd.DataFrame.from_dict({'UMAP1': adata_leukocytes.obsm['X_umap'][:, 0],
+                                 'UMAP2': adata_leukocytes.obsm['X_umap'][:, 1],
+                                 'IL17A_label': adata_leukocytes.obs['IL17A_label'].values})
+    df.to_excel(os.path.join(save_folder, 'Plot_infos.xlsx'))
+
 
 if __name__ == '__main__':
     today = date.today()
     # create saving folder
-    output_path = os.path.join("..", "..", "..", "output", "Figure_3D", str(today))
+    output_path = os.path.join("..", "..", "..", "output", "Figure_4B", str(today))
     os.makedirs(output_path, exist_ok=True)
 
     # Load data:
     # Use merged scRNAseq samples for publication
-    clustered_adata_sc = sc.read(os.path.join("..", "..", "..", 'adata_storage', '2020-12-04_SC_Data_QC_clustered.h5'))
+    clustered_adata_sc = sc.read(os.path.join(
+        "/Users/christina.hillig/Documents/Projects/annData_objects", '2020-12-04_SC_Data_QC_clustered.h5'))
 
     main(save_folder=output_path, adata=clustered_adata_sc)
