@@ -6,7 +6,7 @@
     Date last modified: May/02/2021
     Python Version: 3.7
 """
-from python_scripts.utils import gene_lists, add_observables, helper_tools
+from python_scripts.utils import gene_lists, add_observables, helper_tools, rename_observables
 
 import scanpy as sc
 import numpy as np
@@ -47,6 +47,9 @@ def get_color_palette(num_colors):
 
 
 def plot_tissueregions_cyto(adata, obs_name, title, save_folder, gene_colors=None):
+    # remove spots which really only have JUNCTION as annotation
+    adata = adata[adata.obs['tissue_regions'] != 'Unknown_tissueregions'].copy()
+
     if not gene_colors:
         gene_colors = []
         unique_genes = np.unique(adata.obs[obs_name])
@@ -71,6 +74,8 @@ def plot_tissueregions_cyto(adata, obs_name, title, save_folder, gene_colors=Non
     plt.savefig(os.path.join(save_folder, "_".join(['UMAP', title, "Skinlayers", file_format])))
     plt.close()
 
+    return adata
+
 
 def visualise_clusters(adata, save_folder, key, title):
     """
@@ -82,7 +87,12 @@ def visualise_clusters(adata, save_folder, key, title):
     :return:
     """
     num_clusters = len(np.unique(adata.obs[key]))
-    palette = get_color_palette(num_colors=num_clusters)
+    if key == 'healthy_disease':
+        adata.obs[key] = adata.obs[key].astype('category')
+        adata.obs[key] = adata.obs[key].cat.reorder_categories(['NON LESIONAL', 'LP', 'AD', 'Pso'])
+        palette = ['green', '#ff7f00', '#e41a1c', '#377eb8']
+    else:
+        palette = get_color_palette(num_colors=num_clusters)
 
     fig = plt.figure(facecolor='w', edgecolor='k', figsize=figure_size)
     ax = fig.add_subplot(1, 1, 1)
@@ -150,9 +160,10 @@ def get_tissueregions(adata, tissue_label):
     :param tissue_label:
     :return:
     """
+
     m_epidermis = np.array(
         adata.obs[tissue_label].values)[:, np.newaxis] == np.array(
-        ['upper EPIDERMIS', 'basal EPIDERMIS', 'middle EPIDERMIS', 'JUNCTION'])[np.newaxis, :]
+        ['upper EPIDERMIS', 'basal EPIDERMIS', 'middle EPIDERMIS'])[np.newaxis, :]
     m_epidermis = m_epidermis.sum(axis=1).astype(bool)
 
     m_dermis = np.array(
@@ -223,18 +234,23 @@ def main(save_folder, spatial_adata, spatial_cluster_label: str = 'tissue_layer'
     adata_leukocytes = get_tissueregions(adata=adata_leukocytes, tissue_label=spatial_cluster_label)
 
     # Suppl. Figure 2B
-    plot_tissueregions_cyto(adata=adata_leukocytes, obs_name=obs_name, title='Leukocytes_Cytokines',
-                            save_folder=save_folder, gene_colors=["#ff7f00", "#e41a1c", 'darkgoldenrod', 'purple',
-                                                                  "#377eb8", 'deeppink'])
+    adata_leukocytes = plot_tissueregions_cyto(adata=adata_leukocytes, obs_name=obs_name, title='Leukocytes_Cytokines',
+                                               save_folder=save_folder,
+                                               gene_colors=["#ff7f00", "#e41a1c", 'darkgoldenrod', 'purple',
+                                                            "#377eb8", 'deeppink'])
+    # Read out .xlsx list with double positive spots
+    adata_leukocytes.obs[obs_name].value_counts().to_csv(os.path.join(save_folder, 'SingleMulti_positive_spots.csv'))
+    adata_leukocytes.obs[obs_name].value_counts().to_excel(os.path.join(save_folder, 'SingleMulti_positive_spots.xlsx'))
 
 
 if __name__ == '__main__':
     today = date.today()
     # create saving folder
-    output_path = os.path.join("..", "..", "..", "output", "SupplFigure_2ABC", str(today))
+    output_path = os.path.join("..", "..", "..", "output", "SupplFigure_3ABC", str(today))
     os.makedirs(output_path, exist_ok=True)
 
     # Load data:
-    pp_st_adata = sc.read(os.path.join("..", "..", "..", 'adata_storage', 'st_QC_normed_BC_project_PsoADLP.h5'))
+    pp_st_adata = sc.read(os.path.join(
+        "..", "..", "..", 'adata_storage', '2022-04-08', 'st_QC_normed_BC_project_PsoADLP.h5'))
 
     main(save_folder=output_path, spatial_adata=pp_st_adata)
