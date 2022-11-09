@@ -165,7 +165,7 @@ def get_responder_cytoposneg_counts(adata_obs, obervable_cyto, obervable_resps, 
     return df
 
 
-def get_cluster_counts(adata, tissue_types, cytokine_responders, save_folder, distance=1, find_responders=False,
+def get_cluster_counts(adata, tissue_types, cytokine_responders, save_folder, distance=1, find_associated_genes=False,
                        get_plots=False):
     """Get counts of nearest neighbor and center spot
 
@@ -180,7 +180,7 @@ def get_cluster_counts(adata, tissue_types, cytokine_responders, save_folder, di
         path where output shall be saved
     distance : int
         max. distance of neighbouring spots to center spot
-    find_responders : bool
+    find_associated_genes : bool
     get_plots : bool
         whether to plot in-between-steps
 
@@ -289,7 +289,7 @@ def get_cluster_counts(adata, tissue_types, cytokine_responders, save_folder, di
                     # Read out counts for each responder gene individually
                     for resp_gene in responder_genes:
                         if resp_gene in sub_adata.var_names:
-                            if find_responders and ("counts" in sub_adata.layers.keys()):
+                            if find_associated_genes and ("counts" in sub_adata.layers.keys()):
                                 counts_respgene = np.copy(
                                     sub_adata.layers["counts"])[:, np.where(sub_adata.var.index == resp_gene)[0]]
                                 # create mask
@@ -383,7 +383,7 @@ def get_cluster_counts(adata, tissue_types, cytokine_responders, save_folder, di
 
 
 def run_spatialcorrelation(adata, tissue_types, cytokine_responders, save_folder, radius, sig, corr_method,
-                           find_responders=False, get_plots=False):
+                           find_associated_genes=False, get_plots=False):
     """Perform spatial Correlation Analysis and create Plots
 
     Parameters
@@ -395,7 +395,7 @@ def run_spatialcorrelation(adata, tissue_types, cytokine_responders, save_folder
     radius : int
     sig : None, list
     corr_method : str
-    find_responders : bool
+    find_associated_genes : bool
     get_plots : bool
 
     Returns
@@ -410,11 +410,11 @@ def run_spatialcorrelation(adata, tissue_types, cytokine_responders, save_folder
     # Get Density clusters and counts of cytokines and responders
     df_counts, df_excluded_spot_counts, df_counts_responders, df_included_spots, adata = get_cluster_counts(
         adata=adata, tissue_types=tissue_types, cytokine_responders=cytokine_responders,
-        distance=radius, save_folder=save_folder, find_responders=find_responders, get_plots=get_plots)
+        distance=radius, save_folder=save_folder, find_associated_genes=find_associated_genes, get_plots=get_plots)
     # Info: BET3L and FAM26D are no longer in dataset.. -> overall 71 responder genes
 
     # Perform DGE analysis between cyto and nn spots
-    if find_responders and ("counts" in adata.layers.keys()):
+    if find_associated_genes and ("counts" in adata.layers.keys()):
         refine_responder_genes.rank_cyto_vs_others_genes(adata, cytokine_responders, save_folder, radius=radius)
 
     # 4. Plot correlation
@@ -482,22 +482,36 @@ def data_preparation(adata, tissue_types, epidermis_layers, conditional_genes, c
     return adata
 
 
-def main(adata, save_folder, tissue_types, epidermis_layers, radii, corr_method, conditional_genes,
-         conditionalgenes_responders, find_responders=False, get_plots=False):
-    """
+def main(adata, save_folder, tissue_types, epidermis_layers, radii, conditional_genes,
+         conditionalgenes_responders, corr_method='pearson', find_associated_genes=False, get_plots=False):
+    """ Prepare data, run conditional-based density clustering and create evaluation plots
 
     Parameters
     ----------
-    adata : annData
+    adata : anndata.AnnData
+        adata object containing either raw counts or both raw and normed counts.
+        Later is necessary if find_associated_genes is True
     save_folder : str
+        path to output directory
     tissue_types : str, list
+        This algorithm focuses on conditional clustering in selected skin layers. By selecting **tissue_types** you can
+        choose on which skin layers you want to focus on e.g. ['upper EPIDERMIS', 'middle EPIDERMIS', 'basal EPIDERMIS']
     epidermis_layers : str, list
+        Which epidermal layers to include
     radii : int, list
+        radius/distance from center spot to surrounding nearest neighbor spots
+        e.g.  1 or list [1, 2, 3, ..]
     corr_method : str
+        which weighted correlation method to use: spearman or pearson (default)
     conditional_genes : list
+        name of genes to investigate in spots
     conditionalgenes_responders : dict
-    find_responders: bool
+        name of cond_genes associated genes such as responder
+    find_associated_genes: bool
+        if you want to find other than known associated genes of cond_genes
+        if True, please provided filtered, normed adata object with sizefactors in .obs as input
     get_plots : bool
+        create evaluation plots
 
     Returns
     -------
@@ -516,13 +530,13 @@ def main(adata, save_folder, tissue_types, epidermis_layers, radii, corr_method,
             sig, df_counts, adata = run_spatialcorrelation(
                 adata=adata, tissue_types=tissue_types, cytokine_responders=conditionalgenes_responders,
                 save_folder=save_folder, radius=radius, sig=sig, get_plots=get_plots, corr_method=corr_method,
-                find_responders=find_responders)
+                find_associated_genes=find_associated_genes)
             counts_dict[radius] = df_counts
     else:
         sig, df_counts, adata = run_spatialcorrelation(
             adata=adata, tissue_types=tissue_types, cytokine_responders=conditionalgenes_responders,
             save_folder=save_folder, radius=radii, sig=sig, get_plots=get_plots, corr_method=corr_method,
-            find_responders=find_responders)
+            find_associated_genes=find_associated_genes)
         counts_dict[radii] = df_counts
 
     # Boxplot of optimal radius of responder genes in density clusters (2 & LESIONAL) vs L (1 & LESIONAL)
@@ -531,7 +545,7 @@ def main(adata, save_folder, tissue_types, epidermis_layers, radii, corr_method,
     df_stats_cytokines_responders_in_sdc = plot_evaluations.plot_in_sdc_cytokine_vs_responder(
         adata=adata, conditionalgenes_responders=conditionalgenes_responders, save_folder=save_folder)
 
-    if ('counts' in adata.layers) & (find_responders is True):
+    if ('counts' in adata.layers) & (find_associated_genes is True):
         # Save adata obj for DGE analysis to identify cytokine related genes Fig. S8
         sc.write(os.path.join(save_folder, 'SDC_adata.h5'), adata)
 
