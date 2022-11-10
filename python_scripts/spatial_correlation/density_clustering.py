@@ -7,8 +7,7 @@
 """
 
 # import scripts
-from python_scripts.spatial_correlation import tools, condition_graphs as cyto_graphs, helper_functions as ht, \
-    refine_responder_genes
+from python_scripts.spatial_correlation import tools, condition_graphs as cyto_graphs, refine_responder_genes, subset_data
 from python_scripts.spatial_correlation.plots import plot_clusters, plot_count_distributions, plot_evaluations, \
     plot_spatial_correlation
 from python_scripts.spatial_correlation import helper_functions
@@ -435,55 +434,8 @@ def run_spatialcorrelation(adata, tissue_types, cytokine_responders, save_folder
     return sig, df_counts, adata
 
 
-def data_preparation(adata, tissue_types, epidermis_layers, conditional_genes, conditionalgenes_responders):
-    """Prepare data before applying conditional density clustering algorithm
-
-    Parameters
-    ----------
-    adata : annData
-    tissue_types : list
-    conditional_genes : list
-    epidermis_layers : str, list
-    conditionalgenes_responders : dict
-
-    Returns
-    -------
-
-    """
-    # Subset adata to tissue_types of interest: upper EPIDERMIS', 'middle EPIDERMIS', 'basal EPIDERMIS'
-    if tissue_types:
-        bool_col = adata.obs[tissue_types] == 1
-        merged = bool_col.sum(axis=1)
-        adata = adata[merged == 1].copy()
-        # Rename tissue region 'JUNCTION' to basal EPIDERMIS because some spots got both labels
-        adata = ht.interface_to_epidermis(adata, tissue_layers='tissue_layer', epidermis_layers=epidermis_layers)
-
-    # Get counts of cyotkines and their responders in the EPIDERMIS
-    # - distance between spots: 100 µm, spot diameter: 55 µm
-    # - better: use index array
-    resp_label = []
-    max_nl_counts_cytokines = dict()
-    for cyto in conditional_genes:
-        adata = tools.add_columns_genes(adata=adata, genes=cyto, label=cyto, count_threshold=1)
-        # Calculate new cut-off using non lesion as reference
-        max_nl_counts_cytokines[cyto] = adata.obs[
-            '{}_counts'.format(cyto)][adata.obs['biopsy_type'] == 'NON LESIONAL'].max()
-
-    for ind, cyto_resps in enumerate(conditionalgenes_responders.keys()):
-        resp_label.append("_".join([cyto_resps, "Responders"]))
-        adata = tools.add_columns_genes(adata=adata, genes=conditionalgenes_responders[cyto_resps],
-                                        label=resp_label[ind], count_threshold=1)
-        # Calculate new cut-off using non lesion as reference
-        max_nl_counts_cytokines[resp_label[ind]] = adata.obs[
-            '{}_counts'.format(resp_label[ind])][adata.obs['biopsy_type'] == 'NON LESIONAL'].max()
-
-    print(max_nl_counts_cytokines)
-
-    return adata
-
-
-def main(adata, save_folder, tissue_types, epidermis_layers, radii, conditional_genes,
-         conditionalgenes_responders, corr_method='pearson', find_associated_genes=False, get_plots=False):
+def main(adata, save_folder, tissue_types, epidermis_layers, radii, conditional_genes, conditionalgenes_responders,
+         corr_method='pearson', find_associated_genes=False, get_plots=False):
     """ Prepare data, run conditional-based density clustering and create evaluation plots
 
     Parameters
@@ -497,7 +449,7 @@ def main(adata, save_folder, tissue_types, epidermis_layers, radii, conditional_
         This algorithm focuses on conditional clustering in selected skin layers. By selecting **tissue_types** you can
         choose on which skin layers you want to focus on e.g. ['upper EPIDERMIS', 'middle EPIDERMIS', 'basal EPIDERMIS']
     epidermis_layers : str, list
-        Which epidermal layers to include
+        Which epidermis layers to investigate
     radii : int, list
         radius/distance from center spot to surrounding nearest neighbor spots
         e.g.  1 or list [1, 2, 3, ..]
@@ -517,12 +469,12 @@ def main(adata, save_folder, tissue_types, epidermis_layers, radii, conditional_
     -------
 
     """
-
     # 1. prepare adata object
-    adata = data_preparation(adata=adata, tissue_types=tissue_types, conditional_genes=conditional_genes,
-                             conditionalgenes_responders=conditionalgenes_responders, epidermis_layers=epidermis_layers)
+    adata = subset_data.data_preparation(
+        adata=adata, tissue_layers=tissue_types, conditional_genes=conditional_genes,
+        conditionalgenes_responders=conditionalgenes_responders, epidermis_layers=epidermis_layers)
 
-    # 3. Run conditional clustering and calculate (spatially weighted) correlation
+    # 2. Run conditional clustering and calculate (spatially weighted) correlation
     sig = []
     counts_dict = dict()
     if isinstance(radii, list):
