@@ -94,7 +94,7 @@ correlation between cytokine+ spots and their responder signatures in the epider
 To do so we applied a density-based clustering customised for ST data and calculated the spatially weighted Spearman 
 correlation between the UMI-counts of cytokines and the responder counts where the weights are the number of cytokine 
 transcripts within a conditional density cluster.
-![alt text](/Users/christina.hillig/PycharmProjects/ST_Immune_publication/Publication_analysis/images/Fig1_E-G.png "Workflow spatial correlation") 
+![alt text](./images/Fig1_E-G.png "Workflow spatial correlation") 
 <br>
 [Source code - conditional spatial clustering and weighted correlation](https://github.com/Chillig/ST_biostatistical_analysis/tree/main/python_scripts/spatial_correlation) 
 is provided.
