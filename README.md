@@ -5,6 +5,7 @@ Biedermann T, Schmidt-Weber CB, Theis F, Garzorz-Stark N, Eyerich K*, Menden MP*
 You can find the preprint version of the manuscript here: <br>
 [Low numbers of cytokine transcripts drive inflammatory skin diseases by initiating amplification cascades in localized epidermal clusters](https://www.biorxiv.org/content/10.1101/2021.06.10.447894v1)
 
+Code: [![DOI](https://zenodo.org/badge/363142956.svg)](https://zenodo.org/badge/latestdoi/363142956)
 
 ## Abstract
 Abundant heterogeneous immune cells infiltrate chronic inflammatory diseases and characterization of these cells is 
