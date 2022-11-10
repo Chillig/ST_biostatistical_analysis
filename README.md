@@ -79,14 +79,14 @@ Figures generated with the source code can be recreated by running
 In order to determine characteristic genes associated with cytokine-expressing leukocytes, 
 a DGE analysis was performed between spots / cells containing cytokine-positive leukocytes and 
 cytokine-negative leukocytes. A Vignette can be found here 
-[Vignette - DGE Analysis](https://github.com/Chillig/ST_biostatistical_analysis/blob/main/r_scripts/dge_analysis/Vignette__DGE_Analysis.pdf).
+[Vignette - DGE Analysis](https://github.com/Chillig/ST_biostatistical_analysis/blob/main/r_scripts/dge_analysis/Vignette__DGE_Analysis.Rmd).
 <br>
 <br>
 
 #### Pathway enrichment analysis
 The output of the DGE analysis containing the gene names, p-values, and log2FC are used as input for 
 this type of analysis. A Vignette can be found here 
-[Vignette - Pathway Enrichment Analysis](https://github.com/Chillig/ST_biostatistical_analysis/blob/main/r_scripts/pathway_analysis/Vignette__Pathway_Enrichment_Analysis.pdf).
+[Vignette - Pathway Enrichment Analysis](https://github.com/Chillig/ST_biostatistical_analysis/blob/main/r_scripts/pathway_analysis/Vignette__Pathway_Enrichment_Analysis.Rmd).
 <br>
 <br>
 
