@@ -57,13 +57,6 @@ bioclibs <- c("glmGamPoi", "pathview",  "org.Hs.eg.db", "ReactomePA",  "enrichpl
 invisible(lapply(bioclibs, require, character.only = TRUE))
 ```
 
-
-## Tutorial
-The results generated in this study have been created from raw count matrices and pre-processed data. <br>
-An example with a subset of our data on how to run the pre-processing pipeline and our analysis can be found as a 
-*google colab to be added soon* or *R markdown to be added soon*.
-
-
 ### Preprocessing
 Before the samples are analysed, they have been preprocessed by applying the standard procedures 
 such as quality control (QC), filtering, normalisation and batch correction. 
@@ -72,39 +65,45 @@ The preprocessing is initiated by running [main_preprocessing.py](https://github
 ```{python}
 /path/to/conda_dir/py37_sc_rpy2_diffxpy/bin/python /path/to/Publication_analysis/python_scripts/pre_processing/main_preprocessing.py
 ``` 
-
+<br>
 
 ### Analysis
 Figures generated with the source code can be recreated by running 
 [main_analysis.py - Analysis](https://github.com/Chillig/ST_biostatistical_analysis/blob/main/python_scripts/analysis/main_analysis.py):
 ```{python}
 /path/to/conda_dir/py37_sc_rpy2_diffxpy/bin/python /path/to/Publication_analysis/python_scripts/analysis/main_analysis.py
-```
-
+``` 
+<br>
 
 ### DGE analysis
 In order to determine characteristic genes associated with cytokine-expressing leukocytes, 
 a DGE analysis was performed between spots / cells containing cytokine-positive leukocytes and 
 cytokine-negative leukocytes. A Vignette can be found here 
 [Vignette - DGE Analysis](https://github.com/Chillig/ST_biostatistical_analysis/blob/main/r_scripts/dge_analysis/Vignette__DGE_Analysis.Rmd).
+<br>
 
 ### Pathway enrichment analysis
 The output of the DGE analysis containing the gene names, p-values, and log2FC are used as input for 
 this type of analysis. A Vignette can be found here 
 [Vignette - Pathway Enrichment Analysis](https://github.com/Chillig/ST_biostatistical_analysis/blob/main/r_scripts/pathway_analysis/Vignette__Pathway_Enrichment_Analysis.Rmd).
+<br>
 
-### Correlation between cytokines and their signature responder genes
+### Weighted correlation between cytokine and its signature responder genes
 We investigated the functional relevance of the few cytokine transcripts in lesional ncISD skin by looking at the 
-correlation between cytokine-positive spots and their responder signatures in the epidermis. 
-To do so we applied a density-based clustering customised for ST data and calculated the spatially weighted Pearson 
-correlation between the UMI-counts of cytokines and the responder counts. 
-[Source code - spatial weighted correlation](https://github.com/Chillig/ST_biostatistical_analysis/tree/main/python_scripts/spatial_correlation) 
+correlation between cytokine+ spots and their responder signatures in the epidermis. 
+To do so we applied a density-based clustering customised for ST data and calculated the spatially weighted Spearman 
+correlation between the UMI-counts of cytokines and the responder counts where the weights are the number of cytokine 
+transcripts within a conditional density cluster.
+![alt text](/Users/christina.hillig/PycharmProjects/ST_Immune_publication/Publication_analysis/images/Fig1_E-G.png "Workflow spatial correlation") 
+<br>
+[Source code - conditional spatial clustering and weighted correlation](https://github.com/Chillig/ST_biostatistical_analysis/tree/main/python_scripts/spatial_correlation) 
 is provided.
-This analysis can be run by:
-```{python}
+The following command calls the function to redo the analysis shown in Figure 5F-H:
+```{bash}
 /path/to/conda_dir/py37_sc_rpy2_diffxpy/bin/python /path/to/Publication_analysis/python_scripts/spatial_correlation/main.py
 ```
-
+<br>
+<br>
 
 ## License
 Reproduce the analysis for the manuscript "Low numbers of cytokine transcripts drive inflammatory skin diseases by 
