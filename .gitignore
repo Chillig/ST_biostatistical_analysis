@@ -65,3 +65,5 @@ r_scripts/results
 !/input/rawdata_paths/P15509_P16357_P21093_wo_4_7.csv
 !/input/cell_cycle/Macosko_cell_cycle_genes_2015.csv
 !/images/Fig1_E-G.png
+!/r_scripts/pathway_analysis/Vignette__Pathway_Enrichment_Analysis.pdf
+!/r_scripts/dge_analysis/Vignette__DGE_Analysis.pdf
