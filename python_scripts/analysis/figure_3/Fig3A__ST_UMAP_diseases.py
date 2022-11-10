@@ -156,7 +156,7 @@ def main(save_folder, spatial_adata):
 if __name__ == '__main__':
     today = date.today()
     # create saving folder
-    output_path = os.path.join("..", "..", "..", "output", "Figure_3A_ST_UMAP_diseases", str(today))
+    output_path = os.path.join("..", "..", "..", "output", "Figure_3A", str(today))
     os.makedirs(output_path, exist_ok=True)
 
     # Load data:

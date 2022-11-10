@@ -692,7 +692,7 @@ if __name__ == '__main__':
     pp_adata = load_adata(type_dataset=dataset, cluster_label='tissue_layer')
 
     # create output path
-    output_path = os.path.join("..", "..", "..", "output", "Figure_3B", str(today))
+    output_path = os.path.join("..", "..", "..", "output", "Figure_3CD", str(today))
     os.makedirs(output_path, exist_ok=True)
 
     main(adata=pp_adata, save_folder=output_path, df_keys=columns, log=log_transform,
