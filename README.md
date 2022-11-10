@@ -91,7 +91,14 @@ this type of analysis. A Vignette can be found here
 <br>
 
 #### Weighted correlation between cytokine and its signature responder genes
-![alt text](./images/Fig1_E-G.png "Workflow spatial correlation") 
+![Workflow_SDC](./images/Fig1_E-G.png "Workflow spatial correlation") 
+*Fig.1 - Workflow of spatial, weighted correlation analysis. 
+First spots are grouped into cytokine or responder spot. Second, cytokine and responder spots in a predefined 
+radius are clustered together. Third, spatial weighted Spearman correlation between cytokine and responder counts 
+is calculated.
+Figure adapted from [Schaebitz et al.](https://www.biorxiv.org/content/10.1101/2021.06.10.447894v1)*
+
+
 We investigated the functional relevance of the few cytokine transcripts in lesional ncISD skin by looking at the 
 correlation between cytokine+ spots and their responder signatures in the epidermis. 
 To do so we applied a density-based clustering customised for ST data and calculated the spatially weighted Spearman 
