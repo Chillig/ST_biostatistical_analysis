@@ -2,7 +2,8 @@
 title: "DGE Analysis between IL17A+ and IL17A- T-cell spots on ST data"
 author: "Christina Hillig"
 date: "3/4/2021"
-output: html_document
+output: 
+  pdf_document: default
 ---
 
 ```{r setup, include=FALSE}
