@@ -65,7 +65,6 @@ The preprocessing is initiated by running [main_preprocessing.py](https://github
 ```{python}
 /path/to/conda_dir/py37_sc_rpy2_diffxpy/bin/python /path/to/Publication_analysis/python_scripts/pre_processing/main_preprocessing.py
 ``` 
-<br>
 
 ### Analysis
 Figures generated with the source code can be recreated by running 
@@ -73,22 +72,21 @@ Figures generated with the source code can be recreated by running
 ```{python}
 /path/to/conda_dir/py37_sc_rpy2_diffxpy/bin/python /path/to/Publication_analysis/python_scripts/analysis/main_analysis.py
 ``` 
-<br>
 
-### DGE analysis
+#### DGE analysis
 In order to determine characteristic genes associated with cytokine-expressing leukocytes, 
 a DGE analysis was performed between spots / cells containing cytokine-positive leukocytes and 
 cytokine-negative leukocytes. A Vignette can be found here 
 [Vignette - DGE Analysis](https://github.com/Chillig/ST_biostatistical_analysis/blob/main/r_scripts/dge_analysis/Vignette__DGE_Analysis.Rmd).
 <br>
 
-### Pathway enrichment analysis
+#### Pathway enrichment analysis
 The output of the DGE analysis containing the gene names, p-values, and log2FC are used as input for 
 this type of analysis. A Vignette can be found here 
 [Vignette - Pathway Enrichment Analysis](https://github.com/Chillig/ST_biostatistical_analysis/blob/main/r_scripts/pathway_analysis/Vignette__Pathway_Enrichment_Analysis.Rmd).
 <br>
 
-### Weighted correlation between cytokine and its signature responder genes
+#### Weighted correlation between cytokine and its signature responder genes
 We investigated the functional relevance of the few cytokine transcripts in lesional ncISD skin by looking at the 
 correlation between cytokine+ spots and their responder signatures in the epidermis. 
 To do so we applied a density-based clustering customised for ST data and calculated the spatially weighted Spearman 
