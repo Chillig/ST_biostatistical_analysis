@@ -62,5 +62,6 @@ r_scripts/results
 
 # Included .csv files
 !/input/rawdata_paths/MUC1440x.csv
-!/input/rawdata_paths/P15509_P16357_wo_4_7.csv
+!/input/rawdata_paths/P15509_P16357_P21093_wo_4_7.csv
 !/input/cell_cycle/Macosko_cell_cycle_genes_2015.csv
+!/images/Fig1_E-G.png
