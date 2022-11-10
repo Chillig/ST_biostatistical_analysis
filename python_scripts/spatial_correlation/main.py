@@ -51,6 +51,7 @@ def main(save_folder: str, adata: anndata.AnnData, radius: [int, list], cond_gen
     tissue_layers = ['upper EPIDERMIS', 'middle EPIDERMIS', 'basal EPIDERMIS']
     epidermis_layers = ['upper EPIDERMIS', 'middle EPIDERMIS', 'basal EPIDERMIS']
 
+    # Run conditional density clustering
     adata, counts_dict, df_stats_responders_in_vs_outlesion_sdc, \
     df_stats_cytokines_responders_in_sdc, df_radius_vs_spearman = density_clustering.main(
         adata=adata, save_folder=save_folder, tissue_types=tissue_layers, epidermis_layers=epidermis_layers,
