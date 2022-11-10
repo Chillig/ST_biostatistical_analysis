@@ -79,11 +79,13 @@ a DGE analysis was performed between spots / cells containing cytokine-positive 
 cytokine-negative leukocytes. A Vignette can be found here 
 [Vignette - DGE Analysis](https://github.com/Chillig/ST_biostatistical_analysis/blob/main/r_scripts/dge_analysis/Vignette__DGE_Analysis.Rmd).
 <br>
+<br>
 
 #### Pathway enrichment analysis
 The output of the DGE analysis containing the gene names, p-values, and log2FC are used as input for 
 this type of analysis. A Vignette can be found here 
 [Vignette - Pathway Enrichment Analysis](https://github.com/Chillig/ST_biostatistical_analysis/blob/main/r_scripts/pathway_analysis/Vignette__Pathway_Enrichment_Analysis.Rmd).
+<br>
 <br>
 
 #### Weighted correlation between cytokine and its signature responder genes
