@@ -43,6 +43,7 @@ file to your directory. Now, you can run the following commands in the terminal:
 ```{bash}
 # The following command will create an env with the name py37_sc_rpy2_diffxpy
 conda env create -f https://raw.githubusercontent.com/Chillig/ST_biostatistical_analysis/main/envs/python_conda_env.yml
+
 # Activate the conda env with
 conda activate py37_sc_rpy2_diffxpy
 ```
@@ -52,6 +53,7 @@ Additionally, the following cran and Bioconductor packages are needed: <br>
 # cran packages
 rlibs <- c("dplyr", "gtools", "hash", "kableExtra", "knitr", "stringr", "tibble", "xlsx")
 invisible(lapply(rlibs, require, character.only = TRUE))
+
 # Bioconductor packages (Bioconductor version 3.12 (BiocManager 1.30.12))
 bioclibs <- c("glmGamPoi", "pathview",  "org.Hs.eg.db", "ReactomePA",  "enrichplot", "clusterProfiler")
 invisible(lapply(bioclibs, require, character.only = TRUE))
@@ -89,12 +91,12 @@ this type of analysis. A Vignette can be found here
 <br>
 
 #### Weighted correlation between cytokine and its signature responder genes
+![alt text](./images/Fig1_E-G.png "Workflow spatial correlation") 
 We investigated the functional relevance of the few cytokine transcripts in lesional ncISD skin by looking at the 
 correlation between cytokine+ spots and their responder signatures in the epidermis. 
 To do so we applied a density-based clustering customised for ST data and calculated the spatially weighted Spearman 
 correlation between the UMI-counts of cytokines and the responder counts where the weights are the number of cytokine 
 transcripts within a conditional density cluster.
-![alt text](./images/Fig1_E-G.png "Workflow spatial correlation") 
 <br>
 [Source code - conditional spatial clustering and weighted correlation](https://github.com/Chillig/ST_biostatistical_analysis/tree/main/python_scripts/spatial_correlation) 
 is provided.
