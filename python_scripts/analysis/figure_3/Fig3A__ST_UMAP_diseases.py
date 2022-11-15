@@ -140,17 +140,26 @@ def main(save_folder, spatial_adata):
         adata=spatial_adata, gene_names=leukocyte_markers,
         task='cell_gene', label='celltype', condition=None)
 
-    # # 2. Read out counts and metaData for DGE Analysis including double positive cytokine cells
-    # - Read out only leukocytes spots by 'CD2', 'CD3D', 'CD3E', 'CD3G', 'CD247' and 'PTPRC' surface markers
-    adata_leukocytes = get_celltypes_data(spatial_adata, genes=leukocyte_markers)
-
-    # 3. Highlight diseases
-    plot_disease(adata=adata_leukocytes, obs_name='DISEASE', title='Leukocytes_IL17A', save_folder=save_folder)
+    # 2. Highlight diseases
+    spatial_adata = spatial_adata[spatial_adata.obs['biopsy_type'] == 'LESIONAL'].copy()
+    plot_disease(adata=spatial_adata, obs_name='DISEASE', title='Lesion_skin', save_folder=save_folder)
     # Save coordinates and annotation to .xlsx
-    df = pd.DataFrame.from_dict({'UMAP1': adata_leukocytes.obsm['X_umap'][:, 0],
-                                 'UMAP2': adata_leukocytes.obsm['X_umap'][:, 1],
-                                 'DISEASE': adata_leukocytes.obs['DISEASE'].values})
+    df = pd.DataFrame.from_dict({'UMAP1': spatial_adata.obsm['X_umap'][:, 0],
+                                 'UMAP2': spatial_adata.obsm['X_umap'][:, 1],
+                                 'DISEASE': spatial_adata.obs['DISEASE'].values})
     df.to_excel(os.path.join(save_folder, 'Plot_infos.xlsx'))
+
+    # # # 3. Read out counts and metaData for DGE Analysis including double positive cytokine cells
+    # # - Read out only leukocytes spots by 'CD2', 'CD3D', 'CD3E', 'CD3G', 'CD247' and 'PTPRC' surface markers
+    # adata_leukocytes = get_celltypes_data(spatial_adata, genes=leukocyte_markers)
+    #
+    # # 4. Highlight diseases in Leukocytes
+    # plot_disease(adata=adata_leukocytes, obs_name='DISEASE', title='Leukocytes_IL17A', save_folder=save_folder)
+    # # Save coordinates and annotation to .xlsx
+    # df = pd.DataFrame.from_dict({'UMAP1': adata_leukocytes.obsm['X_umap'][:, 0],
+    #                              'UMAP2': adata_leukocytes.obsm['X_umap'][:, 1],
+    #                              'DISEASE': adata_leukocytes.obs['DISEASE'].values})
+    # df.to_excel(os.path.join(save_folder, 'Plot_infos.xlsx'))
 
 
 if __name__ == '__main__':
