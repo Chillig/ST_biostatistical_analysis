@@ -175,8 +175,8 @@ def create_config_review(path):
 def init_vars():
     # initialization variables
     # create saving folder in current project path
-    today = date.today()
-    # today = '2022-04-01'
+    # today = date.today()
+    today = '2022-04-08'
     savepath = os.path.join("..", "..", "adata_storage", str(today))
     os.makedirs(savepath, exist_ok=True)
 

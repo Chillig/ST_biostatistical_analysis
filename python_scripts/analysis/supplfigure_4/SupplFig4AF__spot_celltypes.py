@@ -27,6 +27,8 @@ class DeconvolutionAnalysis:
 
         self.n_spots = self._adata_st.shape[0]
 
+        self.sample_gene = cytokine[sample_name]
+
         # Add info of cyto+ spots
         self._adata_st, obs_name = add_observables.convert_variable_to_observable(
             adata=self._adata_st, gene_names=['il17a', 'ifng', 'il13'],
@@ -187,6 +189,9 @@ class DeconvolutionAnalysis:
         fig.savefig(os.path.join(self.save_folder, '{}_{}_piechart.pdf'.format(sample_name, str(value).lower())))
         plt.close(fig=fig)
 
+        df_piechart.to_excel(os.path.join(
+            self.save_folder, '{}_{}_piechart.xlsx'.format(sample_name, str(value).lower())))
+
     def get_cropped_sampleimg(self, img_key):
         samples = ['P15509_1004', 'P16357_1003', 'P16357_1020']
         if img_key == 'lowres':
@@ -201,6 +206,9 @@ class DeconvolutionAnalysis:
     def plot_he_celltype_piecharts(self, st_adata, sample_name, ind_sample, df_map_celltypes):
         scale_factor = st_adata.uns['spatial'][sample_name]['scalefactors']['tissue_hires_scalef']
         samples, crops_img = self.get_cropped_sampleimg(img_key='hires')
+
+        df = pd.DataFrame(columns=['spatial_x', 'spatial_y', 'counts', 'point'])
+
         fig, ax = plt.subplots(figsize=(8, 10))
         sc.pl.spatial(st_adata, color='tissue_layer', alpha=0.0, ax=ax, s=1,
                       show=False, crop_coord=crops_img[ind_sample])
@@ -226,6 +234,13 @@ class DeconvolutionAnalysis:
         plt.tight_layout()
         plt.savefig(os.path.join(self.save_folder, '{}_celltype_H&E.pdf'.format(sample_name)))
         plt.close(fig=fig)
+
+        df_data = self.adata_st.to_df(layer='counts')
+        df = pd.DataFrame.from_dict({'X_tissue': self.adata_st.obsm['spatial'][:, 0],
+                                     'Y_tissue': self.adata_st.obsm['spatial'][:, 1],
+                                     'counts': df_data[self.sample_gene],
+                                     'point': range(0, self.adata_st.shape[0], 1)})
+        df.to_excel(os.path.join(self.save_folder, 'Plot_infos_H&E_{}.xlsx'.format(sample_name)))
 
         return patches
 
@@ -256,6 +271,9 @@ class DeconvolutionAnalysis:
         plt.savefig(os.path.join(
             self.save_folder, '{}_{}_sorted_tissuelayer_barplot.png'.format(subcelltype, sample_name)))
         plt.close(fig=fig)
+
+        df.to_excel(os.path.join(
+            self.save_folder, '{}_{}_sorted_tissuelayer_barplot.xlsx'.format(subcelltype, sample_name)))
 
 
 def merge_labels(df_map):
@@ -629,7 +647,7 @@ def main(save_folder):
 if __name__ == '__main__':
     today = date.today()
     # create saving folder
-    output_path = os.path.join("..", "..", "..", "output", "SupplFig3AF", str(today))
+    output_path = os.path.join("..", "..", "..", "output", "SupplFig4AF", str(today))
     os.makedirs(output_path, exist_ok=True)
 
     main(save_folder=output_path)

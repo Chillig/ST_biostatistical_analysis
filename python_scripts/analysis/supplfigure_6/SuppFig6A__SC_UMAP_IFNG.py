@@ -11,6 +11,7 @@ from python_scripts.utils import gene_lists, add_observables, get_condition_spot
 from datetime import date
 import scanpy as sc
 import numpy as np
+import pandas as pd
 import os
 from collections import OrderedDict
 
@@ -213,19 +214,27 @@ def main(save_folder, adata):
     # Add cytokine label to adata and Plot: Highlight cytokines
     adata_leukocytes = add_observables.add_columns_genes(adata=adata_leukocytes, genes='IFNG', label='IFNG')
 
-    """ Suppl. Figure 4B: Highlight IFN-g """
-    plot_annotated_cells(adata=adata_leukocytes, color='IFNG_label', paper_figure='4B', save_folder=save_folder,
+    """ Suppl. Figure 6A: Highlight IFN-g """
+    plot_annotated_cells(adata=adata_leukocytes, color='IFNG_label', paper_figure='6A', save_folder=save_folder,
                          key='SC', title="Leukocyte_IFNG", xpos=0.02, ypos=0.95)
+
+    # Save coordinates and annotation to .xlsx
+    df = pd.DataFrame.from_dict({'UMAP1': adata_leukocytes.obsm['X_umap'][:, 0],
+                                 'UMAP2': adata_leukocytes.obsm['X_umap'][:, 1],
+                                 'IFNG_label': adata_leukocytes.obs['IFNG_label'].values})
+    df.to_excel(os.path.join(save_folder, 'Plot_infos.xlsx'))
 
 
 if __name__ == '__main__':
     today = date.today()
     # create saving folder
-    output_path = os.path.join("..", "..", "..", "output", "SupplFigure_4B", str(today))
+    output_path = os.path.join("..", "..", "..", "output", "SupplFigure_6A", str(today))
     os.makedirs(output_path, exist_ok=True)
 
     # Load data:
     # Use merged scRNAseq samples for publication
-    clustered_adata_sc = sc.read(os.path.join("..", "..", "..", 'adata_storage', '2020-12-04_SC_Data_QC_clustered.h5'))
+    clustered_adata_sc = sc.read(
+        os.path.join("/Users/christina.hillig/PycharmProjects/Cellranger_analysis/Spatial_publication/Input_data",
+                     '2020-12-04_SC_Data_QC_clustered.h5'))
 
     main(save_folder=output_path, adata=clustered_adata_sc)
