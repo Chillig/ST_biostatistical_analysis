@@ -10,8 +10,8 @@ from python_scripts.analysis.figure_5 import Fig5AC__ST_pseudobulk_aggregation_C
 # Creates Figure 5G-I
 from python_scripts.spatial_correlation import main as csdcc
 
-from python_scripts.analysis.supplfigure_1 import SuppFig1C__cytokine_counts_skinlayers, \
-    SuppFig1DE__Lesion_NonLesion_Mean_expression_cytokines_others
+from python_scripts.analysis.supplfigure_1 import SuppFig1A__cytokine_counts_skinlayers, \
+    SuppFig1C__Lesion_NonLesion_Mean_expression_cytokines_others
 from python_scripts.analysis.supplfigure_3 import SuppFig3ABC__ST_UMAP
 from python_scripts.analysis.supplfigure_4 import SupplFig4AF__spot_celltypes
 from python_scripts.analysis.supplfigure_5 import SuppFig5AC__ST_Volcano_Boxplot
@@ -238,8 +238,8 @@ def main(save_folder: str, adata_folder: str, input_folder: str):
     """ Figure S1: NcISD are characterized by low cytokine UMI counts in skin """
     save_folder_sfig1 = os.path.join(save_folder, 'SFig1')
     os.makedirs(save_folder_sfig1, exist_ok=True)
-    SuppFig1C__cytokine_counts_skinlayers.main(save_folder=save_folder, adata=unpp_st_adata)
-    df_stats_mean_cytokines_others_l_vs_nl = SuppFig1DE__Lesion_NonLesion_Mean_expression_cytokines_others.main(
+    SuppFig1A__cytokine_counts_skinlayers.main(save_folder=save_folder, adata=unpp_st_adata)
+    df_stats_mean_cytokines_others_l_vs_nl = SuppFig1C__Lesion_NonLesion_Mean_expression_cytokines_others.main(
         save_folder=save_folder_sfig1, pp_st_adata=pp_st_adata)
 
     """ Figure S3: Cytokine transcript-positive spots are located in the epidermis and enriched in lesional skin """
