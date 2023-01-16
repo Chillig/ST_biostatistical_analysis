@@ -2,6 +2,9 @@
 Schäbitz A*, Hillig C*, Mubarak M, Jargosch M, Farnoud A, Scala E, Pilz AC, Bhalla N, Thomas J, Stahle M, 
 Biedermann T, Schmidt-Weber CB, Theis F, Garzorz-Stark N, Eyerich K*, Menden MP*, Eyerich S*§ <br>
 
+Our manuscript @Nature Communications: 
+[Spatial transcriptomics landscape of lesions from non-communicable inflammatory skin diseases](https://www.nature.com/articles/s41467-022-35319-w)
+
 You can find the preprint version of the manuscript here: <br>
 [Low numbers of cytokine transcripts drive inflammatory skin diseases by initiating amplification cascades in localized epidermal clusters](https://www.biorxiv.org/content/10.1101/2021.06.10.447894v1)
 
