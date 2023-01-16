@@ -160,6 +160,8 @@ def main(save_folder: str, pp_st_adata: anndata.AnnData):
                 dpi=300)
     plt.close(fig=fig)
 
+    df_data.to_excel(os.path.join(output_path, 'Boxplot_infos.xlsx'))
+
     df_statistics.loc[1, :] = [res.pvalue, log2fc, foldchange,
                                mean_cyto_mean_samples_mean_specimen, mean_responders_mean_samples_mean_specimen]
 
@@ -170,15 +172,15 @@ if __name__ == '__main__':
     today = date.today()
     project_folder = os.path.join("..", "..", "..")
     output_path = os.path.join(
-        project_folder, "output", "reviewers", 'SuppFig__cytokines_vs_responders', str(today))
+        project_folder, "output", 'SuppFig7H__cytokines_vs_responders', str(today))
     os.makedirs(output_path, exist_ok=True)
 
     # Read out preprocessed data
     adata_path = os.path.join(project_folder, "adata_storage")
     date_st_pp = '2022-04-08'  # "2020-12-04" -> 2020-12-04_Visium_Data_QC_BC_clustered.h5
     adata_pp = sc.read(os.path.join(adata_path, date_st_pp, 'st_QC_normed_BC_project_PsoADLP.h5'))
-    adata_pp.obs.loc[(adata_pp.obs['basal EPIDERMIS'] == 1) & (adata_pp.obs['DERdepth1'] == 1),
-                     'basal EPIDERMIS'] = [0, 0, 1]
-    adata_pp.obs.loc[(adata_pp.obs['basal EPIDERMIS'] == 1) & (adata_pp.obs['DERdepth1'] == 1), 'DERdepth1'] = 0
+    # adata_pp.obs.loc[(adata_pp.obs['basal EPIDERMIS'] == 1) & (adata_pp.obs['DERdepth1'] == 1),
+    #                  'basal EPIDERMIS'] = [0, 0, 1]
+    # adata_pp.obs.loc[(adata_pp.obs['basal EPIDERMIS'] == 1) & (adata_pp.obs['DERdepth1'] == 1), 'DERdepth1'] = 0
 
     main(save_folder=output_path, pp_st_adata=adata_pp)

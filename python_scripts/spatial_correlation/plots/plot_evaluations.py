@@ -21,6 +21,7 @@ import os
 import scanpy as sc
 import numpy as np
 import pandas as pd
+import random
 
 
 # Figure params
@@ -29,7 +30,7 @@ fig_size, title_fontsize, axis_label_fontsize, legend_fontsize, fileformat, img_
     helper_functions.figure_params()
 
 
-def plot_evaluate_distance(significance, cytokines, min_radius, save_folder):
+def plot_evaluate_distance(significance: list, cytokines: list, min_radius: int, save_folder: str, corr_method: str):
     """Elbow plot for best distance/ radius evaluation
 
     Parameters
@@ -38,6 +39,7 @@ def plot_evaluate_distance(significance, cytokines, min_radius, save_folder):
     cytokines : list
     min_radius: int
     save_folder : str
+    corr_method: str
 
     Returns
     -------
@@ -47,13 +49,21 @@ def plot_evaluate_distance(significance, cytokines, min_radius, save_folder):
     significance = np.array(significance).T
     sig_spearman = []
     for val in significance:
-        sig_spearman.append(val['spearman'])
+        sig_spearman.append(val[corr_method])
 
     # Correlation p-values
     sig_spearman = np.array(sig_spearman)
 
     # load cytokine to color
     cyto_color = helper_functions.get_color_signaturegenes()
+
+    for cyto in cytokines:
+        if cyto not in cyto_color.keys():
+            # Create random hex color for missing keys
+            random_number = random.randint(0, 16777215)
+            hex_number = str(hex(random_number))
+            hex_number = '#' + hex_number[2:]
+            cyto_color[cyto] = hex_number
 
     if min_radius > 0:
         x_vals = np.arange(min_radius, sig_spearman.shape[0] + 1)
@@ -117,11 +127,11 @@ def plot_evaluate_distance(significance, cytokines, min_radius, save_folder):
         sns.despine(ax=ax_corr)
 
     leg = ax_pval.legend(loc='upper center', bbox_to_anchor=(0.5, -0.15), ncol=3, fancybox=True, shadow=False)
-    fig_pval.savefig(os.path.join(save_folder, "_".join(['SpearmanPval_vs_Radius_Evaluation', fileformat])),
+    fig_pval.savefig(os.path.join(save_folder, '{}_Pval_vs_Radius_Evaluation{}'.format(corr_method, fileformat)),
                      bbox_inches='tight',  bbox_extra_artists=(leg,))
     plt.close(fig=fig_pval)
     leg = ax_corr.legend(loc='upper center', bbox_to_anchor=(0.5, -0.15), ncol=3, fancybox=True, shadow=False)
-    fig_corr.savefig(os.path.join(save_folder, "_".join(['SpearmanCorr_vs_Radius_Evaluation', fileformat])),
+    fig_corr.savefig(os.path.join(save_folder, '{}_Corr_vs_Radius_Evaluation{}'.format(corr_method, fileformat)),
                      bbox_inches='tight',  bbox_extra_artists=(leg,))
     plt.close(fig=fig_corr)
 

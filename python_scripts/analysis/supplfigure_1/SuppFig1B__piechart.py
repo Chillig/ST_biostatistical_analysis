@@ -10,7 +10,6 @@ from python_scripts.utils import gene_lists, add_observables, helper_tools, rena
 
 import scanpy as sc
 import numpy as np
-import pandas as pd
 import os
 from datetime import date
 from collections import OrderedDict
@@ -75,17 +74,6 @@ def plot_tissueregions_cyto(adata, obs_name, title, save_folder, gene_colors=Non
     plt.savefig(os.path.join(save_folder, "_".join(['UMAP', title, "Skinlayers", file_format])))
     plt.close()
 
-    df = pd.DataFrame.from_dict({'UMAP1_tissue': adata.obsm['X_umap'][:, 0],
-                                 'UMAP2_tissue': adata.obsm['X_umap'][:, 1],
-                                 'tissue_regions': adata.obs['tissue_regions'].values})
-    df_cytokine = pd.DataFrame.from_dict({
-        'UMAP1_{}'.format(obs_name): cyto_adata.obsm['X_umap'][:, 0],
-        'UMAP2_{}'.format(obs_name): cyto_adata.obsm['X_umap'][:, 1],
-        obs_name: cyto_adata.obs[obs_name].values})
-
-    df.to_excel(os.path.join(save_folder, 'Plot_infos_UMAP_{}_DermisEpidermis.xlsx'.format(title)))
-    df_cytokine.to_excel(os.path.join(save_folder, 'Plot_infos_UMAP_{}_Cytokines.xlsx'.format(title)))
-
     return adata
 
 
@@ -115,13 +103,6 @@ def visualise_clusters(adata, save_folder, key, title):
     plt.tight_layout()
     plt.savefig(os.path.join(save_folder, "_".join(['UMAP_annotated_clusters', key, title, ".pdf"])))
     plt.close()
-
-    df = pd.DataFrame.from_dict({'UMAP1_tissue': adata.obsm['X_umap'][:, 0],
-                                 'UMAP2_tissue': adata.obsm['X_umap'][:, 1],
-                                 'tissue_regions': adata.obs[key].values})
-
-    if key == 'tissue_layer':
-        df.to_excel(os.path.join(save_folder, 'Plot_infos_UMAP_{}_Skinlayers.xlsx'.format(title)))
 
 
 def exclude_cytokine_dp(adata, cytoresps_dict):
@@ -228,23 +209,10 @@ def main(save_folder, spatial_adata, spatial_cluster_label: str = 'tissue_layer'
     # 4. Read out only leukocytes spots by 'CD2', 'CD3D', 'CD3E', 'CD3G', 'CD247' and 'PTPRC' surface markers
     adata_leukocytes = get_celltypes_data(spatial_adata, genes=leukocyte_markers)
 
-    # 5. add observable healthy_disease
-    spatial_adata = add_observables.add_disease_healthy_obs(spatial_adata)
-
     # Rename Junction to epidermis parts or Derdepth1
     adata_leukocytes = helper_tools.junction_to_epidermis_derdepth1(
         adata=adata_leukocytes, tissue_layers='tissue_layer',
         layers=['upper EPIDERMIS', 'middle EPIDERMIS', 'basal EPIDERMIS', 'DERdepth1'])
-
-    # keys: 'patient', 'biopsy_type', 'disease', 'tissue_type'
-    # Suppl Figure 3?
-    visualise_clusters(adata=spatial_adata, save_folder=save_folder, key='healthy_disease', title="Diagnoses")
-    # Suppl. Figure 3A
-    visualise_clusters(adata=adata_leukocytes, save_folder=save_folder, key='tissue_layer',
-                       title="Leukocytes_tissuelayers")
-    # Suppl. Figure 3?
-    visualise_clusters(adata=adata_leukocytes, save_folder=save_folder, key='spot_type',
-                       title="Leukocytes_tissuelayers")
 
     # 5. Read out spots which either have IL17A, IL13 or INFG genes
     adata_leukocytes, obs_name = exclude_cytokine_dp(adata=adata_leukocytes, cytoresps_dict=cytoresps_dict)
@@ -252,11 +220,6 @@ def main(save_folder, spatial_adata, spatial_cluster_label: str = 'tissue_layer'
     # 6. Merge layers of epidermis and save it as epidermis and merge dermis depths and save it as dermis
     adata_leukocytes = get_tissueregions(adata=adata_leukocytes, tissue_label=spatial_cluster_label)
 
-    # Suppl. Figure 3B
-    adata_leukocytes = plot_tissueregions_cyto(adata=adata_leukocytes, obs_name=obs_name, title='Leukocytes_Cytokines',
-                                               save_folder=save_folder,
-                                               gene_colors=["#ff7f00", "#e41a1c", 'darkgoldenrod', 'purple',
-                                                            "#377eb8", 'deeppink'])
     # Read out .xlsx list with double positive spots
     adata_leukocytes.obs[obs_name].value_counts().to_csv(os.path.join(save_folder, 'SingleMulti_positive_spots.csv'))
     adata_leukocytes.obs[obs_name].value_counts().to_excel(os.path.join(save_folder, 'SingleMulti_positive_spots.xlsx'))
@@ -265,7 +228,7 @@ def main(save_folder, spatial_adata, spatial_cluster_label: str = 'tissue_layer'
 if __name__ == '__main__':
     today = date.today()
     # create saving folder
-    output_path = os.path.join("..", "..", "..", "output", "SupplFigure_3AB", str(today))
+    output_path = os.path.join("..", "..", "..", "output", "SupplFigure_1B", str(today))
     os.makedirs(output_path, exist_ok=True)
 
     # Load data:

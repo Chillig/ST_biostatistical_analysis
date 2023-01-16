@@ -64,9 +64,7 @@ def load_adata(type_dataset, cluster_label):
     """
     adata_path = "/Users/christina.hillig/PycharmProjects/ST_Immune_publication/Publication_analysis/adata_storage"
     if type_dataset == 'ST':
-        adata = sc.read(os.path.join(adata_path, '2020-12-04_Visium_Data_QC_BC_clustered.h5'))
-        # remove all spots without a tissue label
-        adata = adata[adata.obs[cluster_label] != 'Unknown']
+        adata = sc.read(os.path.join(adata_path, '2022-04-08', 'st_QC_normed_BC_project_PsoADLP.h5'))
     elif type_dataset == 'SC':
         adata = sc.read(os.path.join(adata_path, '2020-12-04_SC_Data_QC_clustered.h5'))
     else:

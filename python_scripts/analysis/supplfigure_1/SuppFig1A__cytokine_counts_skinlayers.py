@@ -206,6 +206,10 @@ def plot_signature_umicounts(df_l, df_nl, save_folder):
                                 'dot_size': dotsize_range.astype(np.int64)})
         df_freq_nl = df_freq_nl.append(df_long, ignore_index=True)
 
+    # Save infos to excel sheet
+    df_freq_l.to_excel(os.path.join(save_folder, 'Barplot_Lesion.xlsx'))
+    df_freq_nl.to_excel(os.path.join(save_folder, 'Barplot_NONLesion.xlsx'))
+
     """ Barplot """
     plot_umicounts_count(df=df_freq_l, title='Lesioned Skin', sample_name='SupplFigure2a__L_Skin_barplot',
                          save_folder=save_folder, ylabels=tissue_types, hstacks=list(signatures.keys()))
@@ -332,5 +336,5 @@ if __name__ == '__main__':
 
     # Load QCed but not normalised annData object
     unpp_st_adata = sc.read(os.path.join("..", "..", "..", "adata_storage",
-                                         "2020-10-06", "st_adata_P15509_P16357_wo_4_7_unpp.h5"))
+                                         "2022-04-08", "Spatial Transcriptomics_unpp_cleaned_LPADPso.h5"))
     main(save_folder=savepath, adata=unpp_st_adata)

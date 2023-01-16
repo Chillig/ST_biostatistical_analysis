@@ -274,7 +274,7 @@ def plot__stwc_patients(df_counts, cytokine_responders, save_folder, distance, c
     num_unique_colors = len(np.unique(color_seq))
     # 1.1 assign a color to each combination
     dict_patient_color = OrderedDict(zip(df_counts['Patient'].astype(int), color_seq))
-    patient_colors = mpl.colors.ListedColormap(sc.pl.palettes.default_28[:num_unique_colors])
+    patient_colors = mpl.colors.ListedColormap(sc.pl.palettes.default_102[:num_unique_colors])
 
     # 2. Plot Colorbar with tissue layer combinations
     plot_colorbar_legend.plot_standalone_colorbar_patient(
@@ -399,13 +399,14 @@ def plot__stwc_patients(df_counts, cytokine_responders, save_folder, distance, c
     return dict_corr
 
 
-def plot__stwc_tissuelayers_figure1g(df_counts, save_folder, distance, corr_method):
+def plot__stwc_tissuelayers_figure1g(df_counts, cytokine_responders, save_folder, distance, corr_method):
     """Calculate Correlation between each Cytokine positive spot and its nn responder genes spots for each sample
     -> Plot for Figure 4G-I
 
     Parameters
     ----------
     df_counts : pandas.Dataframe
+    cytokine_responders :
     save_folder : str
     distance : int
     corr_method : str
@@ -430,78 +431,98 @@ def plot__stwc_tissuelayers_figure1g(df_counts, save_folder, distance, corr_meth
     plot_colorbar_legend.plot_standalone_colorbar(
         tissuecomb_colors=tissuecomb_colors, labels=dict_tissue_color.keys(), save_folder=save_folder)
 
-    cyto = 'IL17A'
-    resp_name = "_".join([cyto, 'responder'])
-    temp_df = df_counts[[cyto, resp_name, "Cluster_size", "disease", 'tissue_layer', 'Cluster_num_spots']].copy()
-    weighted_cytoname = "_".join(['weighted', cyto])
+    dict_corr = dict({'pearson': [], 'spearman': []})
+    for cyto in cytokine_responders:
+        resp_name = "_".join([cyto, 'responder'])
+        temp_df = df_counts[[cyto, resp_name, "Cluster_size", "disease", 'tissue_layer', 'Cluster_num_spots']].copy()
+        weighted_cytoname = "_".join(['weighted', cyto])
 
-    temp_df = temp_df[~np.isnan(temp_df[cyto].values.astype(np.float64))]
-    temp_df[cyto] = temp_df[cyto].values.astype(np.float)
-    temp_df[resp_name] = temp_df[resp_name].values.astype(np.float)
+        temp_df = temp_df[~np.isnan(temp_df[cyto].values.astype(np.float64))]
+        temp_df[cyto] = temp_df[cyto].values.astype(np.float)
+        temp_df[resp_name] = temp_df[resp_name].values.astype(np.float)
 
-    # # map each string to an integer value
-    cyto_colorseq = []
-    for ind_dict, value in enumerate(temp_df['tissue_layer']):
-        cyto_colorseq.append(dict_tissue_color[value])
+        # # map each string to an integer value
+        cyto_colorseq = []
+        for ind_dict, value in enumerate(temp_df['tissue_layer']):
+            cyto_colorseq.append(dict_tissue_color[value])
 
-    # 1. Calculate correlation
-    # 1.1 Apply weights to cytokine counts and add it to df
-    weighted_cytocounts = temp_df[cyto]
-    temp_df[weighted_cytoname] = weighted_cytocounts.values.astype(np.float64)
+        # 1. Calculate correlation
+        # 1.1 Apply weights to cytokine counts and add it to df
+        weighted_cytocounts = temp_df[cyto]
+        temp_df[weighted_cytoname] = weighted_cytocounts.values.astype(np.float64)
 
-    get_sizes = np.unique(temp_df['Cluster_size'])
-    if any(get_sizes > 6):
-        increased_ylimit = 3
-    else:
-        increased_ylimit = 1
+        get_sizes = np.unique(temp_df['Cluster_size'])
+        if any(get_sizes > 6):
+            increased_ylimit = 3
+        else:
+            increased_ylimit = 1
 
-    # Fit Line going through origin (0, 0), intercept of 0
-    est_woweights_fitted, ypred_woweights, df_woweights, x = get_linefit(
-        df=temp_df, resp_name=resp_name, cyto=cyto)
+        # Fit Line going through origin (0, 0), intercept of 0
+        est_woweights_fitted, ypred_woweights, df_woweights, x = get_linefit(
+            df=temp_df, resp_name=resp_name, cyto=cyto)
 
-    #  Save in .csv
-    temp_df['weights'] = temp_df[cyto]
+        # 1. Calculate correlation
+        # 1.1 Apply weights to cytokine counts and add it to df
+        temp_df['weights'] = temp_df[cyto]
+        temp_df[weighted_cytoname] = temp_df['weights'].values.astype(np.float64)
 
-    # 2. Plot Correlation
-    fig, ax = plt.subplots(figsize=(4, 4))
-    ax.grid(False)
-    # Unweighted: Plot weighted line fit
-    ax.plot(x, ypred_woweights, label="fit", color='black', zorder=1, lw=2)
-    # Unweighted: plotting error band
-    ax.fill_between(x.transpose()[0], df_woweights['mean_ci_lower'].values, df_woweights['mean_ci_upper'].values,
-                    alpha=.1, label='5 - sigma interval', color='black', lw=0.1)
-    # Plot unweighted points
-    ax.scatter(data=temp_df, x=resp_name, y=cyto, c='black', alpha=1, s=100,
-               cmap=ListedColormap(tissuecomb_colors.colors[np.unique(cyto_colorseq)]), zorder=2, edgecolors='black')
+        dict_corr = get_correlation_stats(
+            df=temp_df, resp_name=resp_name, cyto=cyto, weight_name=weighted_cytoname, dict_corr=dict_corr)
 
-    # Axis params
-    xlabel_name = resp_name.split('_')
-    if len(xlabel_name) > 2:
-        ax.set_xlabel("{} Responder Counts".format(xlabel_name[1]), fontsize=18)
-    else:
-        ax.set_xlabel("Responder Counts", fontsize=18)
-    ax.set_ylabel(" ".join([cyto.split('_')[0], 'Counts']), fontsize=18)
+        # Add correlation value and p-value
+        corr_pval = [a_tuple for a_tuple in dict_corr[corr_method] if a_tuple[0] == cyto]
 
-    if temp_df[cyto].max() < 10:
-        ax.set_yticks(np.arange(0, temp_df[cyto].max() + increased_ylimit, 1))
-    elif (temp_df[cyto].max() >= 10) & (temp_df[cyto].max() < 50):
-        ax.set_yticks(np.arange(0, temp_df[cyto].max() + increased_ylimit, 5))
-    elif (temp_df[cyto].max() >= 50) & (temp_df[cyto].max() < 100):
-        ax.set_yticks(np.arange(0, temp_df[cyto].max() + increased_ylimit, 10))
-    elif (temp_df[cyto].max() >= 100) & (temp_df[cyto].max() < 1000):
-        ax.set_yticks(np.arange(0, temp_df[cyto].max() + increased_ylimit, 100))
-    else:
-        ax.set_yticks(np.arange(0, temp_df[cyto].max() + increased_ylimit, 20))
+        # 2. Plot Correlation
+        fig, ax = plt.subplots(figsize=(6, 6))
+        ax.grid(False)
+        # Unweighted: Plot weighted line fit
+        ax.plot(x, ypred_woweights, label="fit", color='black', zorder=1, lw=2)
+        # Unweighted: plotting error band
+        ax.fill_between(x.transpose()[0], df_woweights['mean_ci_lower'].values, df_woweights['mean_ci_upper'].values,
+                        alpha=.1, label='5 - sigma interval', color='black', lw=0.1)
+        # Plot unweighted points
+        ax.scatter(data=temp_df, x=resp_name, y=cyto, c='black', alpha=1, s=100,
+                   cmap=ListedColormap(tissuecomb_colors.colors[np.unique(cyto_colorseq)]),
+                   zorder=2, edgecolors='black')
 
-    ax.tick_params(labelsize=16)
+        # Axis params
+        xlabel_name = resp_name.split('_')
+        if len(xlabel_name) > 2:
+            ax.set_xlabel("{} Responder Counts".format(xlabel_name[1]), fontsize=18)
+        else:
+            ax.set_xlabel("Responder Counts", fontsize=18)
+        ax.set_ylabel(" ".join([cyto.split('_')[0], 'Counts']), fontsize=18)
 
-    plt.tight_layout()
+        if temp_df[cyto].max() < 10:
+            ax.set_yticks(np.arange(0, temp_df[cyto].max() + increased_ylimit, 1))
+        elif (temp_df[cyto].max() >= 10) & (temp_df[cyto].max() < 20):
+            ax.set_yticks(np.arange(0, temp_df[cyto].max() + increased_ylimit, 2))
+        elif (temp_df[cyto].max() >= 20) & (temp_df[cyto].max() < 30):
+            ax.set_yticks(np.arange(0, temp_df[cyto].max() + increased_ylimit, 3))
+        elif (temp_df[cyto].max() >= 30) & (temp_df[cyto].max() < 50):
+            ax.set_yticks(np.arange(0, temp_df[cyto].max() + increased_ylimit, 5))
+        elif (temp_df[cyto].max() >= 50) & (temp_df[cyto].max() < 100):
+            ax.set_yticks(np.arange(0, temp_df[cyto].max() + increased_ylimit, 10))
+        elif (temp_df[cyto].max() >= 100) & (temp_df[cyto].max() < 1000):
+            ax.set_yticks(np.arange(0, temp_df[cyto].max() + increased_ylimit, 100))
+        else:
+            ax.set_yticks(np.arange(0, temp_df[cyto].max() + increased_ylimit, 20))
 
-    # remove upper and right edge lines in plot
-    sns.despine(ax=ax)
+        # Add text: Correlation value and p-value
+        ax.text(temp_df[resp_name].max() / 2 - temp_df[resp_name].max() / 5,
+                temp_df[cyto].max() + 1,
+                'r = {:.2f}; p = {:.2e}'.format(corr_pval[0][1], corr_pval[0][2]),
+                fontstyle='italic', fontsize=text_fontsize)
 
-    # 3. Save figure -> creates figure for Workflow figure 1
-    fig.savefig(os.path.join(
-        save_folder, "{}_tissuelayers_weighted_transcripts_{}_r{}_{}_{}{}".format(
-            'Fig1G', corr_method, str(distance), cyto, resp_name, fileformat)),)
-    plt.close()
+        ax.tick_params(labelsize=16)
+
+        plt.tight_layout()
+
+        # remove upper and right edge lines in plot
+        sns.despine(ax=ax)
+
+        # 3. Save figure -> creates figure for Workflow figure 1
+        fig.savefig(os.path.join(
+            save_folder, "{}_tissuelayers_weighted_transcripts_{}_r{}_{}_{}{}".format(
+                'Fig1G', corr_method, str(distance), cyto, resp_name, fileformat)),)
+        plt.close()

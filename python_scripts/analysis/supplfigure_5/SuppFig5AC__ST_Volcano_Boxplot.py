@@ -62,9 +62,9 @@ def load_adata(type_dataset, cluster_label):
     adata : annData
 
     """
-    adata_path = "/adata_storage"
+    adata_path = "/Users/christina.hillig/PycharmProjects/ST_Immune_publication/Publication_analysis/adata_storage"
     if type_dataset == 'ST':
-        adata = sc.read(os.path.join(adata_path, '2020-12-04_Visium_Data_QC_BC_clustered.h5'))
+        adata = sc.read(os.path.join(adata_path, '2022-04-08', 'st_QC_normed_BC_project_PsoADLP.h5'))
         # remove all spots without a tissue label
         adata = adata[adata.obs[cluster_label] != 'Unknown']
     elif type_dataset == 'SC':
@@ -420,6 +420,14 @@ def volcano_plot(df, df_keys, cytokine, label_genes, title, save_folder, adjust=
     fig.savefig(os.path.join(save_folder, "".join([title, file_format])), dpi=300)
     plt.close()
 
+    # Save to excel file
+    df['label'] = r"{} $>$ 0.05 and |log$_2$FC| $<$ 1".format(legend_label)
+    df['label'][m_sig_log2fc_pval] = r"{} $\leq$ 0.05 and |log$_2$FC| $\geq$ 1".format(legend_label)  # darkred
+    df['label'][m_sig_log2fc] = r"{} $>$ 0.05 and |log$_2$FC| $>$ 1".format(legend_label)  # darkblue
+    df['label'][m_sig_pval] = r"{} $<$ 0.05 and |log$_2$FC| $<$ 1".format(legend_label)  # darkorange
+
+    df.to_excel(os.path.join(save_folder, 'Plot_infos_Volcanoplot_{}.xlsx'.format(title)))
+
 
 def plotly_interactive_volcano(df, df_keys, save_folder, key, x_lab, y_lab, log2fc_cut=1.2, pval_cut=0.05):
     """Plot interactive Volcano plot using plotly
@@ -682,7 +690,8 @@ def main(adata, save_folder, df_keys, log, dge_results_folder):
                                      output_folder=output_folder, log=log)
 
                 # Save counts of genes of interest
-                goi.to_csv(os.path.join(output_folder, "_".join([cyto, "Counts_Highlight_genes.csv"])))
+                goi.to_csv(os.path.join(output_folder, "_".join([cyto, "Violinplots_Highlight_genes.csv"])))
+                goi.to_excel(os.path.join(output_folder, "_".join([cyto, "Violinplots_Highlight_genes.xlsx"])))
 
 
 if __name__ == '__main__':
@@ -698,7 +707,7 @@ if __name__ == '__main__':
     pp_adata = load_adata(type_dataset=dataset, cluster_label='tissue_layer')
 
     # create output path
-    output_path = os.path.join("..", "..", "..", "output", "Figure_3B", str(today))
+    output_path = os.path.join("..", "..", "..", "output", "SupplFigure_5AC", str(today))
     os.makedirs(output_path, exist_ok=True)
 
     main(adata=pp_adata, save_folder=output_path, df_keys=columns, log=log_transform,

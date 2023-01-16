@@ -67,15 +67,19 @@ if __name__ == '__main__':
     # replace os.environ['PYTHONPATH'].split(os.pathsep)[0] with sys.path[2] -> can be run then in terminal
     path = os.path.join("..", "..")
     # create saving folder in current project path
-    savepath = os.path.join(path, "output", "Fig5F-H_Spatial_weighted_correlation", str(today))
+    task = 'Fig5F-H_Spatial_weighted_correlation' 
+    savepath = os.path.join(path, "output", task, str(today))
     os.makedirs(savepath, exist_ok=True)
 
     # Load Raw anndata --> used for publication figure 4
     unpp_st_adata = sc.read(
-        os.path.join(path, "adata_storage", "2022-04-08", "Spatial Transcriptomics_unpp_cleaned_PsoADLP.h5"))
+        os.path.join(path, "adata_storage", "2022-04-08", "Spatial Transcriptomics_unpp_cleaned_LPADPso.h5"))
 
     # 1. Get cytokines and responders
     conditional_genes, _, conditionalgenes_responders = gene_lists.get_publication_cyto_resps()
 
+    radii = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+
     main(save_folder=savepath, adata=unpp_st_adata, cond_genes=conditional_genes,
-         genes_resps=conditionalgenes_responders, radius=1, get_plots=True, find_associated_genes=False)
+         genes_resps=conditionalgenes_responders, radius=radii, get_plots=False, find_associated_genes=False,
+         corr_method='spearman')
