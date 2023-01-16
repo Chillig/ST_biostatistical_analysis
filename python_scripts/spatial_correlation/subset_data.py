@@ -43,6 +43,6 @@ def data_preparation(adata, tissue_layers, epidermis_layers, conditional_genes, 
         max_nl_counts_cytokines[resp_label[ind]] = adata.obs[
             '{}_counts'.format(resp_label[ind])][adata.obs['biopsy_type'] == 'NON LESIONAL'].max()
 
-    print(max_nl_counts_cytokines)
+    print('Cut-offs determine if a gene is expressed in comparison to non-lesion skin: ', max_nl_counts_cytokines)
 
     return adata
