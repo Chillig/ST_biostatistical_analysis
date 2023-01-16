@@ -427,9 +427,10 @@ def run_spatialcorrelation(adata, tissue_types, cytokine_responders, save_folder
         distance=radius, corr_method=corr_method)
 
     # Plot Workflow figure 1G
-    if radius == 1:
-        plot_spatial_correlation.plot__stwc_tissuelayers_figure1g(
-            df_counts=df_counts, save_folder=save_folder, distance=radius, corr_method=corr_method)
+    # if radius == 1:
+    plot_spatial_correlation.plot__stwc_tissuelayers_figure1g(
+        df_counts=df_counts, cytokine_responders=cytokine_responders, save_folder=save_folder,
+        distance=radius, corr_method=corr_method)
 
     return sig, df_counts, adata
 
@@ -504,7 +505,8 @@ def main(adata, save_folder, tissue_types, epidermis_layers, radii, conditional_
     if len(sig) > 1:
         # 6. Evaluate distance via elbow plot
         df_radius_vs_spearman = plot_evaluations.plot_evaluate_distance(
-            significance=sig, cytokines=conditional_genes, min_radius=min(radii), save_folder=save_folder)
+            significance=sig, cytokines=conditional_genes, min_radius=min(radii), save_folder=save_folder,
+            corr_method=corr_method)
 
         # 7. Plot Responder counts normed by number of spots in a cluster
         plot_evaluations.plot_responder_vs_radius(
