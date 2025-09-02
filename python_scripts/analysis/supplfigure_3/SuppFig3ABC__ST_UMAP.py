@@ -270,6 +270,6 @@ if __name__ == '__main__':
 
     # Load data:
     pp_st_adata = sc.read(os.path.join(
-        "..", "..", "..", 'adata_storage', '2022-04-08', 'st_QC_normed_BC_project_PsoADLP.h5'))
+        '/Volumes/T7/data/annData_objects/spatial', '2022-04-08', 'st_QC_normed_BC_project_PsoADLP.h5'))
 
     main(save_folder=output_path, spatial_adata=pp_st_adata)
