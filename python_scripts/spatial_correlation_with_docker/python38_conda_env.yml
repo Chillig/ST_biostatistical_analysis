@@ -1,0 +1,23 @@
+name: analysis_env
+channels:
+  - conda-forge
+  - defaults
+
+dependencies:
+  - python=3.8
+  - numpy
+  - scipy
+  - xlsxwriter
+  - statsmodels
+  - networkx
+  - scikit-learn
+  - scanpy=1.9.3
+  - python-igraph
+  - leidenalg
+  - anndata
+  - pandas
+  - matplotlib
+  - seaborn
+  - jupyterlab
+  - ipykernel 
+
