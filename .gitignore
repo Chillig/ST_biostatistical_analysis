@@ -35,6 +35,7 @@ __pycache__/
 .idea/
 */.idea/
 /.idea/
+/python_scripts/spatial_correlation_with_docker/spatial_correlation/.ipynb_checkpoints
 
 # Files for genotypes / genomic annotations
 *.bam
